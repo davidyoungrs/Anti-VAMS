@@ -110,16 +110,16 @@ export const storageService = {
                     const filePath = `${finalRecord.id}/${crypto.randomUUID()}.${fileExt}`;
 
                     const { error: uploadError } = await supabase.storage
-                        .from('valve-attachments')
+                        .from('valve-attachment')
                         .upload(filePath, file);
 
                     if (uploadError) {
-                        console.error('File upload failed:', uploadError);
+                        console.error('File upload failed. Ensure bucket "valve-attachment" exists and is public:', uploadError);
                         return null;
                     }
 
                     const { data: { publicUrl } } = supabase.storage
-                        .from('valve-attachments')
+                        .from('valve-attachment')
                         .getPublicUrl(filePath);
 
                     return publicUrl;
@@ -203,9 +203,9 @@ export const storageService = {
     delete: async (id) => {
         if (supabase) {
             try {
-                const { data: files } = await supabase.storage.from('valve-attachments').list(`${id}`);
+                const { data: files } = await supabase.storage.from('valve-attachment').list(`${id}`);
                 if (files && files.length > 0) {
-                    await supabase.storage.from('valve-attachments').remove(files.map(f => `${id}/${f.name}`));
+                    await supabase.storage.from('valve-attachment').remove(files.map(f => `${id}/${f.name}`));
                 }
                 const { error } = await supabase.from('valve_records').delete().eq('id', id);
                 if (error) console.error('Supabase delete error', error);
