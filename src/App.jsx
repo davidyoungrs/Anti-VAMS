@@ -221,6 +221,57 @@ function App() {
               </div>
             </div>
 
+            <div className="mt-4 glass-panel" style={{ padding: '1.5rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)' }}>
+              <h3 style={{ marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>Latest Activity</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {records.slice(0, 5).map(record => (
+                  <div
+                    key={record.id}
+                    onClick={() => handleRecordClick(record)}
+                    style={{
+                      padding: '0.75rem 1rem',
+                      borderRadius: 'var(--radius-md)',
+                      background: 'rgba(255,255,255,0.05)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      border: '1px solid transparent'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.border = '1px solid var(--primary)';
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.border = '1px solid transparent';
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 'bold', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        {record.serialNumber}
+                        {(record.files?.length > 0 || record.file_urls?.length > 0) && (
+                          <span title={`${(record.files?.length || record.file_urls?.length)} attachments`} style={{ fontSize: '0.8rem' }}>📎</span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        {record.customer} | {record.dateIn || record.date_in}
+                      </div>
+                    </div>
+                    <div style={{
+                      fontSize: '0.75rem',
+                      padding: '0.2rem 0.5rem',
+                      borderRadius: '4px',
+                      background: (record.pass_fail === 'Y' || record.passFail === 'Y') ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                      color: (record.pass_fail === 'Y' || record.passFail === 'Y') ? '#10b981' : '#ef4444'
+                    }}>
+                      {(record.pass_fail === 'Y' || record.passFail === 'Y') ? 'PASS' : 'FAIL/PEND'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div className="mt-4" style={{ marginTop: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <button className="btn-primary" onClick={() => handleNavigate('create')}>+ New Valve Record</button>
 

@@ -204,23 +204,28 @@ export const RecordForm = ({ initialData, onSave }) => {
                     <h3 className="section-title">Attachments</h3>
                     <FileUpload label="Upload Images or PDFs" onFilesSelected={handleFiles} />
 
-                    {files.length > 0 && (
-                        <div className="mt-4" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
-                            <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-                                📎 Attached Files ({files.length})
-                            </h4>
+                    <div className="mt-4" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
+                        <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                            📎 Attached Files ({files.length})
+                        </h4>
+
+                        {files.length === 0 ? (
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontStyle: 'italic' }}>
+                                No attachments found for this record.
+                            </p>
+                        ) : (
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
                                 {files.map((f, i) => {
                                     const isUrl = typeof f === 'string';
-                                    const name = isUrl ? f.split('/').pop() : f.name;
-                                    const size = isUrl ? '' : `(${Math.round(f.size / 1024)} KB)`;
+                                    const name = isUrl ? f.split('/').pop() : (f.name || `File ${i + 1}`);
+                                    const size = isUrl ? '' : (f.size ? `(${Math.round(f.size / 1024)} KB)` : '');
 
                                     return (
                                         <div key={i} className="glass-panel" style={{ padding: '0.75rem', fontSize: '0.9rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', border: '1px solid var(--primary-light)' }}>
                                             <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 'bold' }} title={name}>
                                                 {name}
                                             </div>
-                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{size}</div>
+                                            {size && <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{size}</div>}
                                             <div className="flex-row" style={{ gap: '0.5rem', marginTop: '0.25rem' }}>
                                                 {isUrl ? (
                                                     <a href={f} target="_blank" rel="noopener noreferrer" className="btn-primary" style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', textDecoration: 'none', textAlign: 'center', flex: 1 }}>
@@ -241,8 +246,8 @@ export const RecordForm = ({ initialData, onSave }) => {
                                     );
                                 })}
                             </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
 
 
