@@ -1,0 +1,323 @@
+import React, { useState, useEffect } from 'react';
+import { Input } from '../components/ui/Input';
+import { Select } from '../components/ui/Select';
+import { Checkbox } from '../components/ui/Checkbox';
+import { FileUpload } from '../components/ui/FileUpload';
+import { storageService } from '../services/storage';
+
+export const RecordForm = ({ initialData, onSave }) => {
+    const [formData, setFormData] = useState({
+        serialNumber: '',
+        jobNo: '',
+        tagNo: '',
+        orderNo: '',
+        customer: '',
+        oem: '',
+        plantArea: '',
+        siteLocation: '',
+        dateIn: '',
+        requiredDate: '',
+        safetyCheck: '',
+        decontaminationCert: 'N',
+        lsaCheck: false,
+        seizedMidStroke: false,
+        modelNo: '',
+        valveType: '',
+        sizeClass: '',
+        packingType: '',
+        flangeType: '',
+        mawp: '',
+        bodyMaterial: '',
+        seatMaterial: '',
+        trimMaterial: '',
+        obturatorMaterial: '',
+        actuator: '',
+        gearOperator: '',
+        failMode: '',
+        bodyTestSpec: '',
+        seatTestSpec: '',
+        bodyPressure: '',
+        bodyPressureUnit: 'PSI',
+        testedBy: '',
+        testDate: '',
+        testMedium: '',
+        passFail: ''
+    });
+
+    const [files, setFiles] = useState([]);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+    useEffect(() => {
+        if (initialData) {
+            const { files: initialFiles, ...rest } = initialData;
+            setFormData(prev => ({ ...prev, ...rest }));
+            if (initialFiles) {
+                setFiles(initialFiles);
+            }
+        } else {
+            // Reset to defaults if initialData is null (essential for "New Record" switch if component is reused)
+            setFormData({
+                serialNumber: '', jobNo: '', tagNo: '', orderNo: '', customer: '', oem: '', plantArea: '', siteLocation: '', dateIn: '', requiredDate: '', safetyCheck: '', decontaminationCert: 'N', lsaCheck: false, seizedMidStroke: false, modelNo: '', valveType: '', sizeClass: '', packingType: '', flangeType: '', mawp: '', bodyMaterial: '', seatMaterial: '', trimMaterial: '', obturatorMaterial: '', actuator: '', gearOperator: '', failMode: '', bodyTestSpec: '', seatTestSpec: '', bodyPressure: '', bodyPressureUnit: 'PSI', testedBy: '', testDate: '', testMedium: '', passFail: ''
+            });
+            setFiles([]);
+        }
+    }, [initialData]);
+
+    const handleChange = (e) => {
+        const { name, value, type, checked } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: type === 'checkbox' ? checked : value
+        }));
+    };
+
+    const handleFiles = (newFiles) => {
+        setFiles(prev => [...prev, ...newFiles]);
+    };
+
+    const handleDelete = () => {
+        if (initialData?.id) {
+            storageService.delete(initialData.id);
+            if (onSave) onSave();
+        }
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const record = { ...formData, files, id: initialData?.id }; // Preserve ID if editing
+
+            await storageService.save(record);
+
+            alert('Record saved successfully!');
+            if (onSave) onSave();
+
+            if (!initialData) {
+                setFormData({
+                    serialNumber: '', jobNo: '', tagNo: '', orderNo: '', customer: '', oem: '', plantArea: '', siteLocation: '', dateIn: '', requiredDate: '', safetyCheck: '', decontaminationCert: 'N', lsaCheck: false, seizedMidStroke: false, modelNo: '', valveType: '', sizeClass: '', packingType: '', flangeType: '', mawp: '', bodyMaterial: '', seatMaterial: '', trimMaterial: '', obturatorMaterial: '', actuator: '', gearOperator: '', failMode: '', bodyTestSpec: '', seatTestSpec: '', bodyPressure: '', bodyPressureUnit: 'PSI', testedBy: '', testDate: '', testMedium: '', passFail: ''
+                });
+                setFiles([]);
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Error saving record');
+        }
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="glass-panel" style={{ padding: '2rem', borderRadius: 'var(--radius-lg)' }}>
+            <div className="flex-row" style={{ justifyContent: 'space-between', marginBottom: '2rem' }}>
+                <h2 className="section-title" style={{ margin: 0, border: 'none' }}>
+                    {initialData ? 'Edit Valve Record' : 'New Valve Record'}
+                </h2>
+                <button type="submit" className="btn-primary">Save Record</button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '2rem' }}>
+                {/* Section 1: Identification */}
+                <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)', gridColumn: '1 / -1' }}>
+                    <h3 className="section-title">Identification</h3>
+                    <div className="grid-2">
+                        <Input label="Serial Number" name="serialNumber" value={formData.serialNumber} onChange={handleChange} required />
+                        <Input label="Customer" name="customer" value={formData.customer} onChange={handleChange} required />
+                        <Input label="OEM" name="oem" value={formData.oem} onChange={handleChange} required />
+                        <Input label="Job No" name="jobNo" value={formData.jobNo} onChange={handleChange} />
+                        <Input label="Tag No" name="tagNo" value={formData.tagNo} onChange={handleChange} />
+                        <Input label="Order No" name="orderNo" value={formData.orderNo} onChange={handleChange} />
+                        <Input label="Plant Area" name="plantArea" value={formData.plantArea} onChange={handleChange} />
+                        <Input label="Site Location" name="siteLocation" value={formData.siteLocation} onChange={handleChange} />
+                    </div>
+                </div>
+
+                {/* Section 2: Dates & Checks */}
+                <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)', gridColumn: '1 / -1' }}>
+                    <h3 className="section-title">Status & Dates</h3>
+                    <div className="grid-2">
+                        <Input type="date" label="Date In" name="dateIn" value={formData.dateIn} onChange={handleChange} />
+                        <Input type="date" label="Required Date" name="requiredDate" value={formData.requiredDate} onChange={handleChange} />
+                        <Input label="Safety Check" name="safetyCheck" value={formData.safetyCheck} onChange={handleChange} />
+                        <Select label="Decontamination Cert" name="decontaminationCert" value={formData.decontaminationCert} onChange={handleChange} options={['Y', 'N']} />
+
+                        <div style={{ gridColumn: 'span 2' }}>
+                            <Checkbox label="LSA Check" name="lsaCheck" checked={formData.lsaCheck} onChange={handleChange} />
+                            <Checkbox label="Seized Mid Stroke" name="seizedMidStroke" checked={formData.seizedMidStroke} onChange={handleChange} />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Section 3: Specifications */}
+                <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)', gridColumn: '1 / -1' }}>
+                    <h3 className="section-title">Specifications</h3>
+                    <div className="grid-3">
+                        <Input label="Make (Model No)" name="modelNo" value={formData.modelNo} onChange={handleChange} />
+                        <Input label="Valve Type" name="valveType" value={formData.valveType} onChange={handleChange} />
+                        <Input label="Size Class" name="sizeClass" value={formData.sizeClass} onChange={handleChange} />
+                        <Input label="Packing Type" name="packingType" value={formData.packingType} onChange={handleChange} />
+                        <Input label="Flange Type" name="flangeType" value={formData.flangeType} onChange={handleChange} />
+                        <Input label="MAWP" name="mawp" value={formData.mawp} onChange={handleChange} />
+
+                        <Input label="Body Material" name="bodyMaterial" value={formData.bodyMaterial} onChange={handleChange} />
+                        <Input label="Seat Material" name="seatMaterial" value={formData.seatMaterial} onChange={handleChange} />
+                        <Input label="Trim Material" name="trimMaterial" value={formData.trimMaterial} onChange={handleChange} />
+                        <Input label="Obturator Material" name="obturatorMaterial" value={formData.obturatorMaterial} onChange={handleChange} />
+                    </div>
+
+                    <h4 className="mt-4 mb-4" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>Actuation</h4>
+                    <div className="grid-3">
+                        <Input label="Actuator" name="actuator" value={formData.actuator} onChange={handleChange} />
+                        <Input label="Gear Operator" name="gearOperator" value={formData.gearOperator} onChange={handleChange} />
+                        <Input label="Fail Mode" name="failMode" value={formData.failMode} onChange={handleChange} />
+                    </div>
+                </div>
+
+                {/* Section 4: Testing */}
+                <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)', gridColumn: '1 / -1' }}>
+                    <h3 className="section-title">Testing Results</h3>
+                    <div className="grid-3">
+                        <Input label="Body Test Spec" name="bodyTestSpec" value={formData.bodyTestSpec} onChange={handleChange} />
+                        <Input label="Seat Test Spec" name="seatTestSpec" value={formData.seatTestSpec} onChange={handleChange} />
+
+                        <div className="flex-row">
+                            <div style={{ flex: 2 }}>
+                                <Input label="Body Pressure" name="bodyPressure" value={formData.bodyPressure} onChange={handleChange} />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <Select label="Unit" name="bodyPressureUnit" value={formData.bodyPressureUnit} onChange={handleChange} options={['PSI', 'Bar', 'MPa']} />
+                            </div>
+                        </div>
+
+                        <Input label="Tested By" name="testedBy" value={formData.testedBy} onChange={handleChange} />
+                        <Input type="date" label="Test Date" name="testDate" value={formData.testDate} onChange={handleChange} />
+                        <Input label="Test Medium" name="testMedium" value={formData.testMedium} onChange={handleChange} />
+                        <Select label="Pass / Fail" name="passFail" value={formData.passFail} onChange={handleChange} options={['Y', 'N']} />
+                    </div>
+                </div>
+
+                {/* Section 5: Attachments */}
+                <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)', gridColumn: '1 / -1' }}>
+                    <h3 className="section-title">Attachments</h3>
+                    <FileUpload label="Upload Images or PDFs" onFilesSelected={handleFiles} />
+
+                    {files.length > 0 && (
+                        <div className="mt-4">
+                            <h4>Current Files:</h4>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
+                                {files.map((f, i) => {
+                                    const isUrl = typeof f === 'string';
+                                    const name = isUrl ? f.split('/').pop() : f.name;
+                                    const size = isUrl ? '' : `(${Math.round(f.size / 1024)} KB)`;
+
+                                    return (
+                                        <div key={i} className="glass-panel" style={{ padding: '0.75rem', fontSize: '0.9rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                            <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={name}>
+                                                {name} {size}
+                                            </div>
+                                            <div className="flex-row" style={{ gap: '0.5rem' }}>
+                                                {isUrl ? (
+                                                    <a href={f} target="_blank" rel="noopener noreferrer" className="btn-secondary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', textDecoration: 'none' }}>
+                                                        View File
+                                                    </a>
+                                                ) : (
+                                                    <span style={{ color: 'var(--primary)', fontWeight: 'bold', fontSize: '0.8rem' }}>Pending Upload</span>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setFiles(prev => prev.filter((_, index) => index !== i))}
+                                                    style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.8rem' }}
+                                                >
+                                                    Remove
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+
+
+                {initialData && (
+                    <div style={{ gridColumn: '1 / -1', marginTop: '2rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+                        <button
+                            type="button"
+                            onClick={() => setShowDeleteConfirm(true)}
+                            style={{
+                                background: 'rgba(239, 68, 68, 0.1)',
+                                color: '#ef4444',
+                                border: '1px solid rgba(239, 68, 68, 0.2)',
+                                padding: '0.75rem 1.5rem',
+                                borderRadius: 'var(--radius-md)',
+                                cursor: 'pointer',
+                                fontWeight: '600',
+                                transition: 'all 0.2s',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem'
+                            }}
+                            onMouseEnter={(e) => e.target.style.background = 'rgba(239, 68, 68, 0.2)'}
+                            onMouseLeave={(e) => e.target.style.background = 'rgba(239, 68, 68, 0.1)'}
+                        >
+                            🗑️ Delete Record
+                        </button>
+                    </div>
+                )}
+            </div>
+
+            {
+                showDeleteConfirm && (
+                    <div style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: 'rgba(0,0,0,0.7)',
+                        backdropFilter: 'blur(4px)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 1000
+                    }}>
+                        <div className="glass-panel" style={{ padding: '2rem', maxWidth: '400px', width: '90%', textAlign: 'center', background: 'var(--bg-surface)' }}>
+                            <h3 style={{ marginTop: 0, color: 'var(--text-primary)' }}>Confirm Deletion</h3>
+                            <p style={{ color: 'var(--text-muted)' }}>Are you sure you want to delete this record? This action cannot be undone.</p>
+                            <div className="flex-row" style={{ justifyContent: 'center', gap: '1rem', marginTop: '1.5rem' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowDeleteConfirm(false)}
+                                    style={{
+                                        padding: '0.75rem 1.5rem',
+                                        borderRadius: 'var(--radius-md)',
+                                        background: 'transparent',
+                                        border: '1px solid var(--border-color)',
+                                        color: 'var(--text-primary)',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleDelete}
+                                    style={{
+                                        padding: '0.75rem 1.5rem',
+                                        borderRadius: 'var(--radius-md)',
+                                        background: '#ef4444',
+                                        border: 'none',
+                                        color: 'white',
+                                        cursor: 'pointer',
+                                        fontWeight: 'bold'
+                                    }}
+                                >
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+        </form >
+    );
+};

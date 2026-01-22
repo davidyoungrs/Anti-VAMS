@@ -1,0 +1,72 @@
+import React from 'react';
+
+export const Layout = ({ children, activeView, onNavigate }) => {
+  const getItemStyle = (viewName) => ({
+    display: 'block',
+    padding: '0.75rem 1rem',
+    borderRadius: 'var(--radius-md)',
+    backgroundColor: activeView === viewName ? 'rgba(14, 165, 233, 0.1)' : 'transparent',
+    color: activeView === viewName ? 'var(--primary)' : 'var(--text-muted)',
+    textDecoration: 'none',
+    fontWeight: activeView === viewName ? '600' : '400',
+    cursor: 'pointer',
+    transition: 'all 0.2s'
+  });
+
+  return (
+    <div className="dashboard-grid">
+      {/* Sidebar */}
+      <aside className="glass-panel" style={{
+        borderRight: '1px solid var(--border-color)',
+        display: 'flex',
+        flexDirection: 'column',
+        zIndex: 10
+      }}>
+        <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <img src="/logo.png" alt="Logo" style={{ height: '48px', width: 'auto' }} />
+          <h1 style={{
+            margin: 0,
+            fontSize: '1.2rem',
+            background: 'linear-gradient(to right, var(--primary), var(--accent))',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            fontWeight: '800'
+          }}>
+            Global Valve Record
+          </h1>
+        </div>
+
+        <nav style={{ flex: 1, padding: '1rem' }}>
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+            <li style={{ marginBottom: '0.5rem' }}>
+              <a onClick={() => onNavigate('dashboard')} style={getItemStyle('dashboard')}>
+                Dashboard
+              </a>
+            </li>
+            <li style={{ marginBottom: '0.5rem' }}>
+              <a onClick={() => onNavigate('create')} style={getItemStyle('create')}>
+                New Record
+              </a>
+            </li>
+            <li style={{ marginBottom: '0.5rem' }}>
+              <a onClick={() => onNavigate('search')} style={getItemStyle('search')}>
+                Search Records
+              </a>
+            </li>
+          </ul>
+        </nav>
+
+        <div style={{ padding: '1rem', borderTop: '1px solid var(--border-color)' }}>
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+            User: Admin
+          </div>
+        </div>
+      </aside >
+
+      {/* Main Content */}
+      < main className="main-content" >
+        {children}
+      </main >
+    </div >
+  );
+};
