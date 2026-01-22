@@ -24,7 +24,12 @@ function App() {
   }, [currentView]); // Reload when switching views to get fresh data
 
   const handleRecordClick = (record) => {
-    setSelectedRecord(record);
+    // Ensure files array is populated from file_urls if necessary
+    const normalizedRecord = {
+      ...record,
+      files: record.files || record.file_urls || []
+    };
+    setSelectedRecord(normalizedRecord);
     setCurrentView('record-detail');
   };
 
