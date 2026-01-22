@@ -57,8 +57,11 @@ export const Layout = ({ children, activeView, onNavigate }) => {
         </nav>
 
         <div style={{ padding: '1rem', borderTop: '1px solid var(--border-color)' }}>
-          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
             User: Admin
+          </div>
+          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', opacity: 0.8 }}>
+            Copyright © 2026 David Young. All rights reserved.
           </div>
         </div>
       </aside >
@@ -66,6 +69,9 @@ export const Layout = ({ children, activeView, onNavigate }) => {
       {/* Main Content */}
       < main className="main-content" >
         {children}
+        <footer style={{ marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)', textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-muted)', opacity: 0.7 }}>
+          Copyright © 2026 David Young. All rights reserved.
+        </footer>
       </main >
     </div >
   );
