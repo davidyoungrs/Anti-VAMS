@@ -205,31 +205,34 @@ export const RecordForm = ({ initialData, onSave }) => {
                     <FileUpload label="Upload Images or PDFs" onFilesSelected={handleFiles} />
 
                     {files.length > 0 && (
-                        <div className="mt-4">
-                            <h4>Current Files:</h4>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
+                        <div className="mt-4" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
+                            <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                                📎 Attached Files ({files.length})
+                            </h4>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
                                 {files.map((f, i) => {
                                     const isUrl = typeof f === 'string';
                                     const name = isUrl ? f.split('/').pop() : f.name;
                                     const size = isUrl ? '' : `(${Math.round(f.size / 1024)} KB)`;
 
                                     return (
-                                        <div key={i} className="glass-panel" style={{ padding: '0.75rem', fontSize: '0.9rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                            <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={name}>
-                                                {name} {size}
+                                        <div key={i} className="glass-panel" style={{ padding: '0.75rem', fontSize: '0.9rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', border: '1px solid var(--primary-light)' }}>
+                                            <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 'bold' }} title={name}>
+                                                {name}
                                             </div>
-                                            <div className="flex-row" style={{ gap: '0.5rem' }}>
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{size}</div>
+                                            <div className="flex-row" style={{ gap: '0.5rem', marginTop: '0.25rem' }}>
                                                 {isUrl ? (
-                                                    <a href={f} target="_blank" rel="noopener noreferrer" className="btn-secondary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', textDecoration: 'none' }}>
-                                                        View File
+                                                    <a href={f} target="_blank" rel="noopener noreferrer" className="btn-primary" style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', textDecoration: 'none', textAlign: 'center', flex: 1 }}>
+                                                        Browse File
                                                     </a>
                                                 ) : (
-                                                    <span style={{ color: 'var(--primary)', fontWeight: 'bold', fontSize: '0.8rem' }}>Pending Upload</span>
+                                                    <span style={{ color: 'var(--accent)', fontWeight: 'bold', fontSize: '0.8rem', flex: 1 }}>Pending Save</span>
                                                 )}
                                                 <button
                                                     type="button"
                                                     onClick={() => setFiles(prev => prev.filter((_, index) => index !== i))}
-                                                    style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.8rem' }}
+                                                    style={{ background: 'rgba(239, 68, 68, 0.1)', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.8rem', padding: '0.35rem', borderRadius: '4px' }}
                                                 >
                                                     Remove
                                                 </button>

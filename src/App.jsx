@@ -157,8 +157,13 @@ function App() {
                     <div className="flex-row" style={{ justifyContent: 'space-between' }}>
                       <div>
                         <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--primary)' }}>{record.serialNumber}</h4>
-                        <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-                          {record.customer} | {record.oem} | {record.date_in || record.dateIn}
+                        <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                          <span>{record.customer} | {record.oem} | {record.dateIn || record.date_in}</span>
+                          {(record.files?.length > 0 || record.file_urls?.length > 0) && (
+                            <span style={{ color: 'var(--primary)', fontWeight: 'bold' }}>
+                              📎 {(record.files?.length || record.file_urls?.length)} Files
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
