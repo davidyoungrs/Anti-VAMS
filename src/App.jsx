@@ -142,42 +142,56 @@ function App() {
                 filteredRecords.map(record => (
                   <div
                     key={record.id}
-                    className="glass-panel"
+                    className="clickable-card glass-panel"
                     style={{
-                      padding: '1rem',
+                      padding: '1.25rem',
                       borderRadius: 'var(--radius-md)',
                       background: 'var(--bg-surface)',
-                      cursor: 'pointer',
-                      transition: 'transform 0.2s'
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      border: '1px solid transparent'
                     }}
                     onClick={() => handleRecordClick(record)}
-                    onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.01)'}
-                    onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                   >
-                    <div className="flex-row" style={{ justifyContent: 'space-between' }}>
-                      <div>
-                        <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--primary)' }}>{record.serialNumber}</h4>
-                        <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                          <span>{record.customer} | {record.oem} | {record.dateIn || record.date_in}</span>
-                          {(record.files?.length > 0 || record.file_urls?.length > 0) && (
-                            <span style={{ color: 'var(--primary)', fontWeight: 'bold' }}>
-                              📎 {(record.files?.length || record.file_urls?.length)} Files
-                            </span>
-                          )}
-                        </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                        <h4 style={{ margin: 0, color: 'var(--primary)', fontSize: '1.2rem' }}>{record.serialNumber}</h4>
+                        {(record.files?.length > 0 || record.file_urls?.length > 0) && (
+                          <span
+                            title={`${(record.files?.length || record.file_urls?.length)} attachments`}
+                            style={{
+                              fontSize: '0.9rem',
+                              color: 'var(--accent)',
+                              background: 'rgba(245, 158, 11, 0.1)',
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                              fontWeight: '600'
+                            }}
+                          >
+                            📎 {(record.files?.length || record.file_urls?.length)}
+                          </span>
+                        )}
                       </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <span style={{
-                          padding: '0.25rem 0.5rem',
-                          borderRadius: '4px',
-                          background: (record.pass_fail === 'Y' || record.passFail === 'Y') ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
-                          color: (record.pass_fail === 'Y' || record.passFail === 'Y') ? '#10b981' : '#ef4444',
-                          fontSize: '0.8rem',
-                          fontWeight: '600'
-                        }}>
-                          {(record.pass_fail === 'Y' || record.passFail === 'Y') ? 'PASS' : ((record.pass_fail === 'N' || record.passFail === 'N') ? 'FAIL' : 'PENDING')}
-                        </span>
+                      <div className="grid-2" style={{ fontSize: '0.85rem', color: 'var(--text-muted)', gap: '0.5rem 1.5rem' }}>
+                        <div><span style={{ color: 'var(--text-label)' }}>Customer:</span> {record.customer}</div>
+                        <div><span style={{ color: 'var(--text-label)' }}>OEM:</span> {record.oem}</div>
+                        <div><span style={{ color: 'var(--text-label)' }}>Tag:</span> {record.tagNo || 'N/A'}</div>
+                        <div><span style={{ color: 'var(--text-label)' }}>Date In:</span> {record.dateIn || record.date_in}</div>
                       </div>
+                    </div>
+                    <div style={{ marginLeft: '1.5rem' }}>
+                      <span style={{
+                        padding: '0.4rem 1rem',
+                        borderRadius: '20px',
+                        background: (record.pass_fail === 'Y' || record.passFail === 'Y') ? 'rgba(16, 185, 129, 0.2)' : (record.pass_fail === 'N' || record.passFail === 'N' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(148, 163, 184, 0.2)'),
+                        color: (record.pass_fail === 'Y' || record.passFail === 'Y') ? '#4ade80' : (record.pass_fail === 'N' || record.passFail === 'N' ? '#f87171' : '#94a3b8'),
+                        fontSize: '0.85rem',
+                        fontWeight: '700',
+                        border: `1px solid ${(record.pass_fail === 'Y' || record.passFail === 'Y') ? 'rgba(16, 185, 129, 0.3)' : (record.pass_fail === 'N' || record.passFail === 'N' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(148, 163, 184, 0.3)')}`
+                      }}>
+                        {(record.pass_fail === 'Y' || record.passFail === 'Y') ? 'PASS' : (record.pass_fail === 'N' || record.passFail === 'N' ? 'FAIL' : 'PENDING')}
+                      </span>
                     </div>
                   </div>
                 ))
@@ -197,13 +211,17 @@ function App() {
                 </p>
               </div>
               <button
-                className="btn-secondary"
+                className="btn-primary"
                 onClick={handleSync}
                 style={{
-                  background: 'linear-gradient(135deg, var(--primary), var(--accent))',
+                  background: 'linear-gradient(135deg, #f59e0b, #d97706)',
                   color: 'white',
                   border: 'none',
-                  boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
+                  boxShadow: '0 4px 15px rgba(245, 158, 11, 0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontWeight: 'bold'
                 }}
               >
                 ☁️ Sync Local to Cloud
@@ -224,51 +242,58 @@ function App() {
             <div className="mt-4 glass-panel" style={{ padding: '1.5rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)' }}>
               <h3 style={{ marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>Latest Activity</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {records.slice(0, 5).map(record => (
-                  <div
-                    key={record.id}
-                    onClick={() => handleRecordClick(record)}
-                    style={{
-                      padding: '0.75rem 1rem',
-                      borderRadius: 'var(--radius-md)',
-                      background: 'rgba(255,255,255,0.05)',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      border: '1px solid transparent'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.border = '1px solid var(--primary)';
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.border = '1px solid transparent';
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontWeight: 'bold', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        {record.serialNumber}
-                        {(record.files?.length > 0 || record.file_urls?.length > 0) && (
-                          <span title={`${(record.files?.length || record.file_urls?.length)} attachments`} style={{ fontSize: '0.8rem' }}>📎</span>
-                        )}
+                {records
+                  .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt))
+                  .slice(0, 5)
+                  .map(record => (
+                    <div
+                      key={record.id}
+                      onClick={() => handleRecordClick(record)}
+                      className="clickable-card"
+                      style={{
+                        padding: '0.75rem 1rem',
+                        borderRadius: 'var(--radius-md)',
+                        background: 'rgba(255,255,255,0.05)',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        border: '1px solid transparent'
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 'bold', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          {record.serialNumber}
+                          {(record.files?.length > 0 || record.file_urls?.length > 0) && (
+                            <span
+                              title={`${(record.files?.length || record.file_urls?.length)} attachments`}
+                              style={{
+                                fontSize: '0.9rem',
+                                color: 'var(--accent)',
+                                background: 'rgba(245, 158, 11, 0.1)',
+                                padding: '2px 6px',
+                                borderRadius: '4px'
+                              }}
+                            >
+                              📎 {(record.files?.length || record.file_urls?.length)}
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                          {record.customer} | {record.dateIn || record.date_in}
+                        </div>
                       </div>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                        {record.customer} | {record.dateIn || record.date_in}
+                      <div style={{
+                        fontSize: '0.75rem',
+                        padding: '0.2rem 0.6rem',
+                        borderRadius: '4px',
+                        background: (record.pass_fail === 'Y' || record.passFail === 'Y') ? 'rgba(16, 185, 129, 0.2)' : (record.pass_fail === 'N' || record.passFail === 'N' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(148, 163, 184, 0.2)'),
+                        color: (record.pass_fail === 'Y' || record.passFail === 'Y') ? '#4ade80' : (record.pass_fail === 'N' || record.passFail === 'N' ? '#f87171' : '#94a3b8'),
+                        fontWeight: '600'
+                      }}>
+                        {(record.pass_fail === 'Y' || record.passFail === 'Y') ? 'PASS' : (record.pass_fail === 'N' || record.passFail === 'N' ? 'FAIL' : 'PENDING')}
                       </div>
                     </div>
-                    <div style={{
-                      fontSize: '0.75rem',
-                      padding: '0.2rem 0.5rem',
-                      borderRadius: '4px',
-                      background: (record.pass_fail === 'Y' || record.passFail === 'Y') ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                      color: (record.pass_fail === 'Y' || record.passFail === 'Y') ? '#10b981' : '#ef4444'
-                    }}>
-                      {(record.pass_fail === 'Y' || record.passFail === 'Y') ? 'PASS' : 'FAIL/PEND'}
-                    </div>
-                  </div>
-                ))}
+                  ))}
               </div>
             </div>
 
