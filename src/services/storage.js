@@ -114,7 +114,9 @@ export const storageService = {
                         .upload(filePath, file);
 
                     if (uploadError) {
-                        console.error('File upload failed. Ensure bucket "valve-attachment" exists and is public:', uploadError);
+                        const errorMsg = `File upload failed for "${file.name}". Ensure bucket "valve-attachment" exists and public RLS policies are enabled. Error: ${uploadError.message}`;
+                        console.error(errorMsg, uploadError);
+                        alert(errorMsg);
                         return null;
                     }
 
