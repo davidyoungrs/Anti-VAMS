@@ -87,9 +87,15 @@ export const RecordForm = ({ initialData, onSave }) => {
         try {
             const record = { ...formData, files, id: initialData?.id }; // Preserve ID if editing
 
-            await storageService.save(record);
+            const savedRecord = await storageService.save(record);
 
             alert('Record saved successfully!');
+
+            // Update UI with the now-uploaded URLs if we are still editing
+            if (initialData) {
+                setFiles(savedRecord.files);
+            }
+
             if (onSave) onSave();
 
             if (!initialData) {
