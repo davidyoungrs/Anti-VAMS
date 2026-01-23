@@ -224,11 +224,12 @@ export function MapView({ records, onRecordClick, onLocationSelect, hasUnsavedCh
                                 <div style={{ padding: '5px', minWidth: '200px' }}>
                                     <h4 style={{ margin: '0 0 5px 0', color: 'var(--primary)' }}>{record.serialNumber}</h4>
 
+
                                     {/* Photo Preview */}
-                                    {(record.files && record.files.length > 0) || (record.file_urls && record.file_urls.length > 0) ? (
+                                    {(record.valvePhoto || (record.files && record.files.length > 0) || (record.file_urls && record.file_urls.length > 0)) ? (
                                         <div style={{ marginBottom: '10px' }}>
                                             <img
-                                                src={record.files?.[0]?.url || record.file_urls?.[0]}
+                                                src={record.valvePhoto || record.files?.[0]?.url || record.file_urls?.[0]}
                                                 alt="Valve preview"
                                                 style={{
                                                     width: '100%',
