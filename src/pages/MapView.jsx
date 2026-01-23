@@ -220,16 +220,37 @@ export function MapView({ records, onRecordClick, onLocationSelect, hasUnsavedCh
                             position={[record.latitude, record.longitude]}
                             icon={getMarkerIcon(record.passFail || record.pass_fail)}
                         >
-                            <Popup>
-                                <div style={{ padding: '5px' }}>
+                            <Popup maxWidth={250}>
+                                <div style={{ padding: '5px', minWidth: '200px' }}>
                                     <h4 style={{ margin: '0 0 5px 0', color: 'var(--primary)' }}>{record.serialNumber}</h4>
+
+                                    {/* Photo Preview */}
+                                    {(record.files && record.files.length > 0) || (record.file_urls && record.file_urls.length > 0) ? (
+                                        <div style={{ marginBottom: '10px' }}>
+                                            <img
+                                                src={record.files?.[0]?.url || record.file_urls?.[0]}
+                                                alt="Valve preview"
+                                                style={{
+                                                    width: '100%',
+                                                    height: '120px',
+                                                    objectFit: 'cover',
+                                                    borderRadius: '4px',
+                                                    border: '1px solid var(--border-color)'
+                                                }}
+                                                onError={(e) => {
+                                                    e.target.style.display = 'none';
+                                                }}
+                                            />
+                                        </div>
+                                    ) : null}
+
                                     <p style={{ margin: '0 0 10px 0', fontSize: '0.8rem' }}>
                                         {record.customer}<br />
                                         {record.valveType} | {record.sizeClass}
                                     </p>
                                     <button
                                         className="btn-primary"
-                                        style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                                        style={{ padding: '4px 8px', fontSize: '0.75rem', width: '100%' }}
                                         onClick={() => onRecordClick(record)}
                                     >
                                         Open Record
