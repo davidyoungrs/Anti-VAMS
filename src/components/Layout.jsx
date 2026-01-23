@@ -45,7 +45,7 @@ export const Layout = ({ children, activeView, onNavigate }) => {
             </li>
             <li style={{ marginBottom: '0.5rem' }}>
               <a onClick={() => onNavigate('create')} style={getItemStyle('create')}>
-                New Record
+                Add New Record
               </a>
             </li>
             <li style={{ marginBottom: '0.5rem' }}>
