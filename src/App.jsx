@@ -181,8 +181,9 @@ function App() {
                       <div className="grid-2" style={{ fontSize: '0.85rem', color: 'var(--text-muted)', gap: '0.5rem 1.5rem' }}>
                         <div><span style={{ color: 'var(--text-label)' }}>Customer:</span> {record.customer}</div>
                         <div><span style={{ color: 'var(--text-label)' }}>OEM:</span> {record.oem}</div>
-                        <div><span style={{ color: 'var(--text-label)' }}>Tag:</span> {record.tagNo || 'N/A'}</div>
-                        <div><span style={{ color: 'var(--text-label)' }}>Date In:</span> {record.dateIn || record.date_in}</div>
+                        <div><span style={{ color: 'var(--text-label)' }}>Type:</span> {record.valveType || 'N/A'}</div>
+                        <div><span style={{ color: 'var(--text-label)' }}>Size/Class:</span> {record.sizeClass || 'N/A'}</div>
+                        <div style={{ gridColumn: 'span 2' }}><span style={{ color: 'var(--text-label)' }}>Tag:</span> {record.tagNo || 'N/A'}</div>
                       </div>
                     </div>
                     <div style={{ marginLeft: '1.5rem' }}>
