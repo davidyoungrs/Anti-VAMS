@@ -234,7 +234,11 @@ function App() {
             </div>
 
             <div className="grid-3 mt-4">
-              <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)' }}>
+              <div
+                onClick={() => handleNavigate('search')}
+                className="glass-panel clickable-card"
+                style={{ padding: '1.5rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)' }}
+              >
                 <h3 style={{ margin: '0 0 0.5rem 0' }}>Number of Records</h3>
                 <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary)' }}>{stats.total}</div>
               </div>
