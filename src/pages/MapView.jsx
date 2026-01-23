@@ -43,14 +43,14 @@ function LocationPicker({ onLocationSelect }) {
     return null;
 }
 
-export function MapView({ records, onRecordClick }) {
+export function MapView({ records, onRecordClick, onLocationSelect }) {
     const defaultCenter = [51.505, -0.09]; // Default to some center if no records
 
     return (
         <div className="glass-panel" style={{ padding: '1rem', borderRadius: 'var(--radius-lg)', height: '70vh', position: 'relative' }}>
             <h2 className="section-title">Site Map</h2>
             <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>
-                Click anywhere on the map to define coordinates for a new record, or click a pin to view details.
+                {onLocationSelect ? "Click anywhere on the map to SET the location for this valve." : "Click a pin to view valve details."}
             </p>
 
             <MapContainer
@@ -62,6 +62,8 @@ export function MapView({ records, onRecordClick }) {
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 />
+
+                {onLocationSelect && <LocationPicker onLocationSelect={onLocationSelect} />}
 
                 {records.filter(r => r.latitude && r.longitude).map(record => (
                     <Marker

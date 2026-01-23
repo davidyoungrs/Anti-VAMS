@@ -229,6 +229,14 @@ function App() {
               setSelectedRecord(record);
               setCurrentView('record-detail');
             }}
+            onLocationSelect={(latlng) => {
+              if (selectedRecord) {
+                const updated = { ...selectedRecord, latitude: latlng.lat, longitude: latlng.lng };
+                setSelectedRecord(updated);
+                // Also update in the main records list so the pin moves immediately
+                setRecords(prev => prev.map(r => r.id === updated.id ? updated : r));
+              }
+            }}
           />
         );
       case 'dashboard':
