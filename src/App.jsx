@@ -10,6 +10,7 @@ function App() {
   const [records, setRecords] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRecord, setSelectedRecord] = useState(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Load data on mount and view change
   const loadData = async () => {
@@ -37,12 +38,31 @@ function App() {
   };
 
   const handleNavigate = (view, data = null) => {
+    if (hasUnsavedChanges) {
+      if (!window.confirm("You have unsaved location changes. Are you sure you want to leave?")) {
+        return;
+      }
+      setHasUnsavedChanges(false);
+    }
+
     if (data) {
       setSelectedRecord(data);
     } else if (view === 'create') {
       setSelectedRecord(null);
     }
     setCurrentView(view);
+  };
+
+  const handleMapSave = async () => {
+    if (!selectedRecord) return;
+    try {
+      await storageService.save(selectedRecord);
+      setHasUnsavedChanges(false);
+      alert('Location saved successfully!');
+      await loadData();
+    } catch (error) {
+      alert('Failed to save location: ' + error.message);
+    }
   };
 
   const handleSync = async () => {
@@ -225,6 +245,10 @@ function App() {
           <MapView
             records={records}
             onRecordClick={(record) => {
+              if (hasUnsavedChanges) {
+                if (!window.confirm("You have unsaved location changes. Are you sure you want to leave?")) return;
+                setHasUnsavedChanges(false);
+              }
               setSelectedRecord(record);
               setCurrentView('record-detail');
             }}
@@ -234,7 +258,13 @@ function App() {
         return (
           <MapView
             records={selectedRecord ? [selectedRecord] : []}
+            hasUnsavedChanges={hasUnsavedChanges}
+            onSave={handleMapSave}
             onRecordClick={(record) => {
+              if (hasUnsavedChanges) {
+                if (!window.confirm("You have unsaved location changes. Are you sure you want to leave?")) return;
+                setHasUnsavedChanges(false);
+              }
               setSelectedRecord(record);
               setCurrentView('record-detail');
             }}
@@ -242,6 +272,7 @@ function App() {
               if (selectedRecord) {
                 const updated = { ...selectedRecord, latitude: latlng.lat, longitude: latlng.lng };
                 setSelectedRecord(updated);
+                setHasUnsavedChanges(true);
                 // Also update in the main records list so the pin moves immediately
                 setRecords(prev => prev.map(r => r.id === updated.id ? updated : r));
               }

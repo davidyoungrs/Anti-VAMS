@@ -81,7 +81,7 @@ function SearchControl({ onLocationFound }) {
     );
 }
 
-export function MapView({ records, onRecordClick, onLocationSelect }) {
+export function MapView({ records, onRecordClick, onLocationSelect, hasUnsavedChanges, onSave }) {
     const [mapType, setMapType] = React.useState('standard');
     const defaultCenter = [51.505, -0.09];
 
@@ -94,13 +94,28 @@ export function MapView({ records, onRecordClick, onLocationSelect }) {
                         {onLocationSelect ? "Click anywhere on the map to SET the location for this valve." : "Click a pin to view valve details."}
                     </p>
                 </div>
-                <button
-                    className="btn-secondary"
-                    onClick={() => setMapType(mapType === 'standard' ? 'satellite' : 'standard')}
-                    style={{ padding: '8px 15px' }}
-                >
-                    {mapType === 'standard' ? '🛰️ Switch to Satellite' : '🗺️ Switch to Standard'}
-                </button>
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    {hasUnsavedChanges && (
+                        <button
+                            className="btn-primary"
+                            onClick={onSave}
+                            style={{
+                                padding: '8px 20px',
+                                background: 'linear-gradient(135deg, #10b981, #059669)',
+                                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+                            }}
+                        >
+                            Confirm & Save Location
+                        </button>
+                    )}
+                    <button
+                        className="btn-secondary"
+                        onClick={() => setMapType(mapType === 'standard' ? 'satellite' : 'standard')}
+                        style={{ padding: '8px 15px' }}
+                    >
+                        {mapType === 'standard' ? '🛰️ Switch to Satellite' : '🗺️ Switch to Standard'}
+                    </button>
+                </div>
             </div>
 
             <div style={{ position: 'relative', height: 'calc(100% - 80px)' }}>
