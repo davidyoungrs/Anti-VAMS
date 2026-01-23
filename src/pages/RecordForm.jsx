@@ -134,6 +134,52 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
                         <Input label="Order No" name="orderNo" value={formData.orderNo} onChange={handleChange} />
                         <Input label="Plant Area" name="plantArea" value={formData.plantArea} onChange={handleChange} />
                         <Input label="Site Location" name="siteLocation" value={formData.siteLocation} onChange={handleChange} />
+
+                        {/* Valve Photo Section */}
+                        <div style={{ gridColumn: 'span 2', marginTop: '1rem', padding: '1rem', background: 'var(--bg-card)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+                            <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: 'var(--text-muted)' }}>📸 Valve Identification Photo</h4>
+                            <p style={{ margin: '0 0 1rem 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                Upload a photo of the valve for visual identification on the map and record.
+                            </p>
+
+                            {formData.valvePhoto && (
+                                <div style={{ marginBottom: '1rem' }}>
+                                    <img
+                                        src={typeof formData.valvePhoto === 'string' ? formData.valvePhoto : URL.createObjectURL(formData.valvePhoto)}
+                                        alt="Valve preview"
+                                        style={{
+                                            width: '100%',
+                                            maxWidth: '300px',
+                                            height: '200px',
+                                            objectFit: 'cover',
+                                            borderRadius: 'var(--radius-md)',
+                                            border: '2px solid var(--primary)'
+                                        }}
+                                    />
+                                </div>
+                            )}
+
+                            <input
+                                type="file"
+                                accept="image/*"
+                                id="valve-photo-input"
+                                style={{ display: 'none' }}
+                                onChange={(e) => {
+                                    if (e.target.files && e.target.files[0]) {
+                                        setFormData(prev => ({ ...prev, valvePhoto: e.target.files[0] }));
+                                    }
+                                }}
+                            />
+                            <button
+                                type="button"
+                                className="btn-secondary"
+                                onClick={() => document.getElementById('valve-photo-input').click()}
+                                style={{ width: '100%' }}
+                            >
+                                {formData.valvePhoto ? '📷 Change Photo' : '📷 Upload Photo'}
+                            </button>
+                        </div>
+
                         <Input type="number" step="any" label="Latitude (GPS)" name="latitude" value={formData.latitude} onChange={handleChange} placeholder="e.g. 51.505" />
                         <Input type="number" step="any" label="Longitude (GPS)" name="longitude" value={formData.longitude} onChange={handleChange} placeholder="e.g. -0.09" />
 

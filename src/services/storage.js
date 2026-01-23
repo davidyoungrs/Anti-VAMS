@@ -66,6 +66,7 @@ export const storageService = {
                         status: r.status,
                         latitude: r.latitude,
                         longitude: r.longitude,
+                        valvePhoto: r.valve_photo,
                         files: r.file_urls || []
                     }));
 
@@ -102,7 +103,41 @@ export const storageService = {
         }
         localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
 
-        // 3. Handle File Uploads (Online only)
+        // 3. Handle Valve Photo Upload (Online only)
+        if (supabase && finalRecord.valvePhoto && typeof finalRecord.valvePhoto !== 'string') {
+            try {
+                const file = finalRecord.valvePhoto;
+                const fileExt = file.name.split('.').pop();
+                const filePath = `${finalRecord.id}/valve-photo-${crypto.randomUUID()}.${fileExt}`;
+
+                const { error: uploadError } = await supabase.storage
+                    .from('valve-attachment')
+                    .upload(filePath, file);
+
+                if (uploadError) {
+                    console.error('Valve photo upload failed:', uploadError);
+                    alert(`Valve photo upload failed: ${uploadError.message}`);
+                } else {
+                    const { data: { publicUrl } } = supabase.storage
+                        .from('valve-attachment')
+                        .getPublicUrl(filePath);
+
+                    finalRecord.valvePhoto = publicUrl;
+
+                    // Update local storage with the new URL
+                    const updatedRecords = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+                    const idx = updatedRecords.findIndex(r => r.id === finalRecord.id);
+                    if (idx !== -1) {
+                        updatedRecords[idx].valvePhoto = publicUrl;
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedRecords));
+                    }
+                }
+            } catch (e) {
+                console.error('Error during valve photo upload:', e);
+            }
+        }
+
+        // 4. Handle File Uploads (Online only)
         if (supabase && finalRecord.files && finalRecord.files.length > 0) {
             try {
                 const uploadedUrls = await Promise.all(finalRecord.files.map(async (file) => {
@@ -189,6 +224,7 @@ export const storageService = {
                         test_medium: finalRecord.testMedium,
                         latitude: finalRecord.latitude,
                         longitude: finalRecord.longitude,
+                        valve_photo: finalRecord.valvePhoto,
                         file_urls: finalRecord.files || []
                     });
 
