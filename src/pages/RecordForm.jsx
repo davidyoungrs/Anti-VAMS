@@ -135,23 +135,7 @@ export const RecordForm = ({ initialData, onSave }) => {
                     </div>
                 </div>
 
-                {/* Section 2: Dates & Checks */}
-                <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)', gridColumn: '1 / -1' }}>
-                    <h3 className="section-title">Status & Dates</h3>
-                    <div className="grid-2">
-                        <Input type="date" label="Date In" name="dateIn" value={formData.dateIn} onChange={handleChange} />
-                        <Input type="date" label="Required Date" name="requiredDate" value={formData.requiredDate} onChange={handleChange} />
-                        <Input label="Safety Check" name="safetyCheck" value={formData.safetyCheck} onChange={handleChange} />
-                        <Select label="Decontamination Cert" name="decontaminationCert" value={formData.decontaminationCert} onChange={handleChange} options={['Y', 'N']} />
-
-                        <div style={{ gridColumn: 'span 2' }}>
-                            <Checkbox label="LSA Check" name="lsaCheck" checked={formData.lsaCheck} onChange={handleChange} />
-                            <Checkbox label="Seized Mid Stroke" name="seizedMidStroke" checked={formData.seizedMidStroke} onChange={handleChange} />
-                        </div>
-                    </div>
-                </div>
-
-                {/* Section 3: Specifications */}
+                {/* Section 2: Specifications */}
                 <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)', gridColumn: '1 / -1' }}>
                     <h3 className="section-title">Specifications</h3>
                     <div className="grid-3">
@@ -173,6 +157,22 @@ export const RecordForm = ({ initialData, onSave }) => {
                         <Input label="Actuator" name="actuator" value={formData.actuator} onChange={handleChange} />
                         <Input label="Gear Operator" name="gearOperator" value={formData.gearOperator} onChange={handleChange} />
                         <Input label="Fail Mode" name="failMode" value={formData.failMode} onChange={handleChange} />
+                    </div>
+                </div>
+
+                {/* Section 3: Dates & Checks */}
+                <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)', gridColumn: '1 / -1' }}>
+                    <h3 className="section-title">Status & Dates</h3>
+                    <div className="grid-2">
+                        <Input type="date" label="Date In" name="dateIn" value={formData.dateIn} onChange={handleChange} />
+                        <Input type="date" label="Required Date" name="requiredDate" value={formData.requiredDate} onChange={handleChange} />
+                        <Input label="Safety Check" name="safetyCheck" value={formData.safetyCheck} onChange={handleChange} />
+                        <Select label="Decontamination Cert" name="decontaminationCert" value={formData.decontaminationCert} onChange={handleChange} options={['Y', 'N']} />
+
+                        <div style={{ gridColumn: 'span 2' }}>
+                            <Checkbox label="LSA Check" name="lsaCheck" checked={formData.lsaCheck} onChange={handleChange} />
+                            <Checkbox label="Seized Mid Stroke" name="seizedMidStroke" checked={formData.seizedMidStroke} onChange={handleChange} />
+                        </div>
                     </div>
                 </div>
 
