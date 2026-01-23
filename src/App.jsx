@@ -182,8 +182,9 @@ function App() {
                         <div><span style={{ color: 'var(--text-label)' }}>Customer:</span> {record.customer}</div>
                         <div><span style={{ color: 'var(--text-label)' }}>OEM:</span> {record.oem}</div>
                         <div><span style={{ color: 'var(--text-label)' }}>Type:</span> {record.valveType || 'N/A'}</div>
-                        <div><span style={{ color: 'var(--text-label)' }}>Size/Class:</span> {record.sizeClass || 'N/A'}</div>
-                        <div style={{ gridColumn: 'span 2' }}><span style={{ color: 'var(--text-label)' }}>Tag:</span> {record.tagNo || 'N/A'}</div>
+                        <div><span style={{ color: 'var(--text-label)' }}>Size:</span> {record.sizeClass || 'N/A'}</div>
+                        <div><span style={{ color: 'var(--text-label)' }}>Class:</span> {record.mawp || 'N/A'}</div>
+                        <div><span style={{ color: 'var(--text-label)' }}>Tag:</span> {record.tagNo || 'N/A'}</div>
                       </div>
                     </div>
                     <div style={{ marginLeft: '1.5rem' }}>
@@ -289,7 +290,7 @@ function App() {
                           )}
                         </div>
                         <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                          {record.customer} | {record.oem} | {record.valveType || 'N/A'} | {record.sizeClass || 'N/A'}
+                          {record.customer} | {record.oem} | {record.valveType || 'N/A'} | {record.sizeClass || 'N/A'} | {record.mawp || 'N/A'}
                         </div>
                       </div>
                       <div style={{

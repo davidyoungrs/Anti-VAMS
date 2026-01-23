@@ -141,7 +141,7 @@ export const RecordForm = ({ initialData, onSave }) => {
                     <div className="grid-3">
                         <Input label="Make (Model No)" name="modelNo" value={formData.modelNo} onChange={handleChange} />
                         <Input label="Valve Type" name="valveType" value={formData.valveType} onChange={handleChange} />
-                        <Input label="Size Class" name="sizeClass" value={formData.sizeClass} onChange={handleChange} />
+                        <Input label="Valve Size" name="sizeClass" value={formData.sizeClass} onChange={handleChange} />
                         <Input label="Packing Type" name="packingType" value={formData.packingType} onChange={handleChange} />
                         <Select
                             label="End Connection"
@@ -150,7 +150,7 @@ export const RecordForm = ({ initialData, onSave }) => {
                             onChange={handleChange}
                             options={['FF', 'RF', 'RTJ', 'BW', 'SW', 'Threaded', 'Hub / Clamp', 'Compression']}
                         />
-                        <Input label="MAWP" name="mawp" value={formData.mawp} onChange={handleChange} />
+                        <Input label="Pressure Class" name="mawp" value={formData.mawp} onChange={handleChange} />
 
                         <Input label="Body Material" name="bodyMaterial" value={formData.bodyMaterial} onChange={handleChange} />
                         <Input label="Seat Material" name="seatMaterial" value={formData.seatMaterial} onChange={handleChange} />
