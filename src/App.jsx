@@ -12,17 +12,19 @@ function App() {
   const [selectedRecord, setSelectedRecord] = useState(null);
 
   // Load data on mount and view change
+  const loadData = async () => {
+    const allRecords = await storageService.getAll();
+    setStats({
+      total: allRecords.length,
+      testPending: allRecords.filter(r => !r.testDate).length
+    });
+    setRecords(allRecords);
+  };
+
+  // Load data on mount
   React.useEffect(() => {
-    const loadData = async () => {
-      const allRecords = await storageService.getAll();
-      setStats({
-        total: allRecords.length,
-        testPending: allRecords.filter(r => !r.testDate).length
-      });
-      setRecords(allRecords);
-    };
     loadData();
-  }, [currentView]); // Reload when switching views to get fresh data
+  }, []); // Only load on mount
 
   const handleRecordClick = (record) => {
     // Ensure files array is populated from file_urls if necessary
@@ -34,11 +36,13 @@ function App() {
     setCurrentView('record-detail');
   };
 
-  const handleNavigate = (view) => {
-    setCurrentView(view);
-    if (view === 'create') {
-      setSelectedRecord(null); // Clear selected if creating new
+  const handleNavigate = (view, data = null) => {
+    if (data) {
+      setSelectedRecord(data);
+    } else if (view === 'create') {
+      setSelectedRecord(null);
     }
+    setCurrentView(view);
   };
 
   const handleSync = async () => {
@@ -115,12 +119,17 @@ function App() {
     e.target.value = null; // Reset input
   };
 
+  const handleSave = async () => {
+    await loadData();
+    setCurrentView('dashboard');
+  };
+
   const renderContent = () => {
     switch (currentView) {
       case 'create':
-        return <RecordForm key="create" onSave={() => setCurrentView('dashboard')} onNavigate={setCurrentView} />;
+        return <RecordForm key="create" onSave={handleSave} onNavigate={handleNavigate} />;
       case 'record-detail':
-        return <RecordForm key={selectedRecord?.id || 'detail'} initialData={selectedRecord} onSave={() => setCurrentView('dashboard')} onNavigate={setCurrentView} />;
+        return <RecordForm key={selectedRecord?.id || 'detail'} initialData={selectedRecord} onSave={handleSave} onNavigate={handleNavigate} />;
       case 'search':
         // Handle search filtering client side on the loaded records
         const filteredRecords = records.filter(r =>
@@ -389,9 +398,9 @@ function App() {
   };
 
   return (
-    <Layout activeView={currentView} onNavigate={handleNavigate}>
+    <Layout activeView={currentView} onNavigate={handleNavigate} >
       {renderContent()}
-    </Layout>
+    </Layout >
   );
 }
 
