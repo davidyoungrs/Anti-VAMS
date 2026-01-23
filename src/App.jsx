@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Layout } from './components/Layout';
 import { RecordForm } from './pages/RecordForm';
 import { MapView } from './pages/MapView';
+import InspectionForm from './pages/InspectionForm';
+import InspectionList from './pages/InspectionList';
 import { storageService } from './services/storage';
 
 function App() {
@@ -11,6 +13,7 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [inspectionData, setInspectionData] = useState(null); // { valveId, inspectionId }
 
   // Load data on mount and view change
   const loadData = async () => {
@@ -276,6 +279,33 @@ function App() {
                 // Also update in the main records list so the pin moves immediately
                 setRecords(prev => prev.map(r => r.id === updated.id ? updated : r));
               }
+            }}
+          />
+        );
+      case 'inspection-form':
+        return (
+          <InspectionForm
+            valveId={inspectionData?.valveId}
+            inspectionId={inspectionData?.inspectionId}
+            onBack={() => {
+              setCurrentView('inspection-list');
+            }}
+            onSave={() => {
+              setCurrentView('inspection-list');
+            }}
+          />
+        );
+      case 'inspection-list':
+        return (
+          <InspectionList
+            valveId={inspectionData?.valveId || selectedRecord?.id}
+            onEdit={(inspectionId) => {
+              setInspectionData({ valveId: selectedRecord?.id, inspectionId });
+              setCurrentView('inspection-form');
+            }}
+            onNewInspection={() => {
+              setInspectionData({ valveId: selectedRecord?.id, inspectionId: null });
+              setCurrentView('inspection-form');
             }}
           />
         );

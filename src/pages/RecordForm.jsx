@@ -118,7 +118,33 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
                 <h2 className="section-title" style={{ margin: 0, border: 'none' }}>
                     {initialData ? 'Edit Valve Record' : 'New Valve Record'}
                 </h2>
-                <button type="submit" className="btn-primary">Save Record</button>
+                <div style={{ display: 'flex', gap: '1rem' }}>
+                    {initialData && initialData.id && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                if (onNavigate) {
+                                    onNavigate('inspection-list', initialData);
+                                }
+                            }}
+                            style={{
+                                padding: '0.75rem 1.5rem',
+                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: 'var(--radius-md)',
+                                cursor: 'pointer',
+                                fontWeight: 'bold',
+                                transition: 'transform 0.2s'
+                            }}
+                            onMouseEnter={(e) => e.target.style.transform = 'translateY(-2px)'}
+                            onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
+                        >
+                            🔍 View Inspections
+                        </button>
+                    )}
+                    <button type="submit" className="btn-primary">Save Record</button>
+                </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '2rem' }}>
