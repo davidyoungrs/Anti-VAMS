@@ -118,9 +118,9 @@ function App() {
   const renderContent = () => {
     switch (currentView) {
       case 'create':
-        return <RecordForm key="create" onSave={() => setCurrentView('dashboard')} />;
+        return <RecordForm key="create" onSave={() => setCurrentView('dashboard')} onNavigate={setCurrentView} />;
       case 'record-detail':
-        return <RecordForm key={selectedRecord?.id || 'detail'} initialData={selectedRecord} onSave={() => setCurrentView('dashboard')} />;
+        return <RecordForm key={selectedRecord?.id || 'detail'} initialData={selectedRecord} onSave={() => setCurrentView('dashboard')} onNavigate={setCurrentView} />;
       case 'search':
         // Handle search filtering client side on the loaded records
         const filteredRecords = records.filter(r =>
@@ -215,6 +215,16 @@ function App() {
         return (
           <MapView
             records={records}
+            onRecordClick={(record) => {
+              setSelectedRecord(record);
+              setCurrentView('record-detail');
+            }}
+          />
+        );
+      case 'single-map':
+        return (
+          <MapView
+            records={selectedRecord ? [selectedRecord] : []}
             onRecordClick={(record) => {
               setSelectedRecord(record);
               setCurrentView('record-detail');

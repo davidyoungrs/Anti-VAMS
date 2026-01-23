@@ -5,7 +5,7 @@ import { Checkbox } from '../components/ui/Checkbox';
 import { FileUpload } from '../components/ui/FileUpload';
 import { storageService } from '../services/storage';
 
-export const RecordForm = ({ initialData, onSave }) => {
+export const RecordForm = ({ initialData, onSave, onNavigate }) => {
     const [formData, setFormData] = useState({
         serialNumber: '',
         jobNo: '',
@@ -136,6 +136,37 @@ export const RecordForm = ({ initialData, onSave }) => {
                         <Input label="Site Location" name="siteLocation" value={formData.siteLocation} onChange={handleChange} />
                         <Input type="number" step="any" label="Latitude (GPS)" name="latitude" value={formData.latitude} onChange={handleChange} placeholder="e.g. 51.505" />
                         <Input type="number" step="any" label="Longitude (GPS)" name="longitude" value={formData.longitude} onChange={handleChange} placeholder="e.g. -0.09" />
+
+                        <div style={{ gridColumn: 'span 2', display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                            <button
+                                type="button"
+                                className="btn-secondary"
+                                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                onClick={() => {
+                                    if (navigator.geolocation) {
+                                        navigator.geolocation.getCurrentPosition((position) => {
+                                            setFormData(prev => ({
+                                                ...prev,
+                                                latitude: position.coords.latitude,
+                                                longitude: position.coords.longitude
+                                            }));
+                                        }, (err) => alert("Could not get location: " + err.message));
+                                    } else {
+                                        alert("Geolocation is not supported by your browser");
+                                    }
+                                }}
+                            >
+                                📍 Get Precise Location
+                            </button>
+                            <button
+                                type="button"
+                                className="btn-secondary"
+                                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                onClick={() => onNavigate('single-map')}
+                            >
+                                🗺️ View on Site Map
+                            </button>
+                        </div>
                     </div>
                 </div>
 
