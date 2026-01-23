@@ -58,6 +58,9 @@ export const Layout = ({ children, activeView, onNavigate }) => {
                 Site Map
               </a>
             </li>
+            <li style={{ marginBottom: '0.5rem' }}>
+              <a href="https://thevalve.pro" style={getItemStyle('TheValve.pro')} target="_blank" rel="noopener noreferrer" > Site Map </a>
+            </li>
           </ul>
         </nav>
 

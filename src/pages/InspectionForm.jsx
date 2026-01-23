@@ -94,16 +94,17 @@ export default function InspectionForm({ valveId, inspectionId, onBack, onSave }
 
     // Group components by category for better UX
     const componentGroups = {
-        'Operator Components': [
-            'bearingCap', 'capscrews', 'stemNut', 'upperBearing', 'lowerBearing',
-            'greaseFitting', 'handwheelOring', 'handwheel', 'stemProtectorAssembly',
-            'indicatorRod', 'rodWiper', 'bevelGearOperator', 'stemProtector',
-            'pipeCap', 'indicatorRod2', 'rodWiper2'
-        ],
+
+
         'Body & Bonnet': [
-            'bodyBonnetStuds', 'bodyBonnetNuts', 'yokeBonnetStuds', 'yokeBonnetNuts',
-            'body', 'bonnet', 'yokeTube'
+            'bonnet', 'body', 'bodyBonnetStuds', 'bodyBonnetNuts', 'yokeBonnetStuds', 'yokeBonnetNuts',
+            'yokeTube'
         ],
+
+        'Internal Components': [
+            'gateSegmentAssembly', 'stem', 'seatAssembly', 'gateSkirt', 'seatSkirt'
+        ],
+
         'Fittings & Accessories': [
             'packingInjection', 'ventFittings', 'greaseFittings', 'reliefValve',
             'nippleRV', 'elbow'
@@ -111,9 +112,14 @@ export default function InspectionForm({ valveId, inspectionId, onBack, onSave }
         'Seals & Packing': [
             'bodyBonnetSeal', 'seatRearOrings', 'yokeTubeGasket', 'packingSet'
         ],
-        'Internal Components': [
-            'gateSegmentAssembly', 'stem', 'seatAssembly', 'gateSkirt', 'seatSkirt'
+
+        'Operator Components': [
+            'bearingCap', 'capscrews', 'stemNut', 'upperBearing', 'lowerBearing',
+            'greaseFitting', 'handwheelOring', 'handwheel', 'stemProtectorAssembly',
+            'indicatorRod', 'rodWiper', 'bevelGearOperator', 'stemProtector',
+            'pipeCap', 'indicatorRod2', 'rodWiper2'
         ],
+
         'Other': ['other']
     };
 
