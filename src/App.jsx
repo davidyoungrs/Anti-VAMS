@@ -125,7 +125,11 @@ function App() {
         const filteredRecords = records.filter(r =>
           r.serialNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
           r.customer?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          r.oem?.toLowerCase().includes(searchQuery.toLowerCase())
+          r.oem?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          r.valveType?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          r.sizeClass?.toString().toLowerCase().includes(searchQuery.toLowerCase()) ||
+          r.mawp?.toString().toLowerCase().includes(searchQuery.toLowerCase()) ||
+          r.tagNo?.toLowerCase().includes(searchQuery.toLowerCase())
         );
         return (
           <div className="glass-panel" style={{ padding: '2rem', borderRadius: 'var(--radius-lg)' }}>
@@ -133,7 +137,7 @@ function App() {
             <div className="mb-4">
               <input
                 type="text"
-                placeholder="Search by Serial No, Customer, or OEM..."
+                placeholder="Search by Serial No, Customer, OEM, Type, Size, Class, or Tag..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{ fontSize: '1.2rem', padding: '1rem' }}
