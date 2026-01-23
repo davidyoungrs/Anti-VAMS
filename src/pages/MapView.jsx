@@ -37,9 +37,43 @@ const getMarkerIcon = (status) => {
 function LocationPicker({ onLocationSelect }) {
     useMapEvents({
         click(e) {
-            onLocationSelect(e.latlng);
+            onLocationSelect?.(e.latlng);
         },
     });
+    return null;
+}
+
+function UserLocationTracker({ isFollowing, onLocationUpdate }) {
+    const map = useMapEvents({});
+
+    React.useEffect(() => {
+        if (!navigator.geolocation) return;
+
+        let watchId;
+        const success = (pos) => {
+            const { latitude, longitude } = pos.coords;
+            const latlng = [latitude, longitude];
+            onLocationUpdate(latlng);
+            if (isFollowing) {
+                map.flyTo(latlng, map.getZoom());
+            }
+        };
+
+        const error = (err) => {
+            console.error("GPS Tracking Error:", err);
+        };
+
+        watchId = navigator.geolocation.watchPosition(success, error, {
+            enableHighAccuracy: true,
+            maximumAge: 5000,
+            timeout: 10000
+        });
+
+        return () => {
+            if (watchId) navigator.geolocation.clearWatch(watchId);
+        };
+    }, [isFollowing, map, onLocationUpdate]);
+
     return null;
 }
 
@@ -83,6 +117,8 @@ function SearchControl({ onLocationFound }) {
 
 export function MapView({ records, onRecordClick, onLocationSelect, hasUnsavedChanges, onSave }) {
     const [mapType, setMapType] = React.useState('standard');
+    const [userLocation, setUserLocation] = React.useState(null);
+    const [isFollowing, setIsFollowing] = React.useState(false);
     const defaultCenter = [51.505, -0.09];
 
     return (
@@ -110,6 +146,18 @@ export function MapView({ records, onRecordClick, onLocationSelect, hasUnsavedCh
                     )}
                     <button
                         className="btn-secondary"
+                        onClick={() => setIsFollowing(!isFollowing)}
+                        style={{
+                            padding: '8px 15px',
+                            background: isFollowing ? 'var(--primary)' : 'var(--bg-card)',
+                            color: isFollowing ? 'white' : 'var(--text-primary)',
+                            border: isFollowing ? 'none' : '1px solid var(--border-color)'
+                        }}
+                    >
+                        {isFollowing ? '🛑 Stop Following' : '🛰️ Follow Me'}
+                    </button>
+                    <button
+                        className="btn-secondary"
                         onClick={() => setMapType(mapType === 'standard' ? 'satellite' : 'standard')}
                         style={{ padding: '8px 15px' }}
                     >
@@ -125,6 +173,8 @@ export function MapView({ records, onRecordClick, onLocationSelect, hasUnsavedCh
                     style={{ height: '100%', width: '100%', borderRadius: 'var(--radius-md)' }}
                 >
                     <SearchControl />
+                    <UserLocationTracker isFollowing={isFollowing} onLocationUpdate={setUserLocation} />
+
                     {mapType === 'standard' ? (
                         <TileLayer
                             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -138,6 +188,31 @@ export function MapView({ records, onRecordClick, onLocationSelect, hasUnsavedCh
                     )}
 
                     {onLocationSelect && <LocationPicker onLocationSelect={onLocationSelect} />}
+
+                    {userLocation && (
+                        <Marker
+                            position={userLocation}
+                            icon={L.divIcon({
+                                className: 'user-location-marker',
+                                html: `
+                                    <div style="position: relative;">
+                                        <div style="width: 16px; height: 16px; background: #3b82f6; border: 3px solid white; border-radius: 50%; box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);"></div>
+                                        <div style="position: absolute; top: -4px; left: -4px; width: 24px; height: 24px; background: rgba(59, 130, 246, 0.3); border-radius: 50%; animation: pulse 2s infinite;"></div>
+                                    </div>
+                                    <style>
+                                        @keyframes pulse {
+                                            0% { transform: scale(1); opacity: 1; }
+                                            100% { transform: scale(2); opacity: 0; }
+                                        }
+                                    </style>
+                                `,
+                                iconSize: [24, 24],
+                                iconAnchor: [12, 12]
+                            })}
+                        >
+                            <Popup>You are here</Popup>
+                        </Marker>
+                    )}
 
                     {records.filter(r => r.latitude && r.longitude).map(record => (
                         <Marker
