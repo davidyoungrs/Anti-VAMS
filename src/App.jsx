@@ -289,7 +289,7 @@ function App() {
                           )}
                         </div>
                         <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                          {record.customer} | {record.dateIn || record.date_in}
+                          {record.customer} | {record.oem} | {record.valveType || 'N/A'} | {record.sizeClass || 'N/A'}
                         </div>
                       </div>
                       <div style={{
