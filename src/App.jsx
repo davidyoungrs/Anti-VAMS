@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Layout } from './components/Layout';
 import { RecordForm } from './pages/RecordForm';
+import { MapView } from './pages/MapView';
 import { storageService } from './services/storage';
 
 function App() {
@@ -209,6 +210,16 @@ function App() {
               )}
             </div>
           </div>
+        );
+      case 'map':
+        return (
+          <MapView
+            records={records}
+            onRecordClick={(record) => {
+              setSelectedRecord(record);
+              setCurrentView('record-detail');
+            }}
+          />
         );
       case 'dashboard':
       default:

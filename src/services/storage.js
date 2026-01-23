@@ -64,6 +64,8 @@ export const storageService = {
                         testMedium: r.test_medium,
                         passFail: r.pass_fail,
                         status: r.status,
+                        latitude: r.latitude,
+                        longitude: r.longitude,
                         files: r.file_urls || []
                     }));
 
@@ -185,6 +187,8 @@ export const storageService = {
                         tested_by: finalRecord.testedBy,
                         test_date: finalRecord.testDate,
                         test_medium: finalRecord.testMedium,
+                        latitude: finalRecord.latitude,
+                        longitude: finalRecord.longitude,
                         file_urls: finalRecord.files || []
                     });
 
@@ -276,6 +280,8 @@ export const storageService = {
                 tested_by: r.testedBy,
                 test_date: r.testDate,
                 test_medium: r.testMedium,
+                latitude: r.latitude,
+                longitude: r.longitude,
                 file_urls: r.files || []
             })));
 

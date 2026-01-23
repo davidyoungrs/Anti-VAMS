@@ -41,7 +41,9 @@ export const RecordForm = ({ initialData, onSave }) => {
         testedBy: '',
         testDate: '',
         testMedium: '',
-        passFail: ''
+        passFail: '',
+        latitude: '',
+        longitude: ''
     });
 
     const [files, setFiles] = useState([]);
@@ -132,6 +134,8 @@ export const RecordForm = ({ initialData, onSave }) => {
                         <Input label="Order No" name="orderNo" value={formData.orderNo} onChange={handleChange} />
                         <Input label="Plant Area" name="plantArea" value={formData.plantArea} onChange={handleChange} />
                         <Input label="Site Location" name="siteLocation" value={formData.siteLocation} onChange={handleChange} />
+                        <Input type="number" step="any" label="Latitude (GPS)" name="latitude" value={formData.latitude} onChange={handleChange} placeholder="e.g. 51.505" />
+                        <Input type="number" step="any" label="Longitude (GPS)" name="longitude" value={formData.longitude} onChange={handleChange} placeholder="e.g. -0.09" />
                     </div>
                 </div>
 
