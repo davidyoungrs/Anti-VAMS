@@ -143,7 +143,13 @@ export const RecordForm = ({ initialData, onSave }) => {
                         <Input label="Valve Type" name="valveType" value={formData.valveType} onChange={handleChange} />
                         <Input label="Size Class" name="sizeClass" value={formData.sizeClass} onChange={handleChange} />
                         <Input label="Packing Type" name="packingType" value={formData.packingType} onChange={handleChange} />
-                        <Input label="Flange Type" name="flangeType" value={formData.flangeType} onChange={handleChange} />
+                        <Select
+                            label="End Connection"
+                            name="flangeType"
+                            value={formData.flangeType}
+                            onChange={handleChange}
+                            options={['FF', 'RF', 'RTJ', 'BW', 'SW', 'Threaded', 'Hub / Clamp', 'Compression']}
+                        />
                         <Input label="MAWP" name="mawp" value={formData.mawp} onChange={handleChange} />
 
                         <Input label="Body Material" name="bodyMaterial" value={formData.bodyMaterial} onChange={handleChange} />
