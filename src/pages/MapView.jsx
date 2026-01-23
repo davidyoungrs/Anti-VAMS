@@ -2,8 +2,6 @@ import React from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import 'leaflet.heat';
-import { useMap } from 'react-leaflet';
 
 // Fix for default marker icons in Leaflet with React
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
@@ -36,123 +34,12 @@ const getMarkerIcon = (status) => {
     });
 };
 
-function MapViewHeader({
-    onLocationSelect,
-    hasUnsavedChanges,
-    onSave,
-    isFollowing,
-    setIsFollowing,
-    mapType,
-    setMapType,
-    showHeatmap,
-    setShowHeatmap,
-    zoneFilter,
-    setZoneFilter,
-    availableZones
-}) {
-    return (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
-            <div style={{ flex: 1, minWidth: '300px' }}>
-                <h2 className="section-title" style={{ margin: 0 }}>Site Map</h2>
-                <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.9rem' }}>
-                    {onLocationSelect ? "Click anywhere on the map to SET the location for this valve." : "Filter by zone or toggle heatmap to analyze performance."}
-                </p>
-
-                {!onLocationSelect && (
-                    <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                        <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Filter Zone:</label>
-                        <select
-                            value={zoneFilter}
-                            onChange={(e) => setZoneFilter(e.target.value)}
-                            style={{
-                                padding: '6px 12px',
-                                borderRadius: '4px',
-                                border: '1px solid var(--border-color)',
-                                background: 'var(--bg-card)',
-                                color: 'var(--text-primary)',
-                                fontSize: '0.85rem'
-                            }}
-                        >
-                            <option value="all">All Plant Areas</option>
-                            {availableZones.map(zone => (
-                                <option key={zone} value={zone}>{zone}</option>
-                            ))}
-                        </select>
-                    </div>
-                )}
-            </div>
-
-            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                {hasUnsavedChanges && (
-                    <button
-                        className="btn-primary"
-                        onClick={onSave}
-                        style={{
-                            padding: '8px 20px',
-                            background: 'linear-gradient(135deg, #10b981, #059669)',
-                            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
-                        }}
-                    >
-                        Confirm & Save Location
-                    </button>
-                )}
-
-                <button
-                    className="btn-secondary"
-                    onClick={() => setShowHeatmap(!showHeatmap)}
-                    style={{
-                        padding: '8px 15px',
-                        background: showHeatmap ? 'var(--accent)' : 'var(--bg-card)',
-                        color: showHeatmap ? 'white' : 'var(--text-primary)',
-                        border: showHeatmap ? 'none' : '1px solid var(--border-color)'
-                    }}
-                >
-                    {showHeatmap ? '🔥 Hide Heatmap' : '📉 Show Failure Heatmap'}
-                </button>
-
-                <button
-                    className="btn-secondary"
-                    onClick={() => setIsFollowing(!isFollowing)}
-                    style={{
-                        padding: '8px 15px',
-                        background: isFollowing ? 'var(--primary)' : 'var(--bg-card)',
-                        color: isFollowing ? 'white' : 'var(--text-primary)',
-                        border: isFollowing ? 'none' : '1px solid var(--border-color)'
-                    }}
-                >
-                    {isFollowing ? '🛑 Stop Following' : '🛰️ Follow Me'}
-                </button>
-
-                <button
-                    className="btn-secondary"
-                    onClick={() => setMapType(mapType === 'standard' ? 'satellite' : 'standard')}
-                    style={{ padding: '8px 15px' }}
-                >
-                    {mapType === 'standard' ? '🛰️ Satellite View' : '🗺️ Standard View'}
-                </button>
-            </div>
-        </div>
-    );
-}
-
-function HeatmapLayer({ points }) {
-    const map = useMap();
-
-    React.useEffect(() => {
-        if (!points || points.length === 0) return;
-
-        const heatmapLayer = L.heatLayer(points, {
-            radius: 30,
-            blur: 20,
-            maxZoom: 17,
-            gradient: { 0.4: 'red', 0.6: 'orange', 0.8: 'yellow', 1.0: 'red' }
-        }).addTo(map);
-
-        return () => {
-            map.removeLayer(heatmapLayer);
-        };
-    }, [map, points]);
-
+function LocationPicker({ onLocationSelect }) {
+    useMapEvents({
+        click(e) {
+            onLocationSelect?.(e.latlng);
+        },
+    });
     return null;
 }
 
@@ -232,47 +119,58 @@ export function MapView({ records, onRecordClick, onLocationSelect, hasUnsavedCh
     const [mapType, setMapType] = React.useState('standard');
     const [userLocation, setUserLocation] = React.useState(null);
     const [isFollowing, setIsFollowing] = React.useState(false);
-    const [showHeatmap, setShowHeatmap] = React.useState(false);
-    const [zoneFilter, setZoneFilter] = React.useState('all');
-
     const defaultCenter = [51.505, -0.09];
 
-    // Extraction of unique zones
-    const availableZones = [...new Set(records.map(r => r.plantArea || r.plant_area).filter(z => z))].sort();
-
-    // Data Filtering
-    const filteredRecords = records.filter(record => {
-        const matchesZone = zoneFilter === 'all' || (record.plantArea || record.plant_area) === zoneFilter;
-        return matchesZone && record.latitude && record.longitude;
-    });
-
-    // Heatmap Data (only failed valves)
-    const heatmapPoints = records
-        .filter(r => (r.passFail === 'N' || r.pass_fail === 'N') && r.latitude && r.longitude)
-        .map(r => [r.latitude, r.longitude, 1]);
-
     return (
-        <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 'var(--radius-lg)', minHeight: '80vh', position: 'relative' }}>
-            <MapViewHeader
-                onLocationSelect={onLocationSelect}
-                hasUnsavedChanges={hasUnsavedChanges}
-                onSave={onSave}
-                isFollowing={isFollowing}
-                setIsFollowing={setIsFollowing}
-                mapType={mapType}
-                setMapType={setMapType}
-                showHeatmap={showHeatmap}
-                setShowHeatmap={setShowHeatmap}
-                zoneFilter={zoneFilter}
-                setZoneFilter={setZoneFilter}
-                availableZones={availableZones}
-            />
+        <div className="glass-panel" style={{ padding: '1rem', borderRadius: 'var(--radius-lg)', height: '70vh', position: 'relative' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <div>
+                    <h2 className="section-title" style={{ margin: 0 }}>Site Map</h2>
+                    <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.9rem' }}>
+                        {onLocationSelect ? "Click anywhere on the map to SET the location for this valve." : "Click a pin to view valve details."}
+                    </p>
+                </div>
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    {hasUnsavedChanges && (
+                        <button
+                            className="btn-primary"
+                            onClick={onSave}
+                            style={{
+                                padding: '8px 20px',
+                                background: 'linear-gradient(135deg, #10b981, #059669)',
+                                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+                            }}
+                        >
+                            Confirm & Save Location
+                        </button>
+                    )}
+                    <button
+                        className="btn-secondary"
+                        onClick={() => setIsFollowing(!isFollowing)}
+                        style={{
+                            padding: '8px 15px',
+                            background: isFollowing ? 'var(--primary)' : 'var(--bg-card)',
+                            color: isFollowing ? 'white' : 'var(--text-primary)',
+                            border: isFollowing ? 'none' : '1px solid var(--border-color)'
+                        }}
+                    >
+                        {isFollowing ? '🛑 Stop Following' : '🛰️ Follow Me'}
+                    </button>
+                    <button
+                        className="btn-secondary"
+                        onClick={() => setMapType(mapType === 'standard' ? 'satellite' : 'standard')}
+                        style={{ padding: '8px 15px' }}
+                    >
+                        {mapType === 'standard' ? '🛰️ Switch to Satellite' : '🗺️ Switch to Standard'}
+                    </button>
+                </div>
+            </div>
 
-            <div style={{ position: 'relative', height: 'calc(100% - 100px)', minHeight: '500px' }}>
+            <div style={{ position: 'relative', height: 'calc(100% - 80px)' }}>
                 <MapContainer
                     center={records.length === 1 && records[0].latitude ? [records[0].latitude, records[0].longitude] : (records.find(r => r.latitude)?.latitude ? [records.find(r => r.latitude).latitude, records.find(r => r.latitude).longitude] : defaultCenter)}
                     zoom={13}
-                    style={{ height: '100%', width: '100%', borderRadius: 'var(--radius-md)', zIndex: 1 }}
+                    style={{ height: '100%', width: '100%', borderRadius: 'var(--radius-md)' }}
                 >
                     <SearchControl />
                     <UserLocationTracker isFollowing={isFollowing} onLocationUpdate={setUserLocation} />
@@ -290,7 +188,6 @@ export function MapView({ records, onRecordClick, onLocationSelect, hasUnsavedCh
                     )}
 
                     {onLocationSelect && <LocationPicker onLocationSelect={onLocationSelect} />}
-                    {showHeatmap && <HeatmapLayer points={heatmapPoints} />}
 
                     {userLocation && (
                         <Marker
@@ -317,7 +214,7 @@ export function MapView({ records, onRecordClick, onLocationSelect, hasUnsavedCh
                         </Marker>
                     )}
 
-                    {filteredRecords.map(record => (
+                    {records.filter(r => r.latitude && r.longitude).map(record => (
                         <Marker
                             key={record.id}
                             position={[record.latitude, record.longitude]}
