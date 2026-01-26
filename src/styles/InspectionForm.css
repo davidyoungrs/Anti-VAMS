@@ -35,6 +35,39 @@
     color: #2c3e50;
 }
 
+/* Valve Info Header */
+.valve-info-header {
+    background: #e9ecef;
+    padding: 15px 20px;
+    border-radius: 8px;
+    margin-bottom: 25px;
+    border-left: 5px solid #28a745;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.valve-info-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.valve-info-label {
+    font-size: 11px;
+    color: #6c757d;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.valve-info-value {
+    font-size: 15px;
+    color: #2c3e50;
+    font-weight: 600;
+}
+
 .form-section {
     background: #f8f9fa;
     padding: 25px;

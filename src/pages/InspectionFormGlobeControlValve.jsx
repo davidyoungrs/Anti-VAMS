@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import {
     inspectionService,
-    VALVE_COMPONENTS,
+    VALVE_COMPONENT_CONFIGS,
     COMPONENT_LABELS,
     CONDITION_OPTIONS,
     ACTION_OPTIONS
 } from '../services/inspectionService';
+import { storageService } from '../services/storage';
+import { ValveDataHeader } from '../components/inspection/ValveDataHeader';
+import { InspectionGeneralInfo } from '../components/inspection/InspectionGeneralInfo';
+import { InspectionPhotos } from '../components/inspection/InspectionPhotos';
 import '../styles/InspectionForm.css';
 
-export default function InspectionForm({ valveId, inspectionId, onBack, onSave }) {
+export default function InspectionFormGlobeControlValve({ valveId, inspectionId, onBack, onSave }) {
     const [inspection, setInspection] = useState({
         valveId: valveId,
         inspectionDate: new Date().toISOString().split('T')[0],
@@ -22,6 +26,22 @@ export default function InspectionForm({ valveId, inspectionId, onBack, onSave }
     const [photoFiles, setPhotoFiles] = useState([]);
     const [isSaving, setIsSaving] = useState(false);
     const [expandedSections, setExpandedSections] = useState({});
+    const [valveData, setValveData] = useState(null);
+
+    // Load valve data
+    useEffect(() => {
+        if (valveId) {
+            loadValveData();
+        }
+    }, [valveId]);
+
+    const loadValveData = async () => {
+        const records = await storageService.getAll();
+        const valve = records.find(r => r.id === valveId);
+        if (valve) {
+            setValveData(valve);
+        }
+    };
 
     // Load existing inspection if editing
     useEffect(() => {
@@ -92,83 +112,23 @@ export default function InspectionForm({ valveId, inspectionId, onBack, onSave }
         }
     };
 
-    // Group components by category for better UX
-    const componentGroups = {
-
-
-        'Body & Bonnet': [
-            'bonnet', 'body', 'bodyBonnetStuds', 'bodyBonnetNuts', 'yokeBonnetStuds', 'yokeBonnetNuts',
-            'yokeTube'
-        ],
-
-        'Internal Components': [
-            'gateSegmentAssembly', 'stem', 'seatAssembly', 'gateSkirt', 'seatSkirt'
-        ],
-
-        'Fittings & Accessories': [
-            'packingInjection', 'ventFittings', 'greaseFittings', 'reliefValve',
-            'nippleRV', 'elbow'
-        ],
-        'Seals & Packing': [
-            'bodyBonnetSeal', 'seatRearOrings', 'yokeTubeGasket', 'packingSet'
-        ],
-
-        'Operator Components': [
-            'bearingCap', 'capscrews', 'stemNut', 'upperBearing', 'lowerBearing',
-            'greaseFitting', 'handwheelOring', 'handwheel', 'stemProtectorAssembly',
-            'indicatorRod', 'rodWiper', 'bevelGearOperator', 'stemProtector',
-            'pipeCap', 'indicatorRod2', 'rodWiper2'
-        ],
-
-        'Other': ['other']
-    };
+    const componentGroups = VALVE_COMPONENT_CONFIGS['Globe Control Valve'];
 
     return (
         <div className="inspection-form">
             <div className="inspection-header">
                 <button onClick={onBack} className="back-button">← Back to Inspections</button>
-                <h2>{inspectionId ? 'Edit Inspection' : 'New Inspection'}</h2>
+                <h2>{inspectionId ? 'Edit Globe Control Valve Inspection' : 'New Globe Control Valve Inspection'}</h2>
             </div>
 
-            <form onSubmit={handleSubmit}>
-                {/* General Information */}
-                <section className="form-section">
-                    <h3>General Information</h3>
-                    <div className="form-grid">
-                        <div className="form-group">
-                            <label>Inspection Date *</label>
-                            <input
-                                type="date"
-                                value={inspection.inspectionDate}
-                                onChange={(e) => handleFieldChange('inspectionDate', e.target.value)}
-                                required
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label>Inspector Name</label>
-                            <input
-                                type="text"
-                                value={inspection.inspectorName || ''}
-                                onChange={(e) => handleFieldChange('inspectorName', e.target.value)}
-                                placeholder="Enter inspector name"
-                            />
-                        </div>
-                        <div className="form-group full-width">
-                            <label>Overall Result</label>
-                            <select
-                                value={inspection.overallResult || ''}
-                                onChange={(e) => handleFieldChange('overallResult', e.target.value)}
-                            >
-                                <option value="">Select Result</option>
-                                <option value="Pass">Pass</option>
-                                <option value="Fail">Fail</option>
-                                <option value="Conditional">Conditional</option>
-                            </select>
-                        </div>
-                    </div>
-                </section>
+            <ValveDataHeader valveData={valveData} />
 
-                {/* Component Inspection */}
+            <form onSubmit={handleSubmit}>
+                <InspectionGeneralInfo
+                    inspection={inspection}
+                    onChange={handleFieldChange}
+                />
+
                 <section className="form-section">
                     <h3>Component Inspection</h3>
                     <p className="section-description">
@@ -192,7 +152,7 @@ export default function InspectionForm({ valveId, inspectionId, onBack, onSave }
                                     {components.map(componentKey => (
                                         <div key={componentKey} className="component-item">
                                             <div className="component-name">
-                                                {COMPONENT_LABELS[componentKey]}
+                                                {COMPONENT_LABELS[componentKey] || componentKey}
                                             </div>
                                             <div className="component-fields">
                                                 <div className="field-group">
@@ -257,7 +217,6 @@ export default function InspectionForm({ valveId, inspectionId, onBack, onSave }
                     ))}
                 </section>
 
-                {/* Repair Notes */}
                 <section className="form-section">
                     <h3>Repair Notes</h3>
                     <textarea
@@ -268,54 +227,13 @@ export default function InspectionForm({ valveId, inspectionId, onBack, onSave }
                     />
                 </section>
 
-                {/* Photos */}
-                <section className="form-section">
-                    <h3>Inspection Photos</h3>
-                    <div className="photo-upload">
-                        <input
-                            type="file"
-                            accept="image/*"
-                            multiple
-                            onChange={handlePhotoChange}
-                            id="inspection-photos"
-                        />
-                        <label htmlFor="inspection-photos" className="upload-button">
-                            📷 Add Photos
-                        </label>
-                    </div>
+                <InspectionPhotos
+                    photoFiles={photoFiles}
+                    existingPhotos={inspection.inspectionPhotos}
+                    onAddPhotos={handlePhotoChange}
+                    onRemoveNewPhoto={removePhoto}
+                />
 
-                    {photoFiles.length > 0 && (
-                        <div className="photo-previews">
-                            {photoFiles.map((file, index) => (
-                                <div key={index} className="photo-preview">
-                                    <img src={URL.createObjectURL(file)} alt={`Preview ${index + 1}`} />
-                                    <button
-                                        type="button"
-                                        onClick={() => removePhoto(index)}
-                                        className="remove-photo"
-                                    >
-                                        ✕
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-                    {inspection.inspectionPhotos && inspection.inspectionPhotos.length > 0 && (
-                        <div className="existing-photos">
-                            <h4>Existing Photos</h4>
-                            <div className="photo-previews">
-                                {inspection.inspectionPhotos.map((url, index) => (
-                                    <div key={index} className="photo-preview">
-                                        <img src={url} alt={`Inspection ${index + 1}`} />
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                </section>
-
-                {/* Actions */}
                 <div className="form-actions">
                     <button type="button" onClick={onBack} className="cancel-button">
                         Cancel

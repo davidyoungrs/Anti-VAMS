@@ -2,7 +2,14 @@ import React, { useState } from 'react';
 import { Layout } from './components/Layout';
 import { RecordForm } from './pages/RecordForm';
 import { MapView } from './pages/MapView';
-import InspectionForm from './pages/InspectionForm';
+import InspectionFormGateValve from './pages/InspectionFormGateValve';
+import InspectionFormBallValve from './pages/InspectionFormBallValve';
+import InspectionFormGlobeControlValve from './pages/InspectionFormGlobeControlValve';
+import InspectionFormButterflyValve from './pages/InspectionFormButterflyValve';
+import InspectionFormCheckValve from './pages/InspectionFormCheckValve';
+import InspectionFormPlugValve from './pages/InspectionFormPlugValve';
+import InspectionFormPressureReliefValve from './pages/InspectionFormPressureReliefValve';
+import { ValveTypeSelector } from './components/inspection/ValveTypeSelector';
 import InspectionList from './pages/InspectionList';
 import { storageService } from './services/storage';
 
@@ -283,18 +290,47 @@ function App() {
           />
         );
       case 'inspection-form':
-        return (
-          <InspectionForm
-            valveId={inspectionData?.valveId}
-            inspectionId={inspectionData?.inspectionId}
-            onBack={() => {
-              setCurrentView('inspection-list');
-            }}
-            onSave={() => {
-              setCurrentView('inspection-list');
-            }}
-          />
-        );
+        const targetValve = records.find(r => r.id === inspectionData?.valveId);
+        // Use override type if user just selected it, otherwise from record
+        const typeToUse = inspectionData?.overrideType || targetValve?.valveType;
+
+        if (!typeToUse || typeToUse === 'Other' || typeToUse === 'N/A') {
+          return (
+            <ValveTypeSelector
+              onSelect={async (type) => {
+                // Update local state to render immediately
+                setInspectionData(prev => ({ ...prev, overrideType: type }));
+
+                // Update the valve record persistently
+                if (targetValve) {
+                  const updated = { ...targetValve, valveType: type };
+                  await storageService.save(updated);
+                  await loadData(); // Refresh records
+                }
+              }}
+              onCancel={() => setCurrentView('inspection-list')}
+            />
+          );
+        }
+
+        const formProps = {
+          valveId: inspectionData?.valveId,
+          inspectionId: inspectionData?.inspectionId,
+          onBack: () => setCurrentView('inspection-list'),
+          onSave: () => setCurrentView('inspection-list')
+        };
+
+        switch (typeToUse) {
+          case 'Ball Valve': return <InspectionFormBallValve {...formProps} />;
+          case 'Globe Control Valve': return <InspectionFormGlobeControlValve {...formProps} />;
+          case 'Butterfly Valve': return <InspectionFormButterflyValve {...formProps} />;
+          case 'Check Valve': return <InspectionFormCheckValve {...formProps} />;
+          case 'Plug Valve': return <InspectionFormPlugValve {...formProps} />;
+          case 'Pressure Relief Valve': return <InspectionFormPressureReliefValve {...formProps} />;
+          case 'Gate Valve':
+          default:
+            return <InspectionFormGateValve {...formProps} />;
+        }
       case 'inspection-list':
         return (
           <InspectionList

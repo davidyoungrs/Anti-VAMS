@@ -247,7 +247,21 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
                     <h3 className="section-title">Specifications</h3>
                     <div className="grid-3">
                         <Input label="Make (Model No)" name="modelNo" value={formData.modelNo} onChange={handleChange} />
-                        <Input label="Valve Type" name="valveType" value={formData.valveType} onChange={handleChange} />
+                        <Select
+                            label="Valve Type"
+                            name="valveType"
+                            value={formData.valveType}
+                            onChange={handleChange}
+                            options={[
+                                'Ball Valve',
+                                'Gate Valve',
+                                'Globe Control Valve',
+                                'Butterfly Valve',
+                                'Check Valve',
+                                'Plug Valve',
+                                'Pressure Relief Valve'
+                            ]}
+                        />
                         <Input label="Valve Size" name="sizeClass" value={formData.sizeClass} onChange={handleChange} />
                         <Input label="Packing Type" name="packingType" value={formData.packingType} onChange={handleChange} />
                         <Select

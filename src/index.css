@@ -83,6 +83,12 @@ textarea {
   box-sizing: border-box;
 }
 
+input,
+select {
+  height: 46px;
+  line-height: normal;
+}
+
 input:focus,
 select:focus,
 textarea:focus {
