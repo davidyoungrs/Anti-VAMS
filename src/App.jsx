@@ -12,6 +12,7 @@ import InspectionFormPressureReliefValve from './pages/InspectionFormPressureRel
 import { ValveTypeSelector } from './components/inspection/ValveTypeSelector';
 import InspectionList from './pages/InspectionList';
 import TestReportForm from './pages/TestReportForm';
+import { AdminPanel } from './pages/AdminPanel';
 import { storageService } from './services/storage';
 
 function App() {
@@ -174,6 +175,8 @@ function App() {
     switch (currentView) {
       case 'create':
         return <RecordForm key="create" onSave={handleSave} onNavigate={handleNavigate} />;
+      case 'admin':
+        return <AdminPanel />;
       case 'record-detail':
         return <RecordForm key={selectedRecord?.id || 'detail'} initialData={selectedRecord} onSave={handleSave} onNavigate={handleNavigate} />;
       case 'search':

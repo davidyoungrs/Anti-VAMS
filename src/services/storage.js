@@ -67,6 +67,7 @@ export const storageService = {
                         latitude: r.latitude,
                         longitude: r.longitude,
                         updatedAt: r.updated_at,
+                        deletedAt: r.deleted_at, // Map Soft Delete timestamp
                         lastViewedAt: r.last_viewed_at,
                         valvePhoto: r.valve_photo,
                         files: r.file_urls || []
@@ -106,7 +107,8 @@ export const storageService = {
                         });
 
                         localStorage.setItem(STORAGE_KEY, JSON.stringify(mergedRecords));
-                        return mergedRecords;
+                        // Filter out deleted records for the UI
+                        return mergedRecords.filter(r => !r.deletedAt);
                     }
                 }
             } catch (e) {
@@ -114,7 +116,8 @@ export const storageService = {
             }
         }
 
-        return localRecords;
+        // Filter out deleted records for the UI (Local fallthrough)
+        return localRecords.filter(r => !r.deletedAt);
     },
 
     save: async (record) => {
@@ -230,6 +233,7 @@ export const storageService = {
                         id: finalRecord.id,
                         created_at: sanitizeVal(finalRecord.createdAt),
                         updated_at: sanitizeVal(finalRecord.updatedAt), // Re-enabled: Column added by user
+                        deleted_at: sanitizeVal(finalRecord.deletedAt), // Soft Delete Support
                         serial_number: finalRecord.serialNumber,
                         customer: finalRecord.customer,
                         oem: finalRecord.oem,
@@ -286,20 +290,100 @@ export const storageService = {
     },
 
     delete: async (id) => {
+        // Soft Delete: Set deleted_at timestamp
+        const deletedAt = new Date().toISOString();
+
         if (supabase) {
             try {
-                const { data: files } = await supabase.storage.from('valve-attachment').list(`${id}`);
-                if (files && files.length > 0) {
-                    await supabase.storage.from('valve-attachment').remove(files.map(f => `${id}/${f.name}`));
+                // Soft Delete in Cloud
+                const { error } = await supabase
+                    .from('valve_records')
+                    .update({ deleted_at: deletedAt })
+                    .eq('id', id);
+
+                if (error) {
+                    console.error('Supabase soft delete error', error);
+                    // Fallback: If column missing (user didn't run SQL?), warn user
+                    if (error.code === '42703') alert("Database error: Missing 'deleted_at' column. Please run the SQL script.");
                 }
-                const { error } = await supabase.from('valve_records').delete().eq('id', id);
-                if (error) console.error('Supabase delete error', error);
             } catch (e) {
                 console.error('Supabase connection error during delete', e);
             }
         }
+
+        // Update Local Storage
         const records = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(records.filter(r => r.id !== id)));
+        // We do NOT remove it. We mark it as deleted.
+        const updatedRecords = records.map(r => r.id === id ? { ...r, deletedAt } : r);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedRecords));
+    },
+
+    restore: async (id) => {
+        if (supabase) {
+            try {
+                const { error } = await supabase
+                    .from('valve_records')
+                    .update({ deleted_at: null })
+                    .eq('id', id);
+                if (error) console.error('Supabase restore error', error);
+            } catch (e) {
+                console.error('Supabase connection error during restore', e);
+            }
+        }
+
+        const records = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+        const updatedRecords = records.map(r => r.id === id ? { ...r, deletedAt: null } : r);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedRecords));
+    },
+
+    getHistory: async (valveId) => {
+        if (!supabase) return [];
+        try {
+            const { data, error } = await supabase
+                .from('valve_history')
+                .select('*')
+                .eq('valve_id', valveId)
+                .order('changed_at', { ascending: false });
+
+            if (error) throw error;
+            return data.map(h => ({
+                id: h.id,
+                changedAt: h.changed_at,
+                snapshot: h.snapshot // This is the JSON record
+            }));
+        } catch (e) {
+            console.error('Error fetching history:', e);
+            return [];
+        }
+    },
+
+    getDeletedRecords: async () => {
+        // Return local records that are marked deleted
+        const records = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+        return records.filter(r => r.deletedAt);
+    },
+
+    getGlobalHistory: async () => {
+        if (!supabase) return [];
+        try {
+            const { data, error } = await supabase
+                .from('valve_history')
+                .select('*, valve_records(serial_number)')
+                .order('changed_at', { ascending: false })
+                .limit(50);
+
+            if (error) throw error;
+            return data.map(h => ({
+                id: h.id,
+                valveId: h.valve_id,
+                serialNumber: h.valve_records?.serial_number || 'Unknown',
+                changedAt: h.changed_at,
+                snapshot: h.snapshot
+            }));
+        } catch (e) {
+            console.error('Error fetching global history:', e);
+            return [];
+        }
     },
 
     search: async (query) => {
@@ -422,6 +506,7 @@ export const storageService = {
                         id: record.id,
                         created_at: sanitizeVal(record.createdAt),
                         updated_at: sanitizeVal(record.updatedAt), // Re-enabled: Column added by user
+                        deleted_at: sanitizeVal(record.deletedAt), // Soft Delete Support
                         serial_number: record.serialNumber,
                         customer: record.customer,
                         oem: record.oem,
