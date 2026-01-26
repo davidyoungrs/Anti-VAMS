@@ -390,25 +390,28 @@ export const storageService = {
                     }
                 }
 
+                // Helper to sanitize dates (Supabase/Postgres dislikes empty strings for dates)
+                const toDateOrNull = (val) => (!val || val === '') ? null : val;
+
                 // 3. Upsert to Supabase
                 const { error } = await supabase
                     .from('valve_records')
                     .upsert({
                         id: record.id,
-                        created_at: record.createdAt,
-                        updated_at: record.updatedAt, // CRITICAL: Identify this version
+                        created_at: toDateOrNull(record.createdAt),
+                        updated_at: toDateOrNull(record.updatedAt),
                         serial_number: record.serialNumber,
                         customer: record.customer,
                         oem: record.oem,
                         job_no: record.jobNo,
                         tag_no: record.tagNo,
                         order_no: record.orderNo,
-                        date_in: record.dateIn,
+                        date_in: toDateOrNull(record.dateIn),
                         status: record.status,
                         pass_fail: record.passFail,
                         plant_area: record.plantArea,
                         site_location: record.siteLocation,
-                        required_date: record.requiredDate,
+                        required_date: toDateOrNull(record.requiredDate),
                         safety_check: record.safetyCheck,
                         decontamination_cert: record.decontaminationCert,
                         lsa_check: record.lsaCheck,
@@ -431,18 +434,19 @@ export const storageService = {
                         body_pressure: record.bodyPressure,
                         body_pressure_unit: record.bodyPressureUnit,
                         tested_by: record.testedBy,
-                        test_date: record.testDate,
+                        test_date: toDateOrNull(record.testDate),
                         test_medium: record.testMedium,
                         latitude: record.latitude,
                         longitude: record.longitude,
-                        last_viewed_at: record.lastViewedAt,
+                        last_viewed_at: toDateOrNull(record.lastViewedAt),
                         valve_photo: record.valvePhoto,
                         file_urls: record.files || []
                     });
 
                 if (error) {
                     failedRecords.push(record.id);
-                    console.error(`Failed to sync record ${record.serialNumber}:`, error);
+                    // Enhanced logging to help user debug
+                    console.error(`Failed to sync record ${record.serialNumber}. Error: ${error.message} (Code: ${error.code})`, error);
                 } else {
                     syncedCount++;
                     // 4. Update Local Storage if we successfully uploaded files (converted Base64 -> URL)
@@ -461,7 +465,8 @@ export const storageService = {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(localRecords));
 
         if (failedRecords.length > 0) {
-            return { success: false, count: syncedCount, error: `Failed to sync ${failedRecords.length} records.` };
+            // Return first error message detail if available
+            return { success: false, count: syncedCount, error: `Failed to sync ${failedRecords.length} records. Check console for details.` };
         }
         return { success: true, count: syncedCount };
     }
