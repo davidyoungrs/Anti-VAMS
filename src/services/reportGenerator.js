@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { VALVE_COMPONENT_CONFIGS, COMPONENT_LABELS } from './inspectionService';
 
 export const generateFullReport = (valveRecord, inspectionData = [], testData = []) => {
     const doc = new jsPDF();
@@ -112,54 +113,70 @@ export const generateFullReport = (valveRecord, inspectionData = [], testData = 
     // --- 3. Inspection Checklist ---
     addSectionHeader("Inspection Checklist");
 
-    // Use latest inspection if multiple exist
-    const latestInspection = inspectionData.length > 0 ? inspectionData[0] : null;
+    // --- 3. Inspection Checklist ---
+    addSectionHeader("Inspection Checklist");
 
-    if (latestInspection) {
-        doc.text(`Inspection Date: ${new Date(latestInspection.inspectionDate || Date.now()).toLocaleDateString()}`, 14, currentY);
-        doc.text(`Inspector: ${latestInspection.inspectorName || 'N/A'}`, 120, currentY);
-        currentY += 8;
+    // Use latest inspection if multiple exist, otherwise empty object
+    const latestInspection = inspectionData.length > 0 ? inspectionData[0] : {};
+    const componentsData = latestInspection.components || {};
 
-        // Flatten components helper
-        const components = latestInspection.components || {};
-        const compRows = Object.entries(components).map(([key, data]) => {
-            // Map simplified keys to readable labels if possible (simplified here)
-            const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-            return [
+    // Display Header Info even if no inspection exists
+    doc.text(`Inspection Date: ${latestInspection.inspectionDate ? new Date(latestInspection.inspectionDate).toLocaleDateString() : 'Not Inspected'}`, 14, currentY);
+    doc.text(`Inspector: ${latestInspection.inspectorName || '-'}`, 120, currentY);
+    currentY += 8;
+
+    // Determine Valve Type and get Config
+    // We need to import these constants at the top of the file, but since this is a pure function replacement,
+    // we will access them via the passed arguments or global scope if possible.
+    // However, clean way is to rely on the imports being added to the file header.
+    // For now, let's assume imports are added. 
+
+    const valveType = valveRecord.valveType || 'Gate Valve'; // Default if missing
+    // Fallback to 'Gate Valve' config if specific type not found, or 'Other'
+    const valveConfig = VALVE_COMPONENT_CONFIGS[valveType] || VALVE_COMPONENT_CONFIGS['Gate Valve'];
+
+    const checklistRows = [];
+
+    // Iterate through Categories in the Config
+    Object.entries(valveConfig).forEach(([categoryName, partsList]) => {
+        // Add Category Header Row
+        checklistRows.push([{ content: categoryName.toUpperCase(), colSpan: 4, styles: { fillColor: [240, 240, 240], fontStyle: 'bold' } }]);
+
+        // Iterate through Parts in that Category
+        partsList.forEach(partKey => {
+            const label = COMPONENT_LABELS[partKey] || partKey.replace(/([A-Z])/g, ' $1').trim(); // Fallback label
+            const partData = componentsData[partKey] || {};
+
+            checklistRows.push([
                 label,
-                data.condition || '-',
-                data.action || '-',
-                data.notes || '-'
-            ];
+                partData.condition || '-',
+                partData.action || '-',
+                partData.notes || '-'
+            ]);
         });
+    });
 
-        if (compRows.length > 0) {
-            autoTable(doc, {
-                startY: currentY,
-                head: [['Component', 'Condition', 'Action', 'Notes']],
-                body: compRows,
-                headStyles: { fillColor: [52, 73, 94] },
-                styles: { fontSize: 9 },
-                margin: { left: 14, right: 14 }
-            });
-            currentY = doc.lastAutoTable.finalY + 10;
-        } else {
-            doc.setFont(undefined, 'italic');
-            doc.text("No checklist items recorded.", 14, currentY);
-            currentY += 10;
-            doc.setFont(undefined, 'normal');
-        }
+    autoTable(doc, {
+        startY: currentY,
+        head: [['Component', 'Condition', 'Action', 'Notes']],
+        body: checklistRows,
+        headStyles: { fillColor: [52, 73, 94] },
+        styles: { fontSize: 9 },
+        margin: { left: 14, right: 14 },
+        pageBreak: 'auto'
+    });
+    currentY = doc.lastAutoTable.finalY + 10;
 
-        // Overall Result
-        doc.setFont('helvetica', 'bold');
-        doc.text(`Overall Result: ${latestInspection.overallResult || 'N/A'}`, 14, currentY);
-        currentY += 15;
-    } else {
-        doc.setFont(undefined, 'italic');
-        doc.text("No inspection data available.", 14, currentY);
-        currentY += 15;
-        doc.setFont(undefined, 'normal');
+    // Overall Result
+    addSectionHeader("Overall Result");
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Result: ${latestInspection.overallResult || 'Pending'}`, 14, currentY);
+    if (latestInspection.repairNotes) {
+        currentY += 6;
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Notes: ${latestInspection.repairNotes}`, 14, currentY);
     }
+    currentY += 15;
 
 
     // --- 4. Test Results ---

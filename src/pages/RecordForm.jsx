@@ -381,7 +381,13 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
                                 {files.map((f, i) => {
                                     const isUrl = typeof f === 'string';
-                                    const name = isUrl ? f.split('/').pop() : (f.name || `File ${i + 1}`);
+                                    let name = isUrl ? f.split('/').pop() : (f.name || `File ${i + 1}`);
+
+                                    // Remove auto-generated timestamp prefix for cleaner display (e.g., "12345_Report.pdf" -> "Report.pdf")
+                                    if (name.match(/^\d+_.+/)) {
+                                        name = name.replace(/^\d+_/, '');
+                                    }
+
                                     const size = isUrl ? '' : (f.size ? `(${Math.round(f.size / 1024)} KB)` : '');
 
                                     return (

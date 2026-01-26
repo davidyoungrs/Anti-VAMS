@@ -74,31 +74,35 @@ export const storageService = {
 
                     // Safety: Only overwrite local if we actually got something from the cloud
                     if (cloudRecords.length > 0) {
-                        // MERGE STRATEGY: Preserve local-only metadata (like recent views) if cloud is older or missing it
-                        // This ensures that 'Latest Activity' works immediately even before a full sync
+                        // MERGE STRATEGY: Prioritize the record with the most recent 'updatedAt' timestamp.
+                        // This ensures that if we just saved locally, we don't get overwritten by stale cloud data.
                         const mergedRecords = cloudRecords.map(cloudRecord => {
                             const localMatch = localRecords.find(l => l.id === cloudRecord.id);
                             if (!localMatch) return cloudRecord;
 
-                            // SMART MERGE FOR FILES:
-                            // If cloud has NO files, but local DOES, preserve local files.
-                            // This happens when we just uploaded files locally, but the Cloud DB 'file_urls' column hasn't updated yet.
-                            let mergedFiles = cloudRecord.files;
-                            if ((!mergedFiles || mergedFiles.length === 0) && (localMatch.files && localMatch.files.length > 0)) {
-                                mergedFiles = localMatch.files;
-                            }
+                            const cloudTime = new Date(cloudRecord.updatedAt || 0).getTime();
+                            const localTime = new Date(localMatch.updatedAt || 0).getTime();
 
-                            return {
-                                ...cloudRecord,
-                                files: mergedFiles,
-                                // If cloud misses these, use local. Use more recent of the two.
-                                updatedAt: new Date(cloudRecord.updatedAt || 0) > new Date(localMatch.updatedAt || 0)
-                                    ? cloudRecord.updatedAt
-                                    : (localMatch.updatedAt || cloudRecord.updatedAt),
-                                lastViewedAt: new Date(cloudRecord.lastViewedAt || 0) > new Date(localMatch.lastViewedAt || 0)
-                                    ? cloudRecord.lastViewedAt
-                                    : (localMatch.lastViewedAt || cloudRecord.lastViewedAt)
-                            };
+                            // Use Local data if it is newer or equal (Equal = we likely just synced it)
+                            if (localTime >= cloudTime) {
+                                return {
+                                    ...localMatch, // Base on local
+                                    // Optionally fill in missing keys from cloud if needed, but usually local is complete
+                                };
+                            } else {
+                                // Cloud is newer. Use Cloud data.
+                                // Fallback: If cloud has NO files, but local has files, keep local files to be safe?
+                                // This handles the edge case of 'cloud array empty' bug.
+                                let finalFiles = cloudRecord.files;
+                                if ((!finalFiles || finalFiles.length === 0) && (localMatch.files && localMatch.files.length > 0)) {
+                                    finalFiles = localMatch.files;
+                                }
+
+                                return {
+                                    ...cloudRecord,
+                                    files: finalFiles
+                                };
+                            }
                         });
 
                         localStorage.setItem(STORAGE_KEY, JSON.stringify(mergedRecords));
@@ -237,7 +241,7 @@ export const storageService = {
                         size_class: finalRecord.sizeClass,
                         packing_type: finalRecord.packingType,
                         flange_type: finalRecord.flangeType,
-                        mawp: r.mawp, // Wait, note: 'mawp: r.mawp' vs 'mawp: finalRecord.mawp'. This is 'save', should be finalRecord.
+                        mawp: finalRecord.mawp,
                         body_material: finalRecord.bodyMaterial,
                         seat_material: finalRecord.seatMaterial,
                         trim_material: finalRecord.trimMaterial,
