@@ -58,14 +58,13 @@ export const Layout = ({ children, activeView, onNavigate }) => {
                 Site Map
               </a>
             </li>
+            <li style={{ marginBottom: '0.5rem' }}> <a href="https://thevalve.pro" target="_blank" rel="noopener noreferrer" style={getItemStyle('TheValve.pro')} > TheValve.pro </a>
+            </li>
 
           </ul>
         </nav>
 
         <div style={{ padding: '1rem', borderTop: '1px solid var(--border-color)' }}>
-          <a href="https://thevalve.pro" target="_blank" rel="noopener noreferrer" style={{ ...getItemStyle('TheValve.pro'), marginBottom: '1rem' }}>
-            TheValve.pro
-          </a>
           <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
             User: Admin
           </div>
