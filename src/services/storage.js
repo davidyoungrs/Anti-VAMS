@@ -214,34 +214,44 @@ export const storageService = {
         // 4. Sync to Supabase
         if (supabase) {
             try {
+                // Helper to sanitize fields (Supabase/Postgres dislikes empty strings for dates & numbers)
+                const sanitizeVal = (val) => (!val || val === '') ? null : val;
+
+                // Helper for numeric fields that might be strings in JS
+                const sanitizeNum = (val) => {
+                    if (val === '' || val === null || val === undefined) return null;
+                    return isNaN(val) ? null : val;
+                };
+
                 // Map to snake_case for Supabase
                 const { error } = await supabase
                     .from('valve_records')
                     .upsert({
                         id: finalRecord.id,
-                        created_at: finalRecord.createdAt,
+                        created_at: sanitizeVal(finalRecord.createdAt),
+                        updated_at: sanitizeVal(finalRecord.updatedAt),
                         serial_number: finalRecord.serialNumber,
                         customer: finalRecord.customer,
                         oem: finalRecord.oem,
                         job_no: finalRecord.jobNo,
                         tag_no: finalRecord.tagNo,
                         order_no: finalRecord.orderNo,
-                        date_in: finalRecord.dateIn,
+                        date_in: sanitizeVal(finalRecord.dateIn),
                         status: finalRecord.status || 'Pending',
                         pass_fail: finalRecord.passFail || 'Pending',
                         plant_area: finalRecord.plantArea,
                         site_location: finalRecord.siteLocation,
-                        required_date: finalRecord.requiredDate,
+                        required_date: sanitizeVal(finalRecord.requiredDate),
                         safety_check: finalRecord.safetyCheck,
                         decontamination_cert: finalRecord.decontaminationCert,
                         lsa_check: finalRecord.lsaCheck,
                         seized_mid_stroke: finalRecord.seizedMidStroke,
                         model_no: finalRecord.modelNo,
                         valve_type: finalRecord.valveType,
-                        size_class: finalRecord.sizeClass,
+                        size_class: sanitizeVal(finalRecord.sizeClass),
                         packing_type: finalRecord.packingType,
                         flange_type: finalRecord.flangeType,
-                        mawp: finalRecord.mawp,
+                        mawp: sanitizeNum(finalRecord.mawp),
                         body_material: finalRecord.bodyMaterial,
                         seat_material: finalRecord.seatMaterial,
                         trim_material: finalRecord.trimMaterial,
@@ -251,15 +261,14 @@ export const storageService = {
                         fail_mode: finalRecord.failMode,
                         body_test_spec: finalRecord.bodyTestSpec,
                         seat_test_spec: finalRecord.seat_test_spec,
-                        body_pressure: finalRecord.bodyPressure,
+                        body_pressure: sanitizeNum(finalRecord.bodyPressure),
                         body_pressure_unit: finalRecord.bodyPressureUnit,
                         tested_by: finalRecord.testedBy,
-                        test_date: finalRecord.testDate,
+                        test_date: sanitizeVal(finalRecord.testDate),
                         test_medium: finalRecord.testMedium,
-                        latitude: finalRecord.latitude,
-                        longitude: finalRecord.longitude,
-                        updated_at: finalRecord.updatedAt,
-                        last_viewed_at: finalRecord.lastViewedAt,
+                        latitude: sanitizeNum(finalRecord.latitude),
+                        longitude: sanitizeNum(finalRecord.longitude),
+                        // last_viewed_at: finalRecord.lastViewedAt, // Removed: Local only
                         valve_photo: finalRecord.valvePhoto,
                         file_urls: finalRecord.files || []
                     });
