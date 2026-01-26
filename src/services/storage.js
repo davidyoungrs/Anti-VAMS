@@ -327,6 +327,7 @@ export const storageService = {
 
         let syncedCount = 0;
         const failedRecords = [];
+        let lastError = null;
 
         // We need to process records one by one (or in chunks) to handle file uploads
         for (let i = 0; i < localRecords.length; i++) {
@@ -460,6 +461,7 @@ export const storageService = {
 
                 if (error) {
                     failedRecords.push(record.id);
+                    lastError = error; // Capture the last error
                     // Enhanced logging to help user debug
                     console.error(`Failed to sync record ${record.serialNumber}. Error: ${error.message} (Code: ${error.code})`, error);
                 } else {
@@ -473,6 +475,7 @@ export const storageService = {
             } catch (err) {
                 console.error(`Exception syncing record ${localRecords[i].serialNumber}:`, err);
                 failedRecords.push(localRecords[i].id);
+                lastError = err;
             }
         }
 
@@ -480,8 +483,9 @@ export const storageService = {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(localRecords));
 
         if (failedRecords.length > 0) {
-            // Return first error message detail if available
-            return { success: false, count: syncedCount, error: `Failed to sync ${failedRecords.length} records. Check console for details.` };
+            // Return detailed error for the user
+            const errorMsg = lastError ? (lastError.message || JSON.stringify(lastError)) : 'Unknown error';
+            return { success: false, count: syncedCount, error: `Failed to sync ${failedRecords.length} records. Last Error: ${errorMsg}` };
         }
         return { success: true, count: syncedCount };
     }
