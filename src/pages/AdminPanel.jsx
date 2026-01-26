@@ -5,6 +5,7 @@ export const AdminPanel = () => {
     const [activeTab, setActiveTab] = useState('trash'); // 'trash' | 'history'
     const [deletedRecords, setDeletedRecords] = useState([]);
     const [history, setHistory] = useState([]);
+    const [currentRecords, setCurrentRecords] = useState([]);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -22,14 +23,45 @@ export const AdminPanel = () => {
                 const records = await storageService.getDeletedRecords();
                 setDeletedRecords(records);
             } else {
-                const historyData = await storageService.getGlobalHistory();
+                // Fetch both history and current records for comparison
+                const [historyData, allRecords] = await Promise.all([
+                    storageService.getGlobalHistory(),
+                    storageService.getAll() // Assuming standard getAll filters out deleted, which is fine for "Live" comparison
+                ]);
                 setHistory(historyData);
+                setCurrentRecords(allRecords);
             }
         } catch (e) {
             console.error("Error loading admin data", e);
         } finally {
             setLoading(false);
         }
+    };
+
+    const getDiff = (oldRecord, newRecord) => {
+        if (!oldRecord || !newRecord) return [];
+        const changes = [];
+        const ignoredKeys = ['updatedAt', 'lastViewedAt', 'deletedAt', 'createdAt', 'files', 'file_urls', 'valvePhoto']; // internal/heavy fields
+
+        // Check for specific keys
+        const allKeys = new Set([...Object.keys(oldRecord), ...Object.keys(newRecord)]);
+
+        allKeys.forEach(key => {
+            if (ignoredKeys.includes(key)) return;
+            const val1 = oldRecord[key];
+            const val2 = newRecord[key];
+
+            // Loose comparison (strings/numbers)
+            if (val1 != val2) {
+                // Handle undefined/null as empty string for display
+                const oldStr = val1 === null || val1 === undefined ? '' : String(val1);
+                const newStr = val2 === null || val2 === undefined ? '' : String(val2);
+                if (oldStr !== newStr) {
+                    changes.push({ key, oldVal: oldStr, newVal: newStr });
+                }
+            }
+        });
+        return changes;
     };
 
     const handleRestore = async (id) => {
@@ -160,35 +192,73 @@ export const AdminPanel = () => {
                                 <p style={{ color: 'var(--text-muted)' }}>No history found (requires online connection).</p>
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                    {history.map(item => (
-                                        <div key={item.id} className="glass-panel" style={{
-                                            padding: '1rem',
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            alignItems: 'center',
-                                            background: 'var(--bg-surface)'
-                                        }}>
-                                            <div>
-                                                <div style={{ fontWeight: 'bold' }}>{item.serialNumber}</div>
-                                                <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                                                    Changed: {new Date(item.changedAt).toLocaleString()}
+                                    {history.map(item => {
+                                        // Find current live record
+                                        // Note: item.valveId matches record.id
+                                        const currentRecord = currentRecords.find(r => r.id === item.valveId);
+                                        const diff = currentRecord ? getDiff(item.snapshot, currentRecord) : null;
+
+                                        return (
+                                            <div key={item.id} className="glass-panel" style={{
+                                                padding: '1rem',
+                                                background: 'var(--bg-surface)',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                gap: '1rem'
+                                            }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <div>
+                                                        <div style={{ fontWeight: 'bold' }}>{item.serialNumber}</div>
+                                                        <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                                                            Snapshot Taken: {new Date(item.changedAt).toLocaleString()}
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => handleRevert(item)}
+                                                        style={{
+                                                            padding: '0.5rem 1rem',
+                                                            background: 'transparent',
+                                                            border: '1px solid var(--primary)',
+                                                            color: 'var(--primary)',
+                                                            borderRadius: 'var(--radius-md)',
+                                                            cursor: 'pointer'
+                                                        }}
+                                                    >
+                                                        ⏪ Revert to this Version
+                                                    </button>
                                                 </div>
+
+                                                {/* Comparison View */}
+                                                {diff && diff.length > 0 ? (
+                                                    <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '8px', fontSize: '0.9rem' }}>
+                                                        <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', color: 'var(--accent)' }}>Changes since this snapshot:</div>
+                                                        <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 1fr', gap: '0.5rem', fontWeight: 'bold', borderBottom: '1px solid var(--border-color)', paddingBottom: '4px', marginBottom: '4px' }}>
+                                                            <div>Field</div>
+                                                            <div style={{ color: 'var(--text-muted)' }}>Snapshot (Old)</div>
+                                                            <div style={{ color: 'var(--primary)' }}>Current (Live)</div>
+                                                        </div>
+                                                        {diff.map((d, idx) => (
+                                                            <div key={idx} style={{ display: 'grid', gridTemplateColumns: '120px 1fr 1fr', gap: '0.5rem', alignItems: 'center' }}>
+                                                                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.key}</div>
+                                                                <div style={{ color: 'var(--text-muted)', wordBreak: 'break-word', fontSize: '0.85rem' }}>{d.oldVal === null || d.oldVal === undefined ? '—' : String(d.oldVal)}</div>
+                                                                <div style={{ color: 'var(--primary)', wordBreak: 'break-word', fontWeight: 'bold', fontSize: '0.85rem' }}>{d.newVal === null || d.newVal === undefined ? '—' : String(d.newVal)}</div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    !currentRecord ? (
+                                                        <div style={{ color: '#ef4444', fontSize: '0.9rem' }}>
+                                                            ⚠️ Record no longer exists (Deleted)
+                                                        </div>
+                                                    ) : (
+                                                        <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontStyle: 'italic' }}>
+                                                            No visible content changes (only timestamp/internal updates).
+                                                        </div>
+                                                    )
+                                                )}
                                             </div>
-                                            <button
-                                                onClick={() => handleRevert(item)}
-                                                style={{
-                                                    padding: '0.5rem 1rem',
-                                                    background: 'transparent',
-                                                    border: '1px solid var(--primary)',
-                                                    color: 'var(--primary)',
-                                                    borderRadius: 'var(--radius-md)',
-                                                    cursor: 'pointer'
-                                                }}
-                                            >
-                                                ⏪ Revert to this Version
-                                            </button>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
