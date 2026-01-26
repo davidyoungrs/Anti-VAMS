@@ -444,7 +444,7 @@ export const storageService = {
                         test_medium: record.testMedium,
                         latitude: sanitizeNum(record.latitude),
                         longitude: sanitizeNum(record.longitude),
-                        last_viewed_at: sanitizeVal(record.lastViewedAt),
+                        // last_viewed_at: sanitizeVal(record.lastViewedAt), // Removed: Column missing in DB, preventing sync. Local only feature for now.
                         valve_photo: record.valvePhoto,
                         file_urls: record.files || []
                     });
