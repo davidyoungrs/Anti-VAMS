@@ -92,6 +92,7 @@ export const storageService = {
             finalRecord.id = crypto.randomUUID();
             finalRecord.createdAt = new Date().toISOString();
         }
+        finalRecord.updatedAt = new Date().toISOString();
 
         // 2. ALWAYS Save to Local First (Ensures reliability even if cloud/files fail)
         const records = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');

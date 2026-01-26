@@ -303,28 +303,7 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
                     </div>
                 </div>
 
-                {/* Section 4: Testing */}
-                <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)', gridColumn: '1 / -1' }}>
-                    <h3 className="section-title">Testing Results</h3>
-                    <div className="grid-3">
-                        <Input label="Body Test Spec" name="bodyTestSpec" value={formData.bodyTestSpec} onChange={handleChange} />
-                        <Input label="Seat Test Spec" name="seatTestSpec" value={formData.seatTestSpec} onChange={handleChange} />
-
-                        <div className="flex-row">
-                            <div style={{ flex: 2 }}>
-                                <Input label="Body Pressure" name="bodyPressure" value={formData.bodyPressure} onChange={handleChange} />
-                            </div>
-                            <div style={{ flex: 1 }}>
-                                <Select label="Unit" name="bodyPressureUnit" value={formData.bodyPressureUnit} onChange={handleChange} options={['PSI', 'Bar', 'MPa']} />
-                            </div>
-                        </div>
-
-                        <Input label="Tested By" name="testedBy" value={formData.testedBy} onChange={handleChange} />
-                        <Input type="date" label="Test Date" name="testDate" value={formData.testDate} onChange={handleChange} />
-                        <Input label="Test Medium" name="testMedium" value={formData.testMedium} onChange={handleChange} />
-                        <Select label="Pass / Fail" name="passFail" value={formData.passFail} onChange={handleChange} options={['Y', 'N']} />
-                    </div>
-                </div>
+                {/* Section 4: Testing Results - REMOVED */}
 
                 {/* Section 5: Attachments */}
                 <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)', gridColumn: '1 / -1' }}>

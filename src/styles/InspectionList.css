@@ -381,3 +381,14 @@
         flex-direction: column;
     }
 }
+
+/* Ensure secondary buttons are visible on light background */
+.inspection-list .btn-secondary {
+    color: #2c3e50;
+    border-color: #ced4da;
+}
+
+.inspection-list .btn-secondary:hover {
+    color: white;
+    border-color: var(--primary);
+}

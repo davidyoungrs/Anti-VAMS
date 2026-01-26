@@ -11,6 +11,7 @@ import InspectionFormPlugValve from './pages/InspectionFormPlugValve';
 import InspectionFormPressureReliefValve from './pages/InspectionFormPressureReliefValve';
 import { ValveTypeSelector } from './components/inspection/ValveTypeSelector';
 import InspectionList from './pages/InspectionList';
+import TestReportForm from './pages/TestReportForm';
 import { storageService } from './services/storage';
 
 function App() {
@@ -37,14 +38,21 @@ function App() {
     loadData();
   }, []); // Only load on mount
 
-  const handleRecordClick = (record) => {
+  const handleRecordClick = async (record) => {
+    // Update last viewed timestamp without blocking
+    const updatedRecord = { ...record, lastViewedAt: new Date().toISOString() };
+    await storageService.save(updatedRecord);
+
     // Ensure files array is populated from file_urls if necessary
     const normalizedRecord = {
-      ...record,
-      files: record.files || record.file_urls || []
+      ...updatedRecord,
+      files: updatedRecord.files || updatedRecord.file_urls || []
     };
     setSelectedRecord(normalizedRecord);
     setCurrentView('record-detail');
+
+    // Refresh records to show updated timestamp in list immediately
+    loadData();
   };
 
   const handleNavigate = (view, data = null) => {
@@ -331,6 +339,16 @@ function App() {
           default:
             return <InspectionFormGateValve {...formProps} />;
         }
+      case 'test-report-form':
+        return (
+          <TestReportForm
+            valveId={inspectionData?.valveId}
+            reportId={inspectionData?.reportId}
+            inspectionId={inspectionData?.inspectionId}
+            onBack={() => setCurrentView('inspection-list')}
+            onSave={() => setCurrentView('inspection-list')}
+          />
+        );
       case 'inspection-list':
         return (
           <InspectionList
@@ -342,6 +360,14 @@ function App() {
             onNewInspection={() => {
               setInspectionData({ valveId: selectedRecord?.id, inspectionId: null });
               setCurrentView('inspection-form');
+            }}
+            onEditReport={(reportId) => {
+              setInspectionData({ valveId: selectedRecord?.id, reportId });
+              setCurrentView('test-report-form');
+            }}
+            onNewReport={(inspectionId = null) => {
+              setInspectionData({ valveId: selectedRecord?.id, reportId: null, inspectionId });
+              setCurrentView('test-report-form');
             }}
           />
         );
@@ -392,8 +418,20 @@ function App() {
             <div className="mt-4 glass-panel" style={{ padding: '1.5rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)' }}>
               <h3 style={{ marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>Latest Activity</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {records
-                  .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt))
+                {[...records]
+                  .sort((a, b) => {
+                    const getTime = (r) => {
+                      const t1 = new Date(r.updatedAt || 0).getTime();
+                      const t2 = new Date(r.createdAt || 0).getTime();
+                      const t3 = new Date(r.lastViewedAt || 0).getTime();
+                      return Math.max(
+                        isNaN(t1) ? 0 : t1,
+                        isNaN(t2) ? 0 : t2,
+                        isNaN(t3) ? 0 : t3
+                      );
+                    };
+                    return getTime(b) - getTime(a);
+                  })
                   .slice(0, 5)
                   .map(record => (
                     <div
