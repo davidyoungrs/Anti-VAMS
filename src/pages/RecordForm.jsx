@@ -4,6 +4,9 @@ import { Select } from '../components/ui/Select';
 import { Checkbox } from '../components/ui/Checkbox';
 import { FileUpload } from '../components/ui/FileUpload';
 import { storageService } from '../services/storage';
+import { generateFullReport } from '../services/reportGenerator';
+import { inspectionService } from '../services/inspectionService';
+import { testReportService } from '../services/testReportService';
 
 export const RecordForm = ({ initialData, onSave, onNavigate }) => {
     const [formData, setFormData] = useState({
@@ -84,6 +87,50 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
         }
     };
 
+    const handleGenerateReport = async () => {
+        if (!initialData?.id) {
+            alert('Please save the record first before generating a report.');
+            return;
+        }
+
+        try {
+            // 1. Fetch related data
+            const inspections = await inspectionService.getByValveId(initialData.id);
+            const tests = await testReportService.getByValveId(initialData.id);
+
+            // 2. Generate PDF Blob
+            const pdfBlob = generateFullReport(formData, inspections, tests);
+
+            // 3. Create a File object
+            const fileName = `Report_${formData.serialNumber || 'Valve'}_${new Date().toISOString().split('T')[0]}.pdf`;
+            const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
+            // 4. Upload via storageService (simulating a file input change sort of)
+            // We need to add it to the files list and trigger a save
+
+            // Since `storageService.save` handles file array uploads, we can append it there.
+            // But `handleFiles` just updates state. We want to persist this immediately.
+
+            // Option A: Update state and ask user to save.
+            // Option B: Force a save immediately. 
+            // Let's go with Option B for "One Click" experience.
+
+            // We need to pass the actual File object to storageService.save which handles uploads
+            const updatedFiles = [...files, pdfFile];
+
+            // Create a temporary record object to save
+            const recordToSave = { ...formData, id: initialData.id, files: updatedFiles };
+            const savedRecord = await storageService.save(recordToSave);
+
+            setFiles(savedRecord.files); // Update local state with new URLs
+            alert(`Report generated and attached: ${fileName}`);
+
+        } catch (error) {
+            console.error('Report generation failed:', error);
+            alert(`Failed to generate report: ${error.message}`);
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
@@ -118,7 +165,18 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
                 <h2 className="section-title" style={{ margin: 0, border: 'none' }}>
                     {initialData ? 'Edit Valve Record' : 'New Valve Record'}
                 </h2>
-                <div style={{ display: 'flex', gap: '1rem' }}>
+                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                    <button type="button" onClick={() => onNavigate('dashboard')} className="btn-secondary">← Back</button>
+                    {initialData && initialData.id && (
+                        <button
+                            type="button"
+                            onClick={handleGenerateReport}
+                            className="btn-primary"
+                            style={{ background: 'var(--accent)', border: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                        >
+                            <span>📄</span> Generate PDF Report
+                        </button>
+                    )}
                     {initialData && initialData.id && (
                         <button
                             type="button"

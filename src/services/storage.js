@@ -66,14 +66,34 @@ export const storageService = {
                         status: r.status,
                         latitude: r.latitude,
                         longitude: r.longitude,
+                        updatedAt: r.updated_at,
+                        lastViewedAt: r.last_viewed_at,
                         valvePhoto: r.valve_photo,
                         files: r.file_urls || []
                     }));
 
                     // Safety: Only overwrite local if we actually got something from the cloud
                     if (cloudRecords.length > 0) {
-                        localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudRecords));
-                        return cloudRecords;
+                        // MERGE STRATEGY: Preserve local-only metadata (like recent views) if cloud is older or missing it
+                        // This ensures that 'Latest Activity' works immediately even before a full sync
+                        const mergedRecords = cloudRecords.map(cloudRecord => {
+                            const localMatch = localRecords.find(l => l.id === cloudRecord.id);
+                            if (!localMatch) return cloudRecord;
+
+                            return {
+                                ...cloudRecord,
+                                // If cloud misses these, use local. Use more recent of the two.
+                                updatedAt: new Date(cloudRecord.updatedAt || 0) > new Date(localMatch.updatedAt || 0)
+                                    ? cloudRecord.updatedAt
+                                    : (localMatch.updatedAt || cloudRecord.updatedAt),
+                                lastViewedAt: new Date(cloudRecord.lastViewedAt || 0) > new Date(localMatch.lastViewedAt || 0)
+                                    ? cloudRecord.lastViewedAt
+                                    : (localMatch.lastViewedAt || cloudRecord.lastViewedAt)
+                            };
+                        });
+
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(mergedRecords));
+                        return mergedRecords;
                     }
                 }
             } catch (e) {
@@ -225,6 +245,8 @@ export const storageService = {
                         test_medium: finalRecord.testMedium,
                         latitude: finalRecord.latitude,
                         longitude: finalRecord.longitude,
+                        updated_at: finalRecord.updatedAt,
+                        last_viewed_at: finalRecord.lastViewedAt,
                         valve_photo: finalRecord.valvePhoto,
                         file_urls: finalRecord.files || []
                     });
