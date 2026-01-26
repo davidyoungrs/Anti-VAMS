@@ -193,12 +193,46 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
                                 borderRadius: 'var(--radius-md)',
                                 cursor: 'pointer',
                                 fontWeight: 'bold',
-                                transition: 'transform 0.2s'
+                                transition: 'transform 0.2s',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem'
                             }}
                             onMouseEnter={(e) => e.target.style.transform = 'translateY(-2px)'}
                             onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
                         >
-                            🔍 View Inspections
+                            <span>🔍</span> Inspections & Tests
+                        </button>
+                    )}
+                    {/* Direct Test Access */}
+                    {initialData && initialData.id && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                if (onNavigate) {
+                                    // We need to pass a special flag or handle this via App.jsx to jump straight to a new test
+                                    // For now, let's navigate to inspection-list but with a "new test" intent if possible, 
+                                    // OR simpler: App.jsx needs to support jumping to 'test-report-form' with a null reportId
+                                    // Looking at App.jsx, it has 'onNewReport' prop passed to InspectionList, but here we only have 'onNavigate'.
+                                    // Let's check App.jsx again. It handles 'data' arg in 'handleNavigate'.
+                                    // We might need to update App.jsx to handle a 'new-test' action, OR just route to inspection-list and let them click 'New Test' there (which we just made easier).
+                                    // Actually, let's try to be clever. App.jsx: handleNavigate('test-report-form', { valveId: initialData.id, reportId: null })
+                                    // But wait, App.jsx 'handleNavigate' sets 'selectedRecord' with data. It doesn't set 'inspectionData'.
+                                    // We might need to stick to "Inspections & Tests" being the hub for now to avoid App.jsx refactor.
+                                    // BUT the user asked for "make suggestions for updates".
+                                    // I'll stick to renaming the button for now as it solves the clarity issue, and later we can add direct deep linking if needed.
+                                    // Wait, I can trigger a new report via InspectionList if I pass a param? No.
+                                    // Let's stick to the plan: Rename button + Add 'New Test' button to RECORD FORM?
+                                    // If I add 'New Test' button here, I need to know how to trigger it.
+                                    // App.jsx doesn't seem to expose a direct "create test" route nicely without `inspectionData` state.
+                                    // I'll stick to just renaming "View Inspections" -> "Inspections & Tests" as the PRIMARY improvement for now.
+                                    // It reduces clutter.
+                                }
+                            }}
+                            className="btn-secondary"
+                            style={{ display: 'none' }} // Hidden for now until App.jsx routing supports direct deep link
+                        >
+                            🧪 New Test
                         </button>
                     )}
                     <button type="submit" className="btn-primary">Save Record</button>

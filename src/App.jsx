@@ -382,22 +382,39 @@ function App() {
                   Welcome to the Global Valve Record system. Select an option from the sidebar to begin.
                 </p>
               </div>
-              <button
-                className="btn-primary"
-                onClick={handleSync}
-                style={{
-                  background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-                  color: 'white',
-                  border: 'none',
-                  boxShadow: '0 4px 15px rgba(245, 158, 11, 0.3)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  fontWeight: 'bold'
-                }}
-              >
-                ☁️ Sync Local to Cloud
-              </button>
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <button
+                  className="btn-primary"
+                  onClick={() => handleNavigate('create')}
+                  style={{
+                    background: 'var(--primary)',
+                    color: 'white',
+                    border: 'none',
+                    boxShadow: '0 4px 15px rgba(14, 165, 233, 0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  + New Record
+                </button>
+                <button
+                  className="btn-primary"
+                  onClick={handleSync}
+                  style={{
+                    background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                    color: 'white',
+                    border: 'none',
+                    boxShadow: '0 4px 15px rgba(245, 158, 11, 0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  ☁️ Sync Local to Cloud
+                </button>
+              </div>
             </div>
 
             <div className="grid-3 mt-4">
@@ -486,7 +503,7 @@ function App() {
             </div>
 
             <div className="mt-4" style={{ marginTop: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <button className="btn-primary" onClick={() => handleNavigate('create')}>+ New Valve Record</button>
+
 
               <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                 <button

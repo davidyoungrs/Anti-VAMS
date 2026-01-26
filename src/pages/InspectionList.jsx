@@ -3,6 +3,9 @@ import { inspectionService } from '../services/inspectionService';
 import { testReportService } from '../services/testReportService';
 import '../styles/InspectionList.css';
 
+import { storageService } from '../services/storage';
+import { generateFullReport } from '../services/reportGenerator';
+
 export default function InspectionList({ valveId, onEdit, onNewInspection, onEditReport, onNewReport }) {
     const [inspections, setInspections] = useState([]);
     const [testReports, setTestReports] = useState([]);
@@ -26,6 +29,40 @@ export default function InspectionList({ valveId, onEdit, onNewInspection, onEdi
             console.error('Failed to load data:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleGenerateReport = async () => {
+        if (!valveId) return;
+
+        try {
+            // 1. Fetch Valve Record
+            const allRecords = await storageService.getAll();
+            const valveRecord = allRecords.find(r => r.id === valveId);
+
+            if (!valveRecord) {
+                alert('Error: Could not find valve record.');
+                return;
+            }
+
+            // 2. Generate PDF Blob
+            const pdfBlob = generateFullReport(valveRecord, inspections, testReports);
+
+            // 3. Create File Object
+            const fileName = `Report_${valveRecord.serialNumber || 'Valve'}_${new Date().toISOString().split('T')[0]}.pdf`;
+            const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
+            // 4. Save (Append to files)
+            const currentFiles = valveRecord.files || valveRecord.file_urls || [];
+            const updatedFiles = [...currentFiles, pdfFile];
+            const recordToSave = { ...valveRecord, files: updatedFiles };
+
+            await storageService.save(recordToSave);
+            alert(`Report generated and attached: ${fileName}`);
+
+        } catch (error) {
+            console.error('Report generation failed:', error);
+            alert(`Failed to generate report: ${error.message}`);
         }
     };
 
@@ -96,7 +133,22 @@ export default function InspectionList({ valveId, onEdit, onNewInspection, onEdi
         <div className="inspection-list">
             <div className="list-header">
                 <h3>Inspection History</h3>
-                <div style={{ display: 'flex', gap: '1rem' }}>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <button
+                        onClick={handleGenerateReport}
+                        className="btn-primary"
+                        style={{
+                            background: 'var(--accent)',
+                            fontSize: '0.9rem',
+                            padding: '0.5rem 1rem',
+                            whiteSpace: 'nowrap',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem'
+                        }}
+                    >
+                        <span>📄</span> Generate PDF Report
+                    </button>
                     <button onClick={onNewReport} className="btn-secondary" style={{ fontSize: '0.9rem', padding: '0.5rem 1rem' }}>
                         📄 New Test Report (Standalone)
                     </button>
