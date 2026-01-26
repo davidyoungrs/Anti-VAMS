@@ -229,7 +229,7 @@ export const storageService = {
                     .upsert({
                         id: finalRecord.id,
                         created_at: sanitizeVal(finalRecord.createdAt),
-                        // updated_at: sanitizeVal(finalRecord.updatedAt), // Removed: Column missing in DB
+                        updated_at: sanitizeVal(finalRecord.updatedAt), // Re-enabled: Column added by user
                         serial_number: finalRecord.serialNumber,
                         customer: finalRecord.customer,
                         oem: finalRecord.oem,
@@ -415,7 +415,7 @@ export const storageService = {
                     .upsert({
                         id: record.id,
                         created_at: sanitizeVal(record.createdAt),
-                        // updated_at: sanitizeVal(record.updatedAt), // Removed: Column missing in DB
+                        updated_at: sanitizeVal(record.updatedAt), // Re-enabled: Column added by user
                         serial_number: record.serialNumber,
                         customer: record.customer,
                         oem: record.oem,
