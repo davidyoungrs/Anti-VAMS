@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 export const generateFullReport = (valveRecord, inspectionData = [], testData = []) => {
     const doc = new jsPDF();
@@ -42,11 +42,62 @@ export const generateFullReport = (valveRecord, inspectionData = [], testData = 
         ['Model No', valveRecord.modelNo || 'N/A', 'Actuator', valveRecord.actuator || 'N/A']
     ];
 
-    doc.autoTable({
+    autoTable(doc, {
         startY: currentY,
         head: [],
         body: valveRows,
         theme: 'plain',
+        styles: { fontSize: 10, cellPadding: 1.5 },
+        columnStyles: {
+            0: { fontStyle: 'bold', cellWidth: 35 },
+            1: { cellWidth: 55 },
+            2: { fontStyle: 'bold', cellWidth: 35 },
+            3: { cellWidth: 55 }
+        },
+        margin: { left: 14, right: 14 }
+    });
+    currentY = doc.lastAutoTable.finalY + 5;
+
+    // --- 2.1 Construction Details ---
+    const constructionRows = [
+        ['Body Material', valveRecord.bodyMaterial || '', 'Seat Material', valveRecord.seatMaterial || ''],
+        ['Trim Material', valveRecord.trimMaterial || '', 'Obturator', valveRecord.obturatorMaterial || ''],
+        ['Packing Type', valveRecord.packingType || '', 'Flange Type', valveRecord.flangeType || ''],
+        ['Gear Operator', valveRecord.gearOperator || '', 'MAWP', valveRecord.mawp || '']
+    ];
+
+    autoTable(doc, {
+        startY: currentY,
+        head: [[' Construction Details', '', '', '']],
+        body: constructionRows,
+        theme: 'striped',
+        headStyles: { fillColor: [200, 200, 200], textColor: [0, 0, 0], fontStyle: 'bold' },
+        styles: { fontSize: 10, cellPadding: 1.5 },
+        columnStyles: {
+            0: { fontStyle: 'bold', cellWidth: 35 },
+            1: { cellWidth: 55 },
+            2: { fontStyle: 'bold', cellWidth: 35 },
+            3: { cellWidth: 55 }
+        },
+        margin: { left: 14, right: 14 }
+    });
+    currentY = doc.lastAutoTable.finalY + 5;
+
+    // --- 2.2 Service & Testing Specs ---
+    const serviceRows = [
+        ['Date In', valveRecord.dateIn || '', 'Required Date', valveRecord.requiredDate || ''],
+        ['Fail Mode', valveRecord.failMode || '', 'Safety Check', valveRecord.safetyCheck || ''],
+        ['Body Test Spec', valveRecord.bodyTestSpec || '', 'Body Pressure', `${valveRecord.bodyPressure || ''} ${valveRecord.bodyPressureUnit || ''}`],
+        ['Seat Test Spec', valveRecord.seatTestSpec || '', 'Tested By', valveRecord.testedBy || ''],
+        ['LSA Check', valveRecord.lsaCheck ? 'Yes' : 'No', 'Decon Cert', valveRecord.decontaminationCert || '']
+    ];
+
+    autoTable(doc, {
+        startY: currentY,
+        head: [[' Service & Testing Specs', '', '', '']],
+        body: serviceRows,
+        theme: 'striped',
+        headStyles: { fillColor: [200, 200, 200], textColor: [0, 0, 0], fontStyle: 'bold' },
         styles: { fontSize: 10, cellPadding: 1.5 },
         columnStyles: {
             0: { fontStyle: 'bold', cellWidth: 35 },
@@ -83,7 +134,7 @@ export const generateFullReport = (valveRecord, inspectionData = [], testData = 
         });
 
         if (compRows.length > 0) {
-            doc.autoTable({
+            autoTable(doc, {
                 startY: currentY,
                 head: [['Component', 'Condition', 'Action', 'Notes']],
                 body: compRows,
@@ -93,10 +144,10 @@ export const generateFullReport = (valveRecord, inspectionData = [], testData = 
             });
             currentY = doc.lastAutoTable.finalY + 10;
         } else {
-            doc.setFontStyle('italic');
+            doc.setFont(undefined, 'italic');
             doc.text("No checklist items recorded.", 14, currentY);
             currentY += 10;
-            doc.setFontStyle('normal');
+            doc.setFont(undefined, 'normal');
         }
 
         // Overall Result
@@ -104,10 +155,10 @@ export const generateFullReport = (valveRecord, inspectionData = [], testData = 
         doc.text(`Overall Result: ${latestInspection.overallResult || 'N/A'}`, 14, currentY);
         currentY += 15;
     } else {
-        doc.setFontStyle('italic');
+        doc.setFont(undefined, 'italic');
         doc.text("No inspection data available.", 14, currentY);
         currentY += 15;
-        doc.setFontStyle('normal');
+        doc.setFont(undefined, 'normal');
     }
 
 
@@ -148,7 +199,7 @@ export const generateFullReport = (valveRecord, inspectionData = [], testData = 
             pt.highPressureLiquid?.duration || '-'
         ]);
 
-        doc.autoTable({
+        autoTable(doc, {
             startY: currentY,
             head: [['Test Type', 'Actual Pressure', 'Allowable', 'Unit', 'Duration (min)']],
             body: testTableData,
@@ -169,7 +220,7 @@ export const generateFullReport = (valveRecord, inspectionData = [], testData = 
                 row.allowable || '-'
             ]);
 
-            doc.autoTable({
+            autoTable(doc, {
                 startY: currentY,
                 head: [['Signal', '% Travel', 'Allowable Error']],
                 body: strokeRows,
@@ -180,7 +231,7 @@ export const generateFullReport = (valveRecord, inspectionData = [], testData = 
         }
 
     } else {
-        doc.setFontStyle('italic');
+        doc.setFont(undefined, 'italic');
         doc.text("No test results available.", 14, currentY);
         currentY += 10;
     }

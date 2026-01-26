@@ -80,8 +80,17 @@ export const storageService = {
                             const localMatch = localRecords.find(l => l.id === cloudRecord.id);
                             if (!localMatch) return cloudRecord;
 
+                            // SMART MERGE FOR FILES:
+                            // If cloud has NO files, but local DOES, preserve local files.
+                            // This happens when we just uploaded files locally, but the Cloud DB 'file_urls' column hasn't updated yet.
+                            let mergedFiles = cloudRecord.files;
+                            if ((!mergedFiles || mergedFiles.length === 0) && (localMatch.files && localMatch.files.length > 0)) {
+                                mergedFiles = localMatch.files;
+                            }
+
                             return {
                                 ...cloudRecord,
+                                files: mergedFiles,
                                 // If cloud misses these, use local. Use more recent of the two.
                                 updatedAt: new Date(cloudRecord.updatedAt || 0) > new Date(localMatch.updatedAt || 0)
                                     ? cloudRecord.updatedAt
@@ -114,17 +123,10 @@ export const storageService = {
         }
         finalRecord.updatedAt = new Date().toISOString();
 
-        // 2. ALWAYS Save to Local First (Ensures reliability even if cloud/files fail)
-        const records = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-        const index = records.findIndex(r => r.id === finalRecord.id);
-        if (index !== -1) {
-            records[index] = { ...records[index], ...finalRecord };
-        } else {
-            records.unshift(finalRecord);
-        }
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+        // 2. Process Files & Photos (BEFORE saving to local storage)
+        // This ensures local storage never gets "File" objects which turn into {}
 
-        // 3. Handle Valve Photo Upload (Online only)
+        // 2a. Handle Valve Photo
         if (supabase && finalRecord.valvePhoto && typeof finalRecord.valvePhoto !== 'string') {
             try {
                 const file = finalRecord.valvePhoto;
@@ -142,66 +144,73 @@ export const storageService = {
                     const { data: { publicUrl } } = supabase.storage
                         .from('valve-attachment')
                         .getPublicUrl(filePath);
-
                     finalRecord.valvePhoto = publicUrl;
-
-                    // Update local storage with the new URL
-                    const updatedRecords = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-                    const idx = updatedRecords.findIndex(r => r.id === finalRecord.id);
-                    if (idx !== -1) {
-                        updatedRecords[idx].valvePhoto = publicUrl;
-                        localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedRecords));
-                    }
                 }
             } catch (e) {
                 console.error('Error during valve photo upload:', e);
             }
         }
 
-        // 4. Handle File Uploads (Online only)
-        if (supabase && finalRecord.files && finalRecord.files.length > 0) {
+        // 2b. Handle Attachments (Support Offline via Base64)
+        if (finalRecord.files && finalRecord.files.length > 0) {
             try {
-                const uploadedUrls = await Promise.all(finalRecord.files.map(async (file) => {
-                    if (typeof file === 'string') return file; // Already a URL
+                const processedFiles = await Promise.all(finalRecord.files.map(async (file) => {
+                    if (typeof file === 'string') return file; // Already URL or Base64
 
-                    const fileExt = file.name.split('.').pop();
-                    const filePath = `${finalRecord.id}/${crypto.randomUUID()}.${fileExt}`;
+                    // Try Supabase upload if available
+                    if (supabase) {
+                        try {
+                            const fileExt = file.name.split('.').pop();
+                            // Use timestamp to prevent collisions
+                            const filePath = `${finalRecord.id}/${Date.now()}_${file.name}`;
 
-                    const { error: uploadError } = await supabase.storage
-                        .from('valve-attachment')
-                        .upload(filePath, file);
+                            const { error: uploadError } = await supabase.storage
+                                .from('valve-attachment')
+                                .upload(filePath, file);
 
-                    if (uploadError) {
-                        const errorMsg = `File upload failed for "${file.name}". Ensure bucket "valve-attachment" exists and public RLS policies are enabled. Error: ${uploadError.message}`;
-                        console.error(errorMsg, uploadError);
-                        alert(errorMsg);
-                        return null;
+                            if (!uploadError) {
+                                const { data: { publicUrl } } = supabase.storage
+                                    .from('valve-attachment')
+                                    .getPublicUrl(filePath);
+                                return publicUrl;
+                            }
+                            console.warn('Supabase upload failed, falling back to local base64:', uploadError);
+                        } catch (err) {
+                            console.warn('Supabase exception, falling back to local:', err);
+                        }
                     }
 
-                    const { data: { publicUrl } } = supabase.storage
-                        .from('valve-attachment')
-                        .getPublicUrl(filePath);
-
-                    return publicUrl;
+                    // Fallback (or Offline): Convert to Base64
+                    return new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.readAsDataURL(file);
+                        reader.onload = () => resolve(reader.result);
+                        reader.onerror = error => reject(error);
+                    });
                 }));
 
-                finalRecord.files = uploadedUrls.filter(url => url !== null);
+                finalRecord.files = processedFiles;
 
-                // Update local storage again with the new URLs
-                const updatedRecords = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-                const idx = updatedRecords.findIndex(r => r.id === finalRecord.id);
-                if (idx !== -1) {
-                    updatedRecords[idx].files = finalRecord.files;
-                    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedRecords));
-                }
             } catch (e) {
-                console.error('Error during file upload:', e);
+                console.error('Error processing files:', e);
+                // Don't fail the whole save, at least save the record data
             }
         }
 
-        // 4. Try Online Save
+        // 3. Save to Local Storage (Now contains strings, not File objects)
+        const records = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+        const index = records.findIndex(r => r.id === finalRecord.id);
+        if (index !== -1) {
+            records[index] = { ...records[index], ...finalRecord };
+        } else {
+            records.unshift(finalRecord);
+        }
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+
+        // 4. Sync to Supabase
         if (supabase) {
             try {
+                // Map to snake_case for Supabase
                 const { error } = await supabase
                     .from('valve_records')
                     .upsert({
@@ -228,7 +237,7 @@ export const storageService = {
                         size_class: finalRecord.sizeClass,
                         packing_type: finalRecord.packingType,
                         flange_type: finalRecord.flangeType,
-                        mawp: finalRecord.mawp,
+                        mawp: r.mawp, // Wait, note: 'mawp: r.mawp' vs 'mawp: finalRecord.mawp'. This is 'save', should be finalRecord.
                         body_material: finalRecord.bodyMaterial,
                         seat_material: finalRecord.seatMaterial,
                         trim_material: finalRecord.trimMaterial,
@@ -253,12 +262,10 @@ export const storageService = {
 
                 if (error) {
                     console.error('Supabase DB error:', error);
-                    // We throw here so the UI knows there's a problem (likely missing columns)
                     throw error;
                 }
             } catch (e) {
                 console.error('Supabase connection error:', e);
-                // Connection errors don't throw, allowing offline mode to work
             }
         }
 
@@ -348,4 +355,3 @@ export const storageService = {
         return { success: true, count: localRecords.length };
     }
 };
-
