@@ -410,7 +410,7 @@ export const storageService = {
                 };
 
                 // 3. Upsert to Supabase
-                const { error } = await supabase
+                const response = supabase
                     .from('valve_records')
                     .upsert({
                         id: record.id,
@@ -459,11 +459,18 @@ export const storageService = {
                         file_urls: record.files || []
                     });
 
-                if (error) {
+                // verify write
+                const { data, error } = await response.select();
+
+                if (error || (data && data.length === 0)) {
                     failedRecords.push(record.id);
-                    lastError = error; // Capture the last error
-                    // Enhanced logging to help user debug
-                    console.error(`Failed to sync record ${record.serialNumber}. Error: ${error.message} (Code: ${error.code})`, error);
+                    if (data && data.length === 0) {
+                        lastError = { message: "Write ignored by database. Check Supabase RLS Policies." };
+                        console.warn(`Record ${record.serialNumber} sync ignored (RLS blocked?)`);
+                    } else {
+                        lastError = error;
+                        console.error(`Failed to sync record ${record.serialNumber}. Error: ${error.message} (Code: ${error.code})`, error);
+                    }
                 } else {
                     syncedCount++;
                     // 4. Update Local Storage if we successfully uploaded files (converted Base64 -> URL)
