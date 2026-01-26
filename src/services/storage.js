@@ -306,56 +306,163 @@ export const storageService = {
 
     syncLocalToCloud: async () => {
         if (!supabase) return { error: 'Supabase not configured' };
-        const localRecords = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+
+        let localRecords = [];
+        try {
+            localRecords = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+        } catch (e) {
+            return { error: 'Failed to read local storage' };
+        }
+
         if (localRecords.length === 0) return { success: true, count: 0 };
 
-        const { error } = await supabase
-            .from('valve_records')
-            .upsert(localRecords.map(r => ({
-                id: r.id,
-                created_at: r.createdAt,
-                serial_number: r.serialNumber,
-                customer: r.customer,
-                oem: r.oem,
-                job_no: r.jobNo,
-                tag_no: r.tagNo,
-                order_no: r.orderNo,
-                date_in: r.dateIn,
-                status: r.status,
-                pass_fail: r.passFail,
-                plant_area: r.plantArea,
-                site_location: r.siteLocation,
-                required_date: r.requiredDate,
-                safety_check: r.safetyCheck,
-                decontamination_cert: r.decontaminationCert,
-                lsa_check: r.lsaCheck,
-                seized_mid_stroke: r.seizedMidStroke,
-                model_no: r.modelNo,
-                valve_type: r.valveType,
-                size_class: r.sizeClass,
-                packing_type: r.packingType,
-                flange_type: r.flangeType,
-                mawp: r.mawp,
-                body_material: r.bodyMaterial,
-                seat_material: r.seatMaterial,
-                trim_material: r.trimMaterial,
-                obturator_material: r.obturatorMaterial,
-                actuator: r.actuator,
-                gear_operator: r.gearOperator,
-                fail_mode: r.failMode,
-                body_test_spec: r.bodyTestSpec,
-                seat_test_spec: r.seat_test_spec,
-                body_pressure: r.bodyPressure,
-                body_pressure_unit: r.bodyPressureUnit,
-                tested_by: r.testedBy,
-                test_date: r.testDate,
-                test_medium: r.testMedium,
-                latitude: r.latitude,
-                longitude: r.longitude,
-                file_urls: r.files || []
-            })));
+        let syncedCount = 0;
+        const failedRecords = [];
 
-        if (error) return { error };
-        return { success: true, count: localRecords.length };
+        // We need to process records one by one (or in chunks) to handle file uploads
+        for (let i = 0; i < localRecords.length; i++) {
+            let record = { ...localRecords[i] };
+            let recordModified = false;
+
+            try {
+                // 1. Process Files: Upload Base64 strings to Supabase Storage
+                if (record.files && record.files.length > 0) {
+                    const processedFiles = await Promise.all(record.files.map(async (file) => {
+                        // Check if it's a Base64 string (starts with data:)
+                        if (typeof file === 'string' && file.startsWith('data:')) {
+                            try {
+                                // Convert Base64 to Blob
+                                const res = await fetch(file);
+                                const blob = await res.blob();
+
+                                // Generate path
+                                const fileExt = file.substring(file.indexOf('/') + 1, file.indexOf(';'));
+                                const fileName = `${Date.now()}_offline_upload.${fileExt}`;
+                                const filePath = `${record.id}/${fileName}`;
+
+                                // Upload
+                                const { error: uploadError } = await supabase.storage
+                                    .from('valve-attachment')
+                                    .upload(filePath, blob);
+
+                                if (!uploadError) {
+                                    const { data: { publicUrl } } = supabase.storage
+                                        .from('valve-attachment')
+                                        .getPublicUrl(filePath);
+                                    recordModified = true;
+                                    return publicUrl;
+                                } else {
+                                    console.warn('Failed to upload offline file during sync:', uploadError);
+                                    return file; // Keep Base64 if upload fails? Or fail the sync? Let's keep it for now.
+                                }
+                            } catch (err) {
+                                console.error('Error processing offline file:', err);
+                                return file;
+                            }
+                        }
+                        return file; // Already a URL or normal string
+                    }));
+
+                    record.files = processedFiles;
+                }
+
+                // 2. Process Valve Photo: Same logic
+                if (record.valvePhoto && typeof record.valvePhoto === 'string' && record.valvePhoto.startsWith('data:')) {
+                    try {
+                        const res = await fetch(record.valvePhoto);
+                        const blob = await res.blob();
+                        const fileExt = record.valvePhoto.substring(record.valvePhoto.indexOf('/') + 1, record.valvePhoto.indexOf(';'));
+                        const filePath = `${record.id}/valve-photo-${Date.now()}.${fileExt}`;
+
+                        const { error: uploadError } = await supabase.storage
+                            .from('valve-attachment')
+                            .upload(filePath, blob);
+
+                        if (!uploadError) {
+                            const { data: { publicUrl } } = supabase.storage
+                                .from('valve-attachment')
+                                .getPublicUrl(filePath);
+                            record.valvePhoto = publicUrl;
+                            recordModified = true;
+                        }
+                    } catch (err) {
+                        console.error('Error processing valve photo:', err);
+                    }
+                }
+
+                // 3. Upsert to Supabase
+                const { error } = await supabase
+                    .from('valve_records')
+                    .upsert({
+                        id: record.id,
+                        created_at: record.createdAt,
+                        updated_at: record.updatedAt, // CRITICAL: Identify this version
+                        serial_number: record.serialNumber,
+                        customer: record.customer,
+                        oem: record.oem,
+                        job_no: record.jobNo,
+                        tag_no: record.tagNo,
+                        order_no: record.orderNo,
+                        date_in: record.dateIn,
+                        status: record.status,
+                        pass_fail: record.passFail,
+                        plant_area: record.plantArea,
+                        site_location: record.siteLocation,
+                        required_date: record.requiredDate,
+                        safety_check: record.safetyCheck,
+                        decontamination_cert: record.decontaminationCert,
+                        lsa_check: record.lsaCheck,
+                        seized_mid_stroke: record.seizedMidStroke,
+                        model_no: record.modelNo,
+                        valve_type: record.valveType,
+                        size_class: record.sizeClass,
+                        packing_type: record.packingType,
+                        flange_type: record.flangeType,
+                        mawp: record.mawp,
+                        body_material: record.bodyMaterial,
+                        seat_material: record.seatMaterial,
+                        trim_material: record.trimMaterial,
+                        obturator_material: record.obturatorMaterial,
+                        actuator: record.actuator,
+                        gear_operator: record.gearOperator,
+                        fail_mode: record.failMode,
+                        body_test_spec: record.bodyTestSpec,
+                        seat_test_spec: record.seat_test_spec,
+                        body_pressure: record.bodyPressure,
+                        body_pressure_unit: record.bodyPressureUnit,
+                        tested_by: record.testedBy,
+                        test_date: record.testDate,
+                        test_medium: record.testMedium,
+                        latitude: record.latitude,
+                        longitude: record.longitude,
+                        last_viewed_at: record.lastViewedAt,
+                        valve_photo: record.valvePhoto,
+                        file_urls: record.files || []
+                    });
+
+                if (error) {
+                    failedRecords.push(record.id);
+                    console.error(`Failed to sync record ${record.serialNumber}:`, error);
+                } else {
+                    syncedCount++;
+                    // 4. Update Local Storage if we successfully uploaded files (converted Base64 -> URL)
+                    if (recordModified) {
+                        localRecords[i] = record;
+                    }
+                }
+
+            } catch (err) {
+                console.error(`Exception syncing record ${localRecords[i].serialNumber}:`, err);
+                failedRecords.push(localRecords[i].id);
+            }
+        }
+
+        // Save back any URL updates to local storage
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(localRecords));
+
+        if (failedRecords.length > 0) {
+            return { success: false, count: syncedCount, error: `Failed to sync ${failedRecords.length} records.` };
+        }
+        return { success: true, count: syncedCount };
     }
 };
