@@ -390,38 +390,44 @@ export const storageService = {
                     }
                 }
 
-                // Helper to sanitize dates (Supabase/Postgres dislikes empty strings for dates)
-                const toDateOrNull = (val) => (!val || val === '') ? null : val;
+                // Helper to sanitize fields (Supabase/Postgres dislikes empty strings for dates & numbers)
+                const sanitizeVal = (val) => (!val || val === '') ? null : val;
+
+                // Helper for numeric fields that might be strings in JS
+                const sanitizeNum = (val) => {
+                    if (val === '' || val === null || val === undefined) return null;
+                    return isNaN(val) ? null : val;
+                };
 
                 // 3. Upsert to Supabase
                 const { error } = await supabase
                     .from('valve_records')
                     .upsert({
                         id: record.id,
-                        created_at: toDateOrNull(record.createdAt),
-                        updated_at: toDateOrNull(record.updatedAt),
+                        created_at: sanitizeVal(record.createdAt),
+                        updated_at: sanitizeVal(record.updatedAt),
                         serial_number: record.serialNumber,
                         customer: record.customer,
                         oem: record.oem,
                         job_no: record.jobNo,
                         tag_no: record.tagNo,
                         order_no: record.orderNo,
-                        date_in: toDateOrNull(record.dateIn),
+                        date_in: sanitizeVal(record.dateIn),
                         status: record.status,
                         pass_fail: record.passFail,
                         plant_area: record.plantArea,
                         site_location: record.siteLocation,
-                        required_date: toDateOrNull(record.requiredDate),
+                        required_date: sanitizeVal(record.requiredDate),
                         safety_check: record.safetyCheck,
                         decontamination_cert: record.decontaminationCert,
                         lsa_check: record.lsaCheck,
                         seized_mid_stroke: record.seizedMidStroke,
                         model_no: record.modelNo,
                         valve_type: record.valveType,
-                        size_class: record.sizeClass,
+                        size_class: sanitizeVal(record.sizeClass), // Often mixed type, safest to treat as string or null if empty
                         packing_type: record.packingType,
                         flange_type: record.flangeType,
-                        mawp: record.mawp,
+                        mawp: sanitizeNum(record.mawp), // Likely numeric
                         body_material: record.bodyMaterial,
                         seat_material: record.seatMaterial,
                         trim_material: record.trimMaterial,
@@ -431,14 +437,14 @@ export const storageService = {
                         fail_mode: record.failMode,
                         body_test_spec: record.bodyTestSpec,
                         seat_test_spec: record.seat_test_spec,
-                        body_pressure: record.bodyPressure,
+                        body_pressure: sanitizeNum(record.bodyPressure), // Likely numeric
                         body_pressure_unit: record.bodyPressureUnit,
                         tested_by: record.testedBy,
-                        test_date: toDateOrNull(record.testDate),
+                        test_date: sanitizeVal(record.testDate),
                         test_medium: record.testMedium,
-                        latitude: record.latitude,
-                        longitude: record.longitude,
-                        last_viewed_at: toDateOrNull(record.lastViewedAt),
+                        latitude: sanitizeNum(record.latitude),
+                        longitude: sanitizeNum(record.longitude),
+                        last_viewed_at: sanitizeVal(record.lastViewedAt),
                         valve_photo: record.valvePhoto,
                         file_urls: record.files || []
                     });
