@@ -400,6 +400,12 @@ export const storageService = {
                     }
                 }
 
+                // 2b. Ensure timestamp exists (Legacy record fix)
+                if (!record.updatedAt) {
+                    record.updatedAt = new Date().toISOString();
+                    recordModified = true;
+                }
+
                 // Helper to sanitize fields (Supabase/Postgres dislikes empty strings for dates & numbers)
                 const sanitizeVal = (val) => (!val || val === '') ? null : val;
 
@@ -457,7 +463,7 @@ export const storageService = {
                         // last_viewed_at: sanitizeVal(record.lastViewedAt), // Removed: Column missing in DB, preventing sync. Local only feature for now.
                         valve_photo: record.valvePhoto,
                         file_urls: record.files || []
-                    });
+                    }, { onConflict: 'id' });
 
                 // verify write
                 const { data, error } = await response.select();
