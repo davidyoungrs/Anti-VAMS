@@ -198,6 +198,11 @@ export const AdminPanel = () => {
                                         const currentRecord = currentRecords.find(r => r.id === item.valveId);
                                         const diff = currentRecord ? getDiff(item.snapshot, currentRecord) : null;
 
+                                        // Filter out items with no visible changes
+                                        if (currentRecord && (!diff || diff.length === 0)) {
+                                            return null;
+                                        }
+
                                         return (
                                             <div key={item.id} className="glass-panel" style={{
                                                 padding: '1rem',
