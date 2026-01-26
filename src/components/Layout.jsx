@@ -68,7 +68,7 @@ export const Layout = ({ children, activeView, onNavigate }) => {
             User: Admin
           </div>
           <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', opacity: 0.8 }}>
-            Copyright © 2026 David Young. All rights reserved.
+            Copyright © 2026 TheValve.pro. All rights reserved.
           </div>
         </div>
       </aside >
@@ -77,7 +77,7 @@ export const Layout = ({ children, activeView, onNavigate }) => {
       < main className="main-content" >
         {children}
         <footer style={{ marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)', textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-muted)', opacity: 0.7 }}>
-          Copyright © 2026 David Young. All rights reserved.
+          Copyright © 2026 TheValve.pro All rights reserved.
         </footer>
       </main >
     </div >
