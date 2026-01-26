@@ -494,6 +494,14 @@ export const storageService = {
             const errorMsg = lastError ? (lastError.message || JSON.stringify(lastError)) : 'Unknown error';
             return { success: false, count: syncedCount, error: `Failed to sync ${failedRecords.length} records. Last Error: ${errorMsg}` };
         }
-        return { success: true, count: syncedCount };
+
+        // Final Verify: Get total count from cloud
+        let cloudTotal = 'unknown';
+        if (supabase) {
+            const { count } = await supabase.from('valve_records').select('*', { count: 'exact', head: true });
+            cloudTotal = count;
+        }
+
+        return { success: true, count: syncedCount, cloudTotal };
     }
 };

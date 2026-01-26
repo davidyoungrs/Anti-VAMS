@@ -88,9 +88,17 @@ function App() {
     if (result.error) {
       alert(`Sync failed: ${result.error.message || result.error}`);
     } else {
-      alert(`Successfully synced ${result.count} records to the cloud!`);
-      const allRecords = await storageService.getAll();
-      setRecords(allRecords);
+      if (result.success) {
+        const cloudMsg = result.cloudTotal !== undefined ? ` (Cloud Total: ${result.cloudTotal})` : '';
+        alert(`Successfully synced ${result.count} records to the cloud!${cloudMsg}`);
+        // Reload to refresh view
+        window.location.reload();
+      } else {
+        // Fallback if result.success is not explicitly true but no error
+        alert(`Sync completed with no errors, but success status is unclear. Synced ${result.count} records.`);
+        const allRecords = await storageService.getAll();
+        setRecords(allRecords);
+      }
     }
   };
 
