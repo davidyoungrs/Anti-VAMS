@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 
 export const Layout = ({ children, activeView, onNavigate }) => {
-  const [isAdminOpen, setIsAdminOpen] = useState(false); // Default open for visibility
+  const [isAdminOpen, setIsAdminOpen] = useState(false); // Default collapsed
+  const [isChartsOpen, setIsChartsOpen] = useState(false); // Default collapsedn for visibility
   const getItemStyle = (viewName) => ({
     display: 'block',
     padding: '0.75rem 1rem',
@@ -59,6 +60,37 @@ export const Layout = ({ children, activeView, onNavigate }) => {
                 Valve Map
               </a>
             </li>
+            {/* Dashboards and Charts Group */}
+            <li style={{ marginBottom: '0.5rem' }}>
+              <div
+                onClick={() => setIsChartsOpen(!isChartsOpen)}
+                style={{
+                  ...getItemStyle('charts-group'),
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}
+              >
+                Dashboards & Charts
+                <span style={{ fontSize: '0.8rem' }}>{isChartsOpen ? '▼' : '▶'}</span>
+              </div>
+
+              {isChartsOpen && (
+                <ul style={{ listStyle: 'none', padding: '0.5rem 0 0 1.5rem', margin: 0 }}>
+                  <li style={{ marginBottom: '0.5rem' }}>
+                    <a onClick={() => onNavigate('analytics')} style={{ ...getItemStyle('analytics'), fontSize: '0.9rem' }}>
+                      Analytics
+                    </a>
+                  </li>
+                  <li style={{ marginBottom: '0.5rem' }}>
+                    <a onClick={() => onNavigate('scheduler')} style={{ ...getItemStyle('scheduler'), fontSize: '0.9rem' }}>
+                      Maintenance Scheduler
+                    </a>
+                  </li>
+                </ul>
+              )}
+            </li>
+
             <li style={{ marginBottom: '0.5rem' }}>
               <div
                 onClick={() => setIsAdminOpen(!isAdminOpen)}

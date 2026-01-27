@@ -19,6 +19,7 @@ The main dashboard gives you quick access to all core functions:
 ### Creating a New Record
 1. Click **"New Valve Record"** on the dashboard.
 2. **Valve Data**: Fill in the basic identification (Serial No, Job No, Tag No).
+   - **Pro Tip (Mobile)**: Click the **Camera Icon** next to 'Serial Number' to use OCR to scan the text directly from the nameplate.
 3. **Construction**: Enter material details (Body, Seat, Trim, etc.).
 4. **Service & Testing**: Define the required test pressures and service conditions.
 5. Click **"Save Record"** at the bottom. The record is now saved locally.
@@ -67,25 +68,37 @@ Click **"Save Test Report"** when finished.
 
 ---
 
-## 5. Generating Reports
+## 5. Generating Reports & QR Codes
 
 Once a valve has an inspection or test record, you can generate a full PDF report.
 
 1. Open the **Valve Record**.
-2. Click the **"Generate PDF Report"** button (usually at the top right or bottom of the form).
-3. **Wait a moment**: The system is fetching the logo and formatting the document.
+2. Click the **"Generate PDF Report"** button.
+3. **Wait a moment**: The system fetches the logo, generates a QR code, and formats the document.
 4. **Download**: The PDF will automatically download to your device.
 
-### What's in the Report?
-- **Header**: Company Logo & Address on every page.
-- **Page 1**: Valve Datasheet & Construction Details.
-- **Inspection**: The full checklist condition report.
-- **Test Results**: Tables for Hydro, Gas, and Stroke tests.
-- **Photos**: A gallery of all inspection photos at the end.
+### QR Code Integration
+- **In the Report**: A unique QR code is stamped on the last page of the PDF.
+- **Attachment**: The QR code is also saved as a separate image file in the "Attachments" list.
+- **Usage**: Scan this QR code with any mobile device to **instantly open this specific valve record** in the application.
 
 ---
 
-## 6. Data Synchronization (Cloud)
+## 6. Analytics Dashboard
+
+Gain insights into your valve population using the visual dashboard.
+
+1. Navigate to **"Dashboards & Charts"** > **"Analytics"** in the sidebar menu.
+2. **Filtering**:
+   - Use the **OEM Filter** dropdown to select specific manufacturers (e.g., "Cameron", "ValvTechnologies").
+   - Hold **Cmd/Ctrl** to select multiple OEMs at once. Select "All OEMs" to reset.
+3. **Charts**:
+   - **Pass/Fail Rates**: Bar chart showing testing outcomes by manufacturer.
+   - **Top Failure Modes**: Pie chart highlighting the most common reasons for valve failure (e.g., "Seat Leak", "Stem Damage").
+
+---
+
+## 7. Data Synchronization (Cloud)
 
 Your data is stored **locally** on your browser first, so you can work offline. To backup or share data:
 

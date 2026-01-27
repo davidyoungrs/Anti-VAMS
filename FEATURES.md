@@ -1,9 +1,10 @@
 # Features
 
 ## 1. Valve Record Management
-- ** comprehensive Datasheets**: Store and manage detailed technical specifications for valves.
+- **Comprehensive Datasheets**: Store and manage detailed technical specifications for valves.
 - **Data Entry**: Fields for General Info, Construction Details, Service Conditions, and Testing Specs.
 - **Search & Filter**: Easily locate valve records by Serial Number, Tag No, or Customer.
+- **OCR Scanner (Mobile)**: fast text recognition for Serial Numbers using device camera.
 
 ## 2. Inspection System
 - **Component Checklists**: Detailed inspection checklists tailored to valve types (e.g., Gate, Globe, Ball).
@@ -30,6 +31,7 @@
   - Inspection Results & Checklist.
   - Test Data (Pressure & Stroke).
   - Inspection Photo Gallery.
+- **Embedded QR Code**: Every report includes a unique QR code for instant digital access.
 - **Layout automation**: Smart pagination to prevent table rows from breaking awkwardly or overlapping headers.
 - **Traceability**: Footer on every page with generation Date/Time and Page Numbers.
 
@@ -38,3 +40,15 @@
   - **Local First**: Works offline using browser LocalStorage.
   - **Cloud Sync**: One-click synchronization with Supabase for data backup and team collaboration.
 - **Media Handling**: Securely uploads and retrieves images for inspection reports.
+
+## 6. Analytics & Intelligence
+- **Visual Dashboard**:
+  - **Pass/Fail Rates**: Bar charts comparing performance across OEMs.
+  - **Failure Modes**: Pie charts visualizing common failure reasons (e.g., Seat Leaks).
+- **OEM Filtering**: Multi-select dropdown to filter analytics by specific manufacturers.
+- **Maintenance Scheduler**: (Coming Soon) Tools for scheduling and tracking recurring maintenance.
+
+## 7. Advanced Tools
+- **Deep Linking**: 
+  - Use QR codes to bypass the dashboard and open specific valve records immediately.
+  - Physical-to-Digital bridge for workshop efficiency.

@@ -13,6 +13,8 @@ import { ValveTypeSelector } from './components/inspection/ValveTypeSelector';
 import InspectionList from './pages/InspectionList';
 import TestReportForm from './pages/TestReportForm';
 import { AdminPanel } from './pages/AdminPanel';
+import { AnalyticsDashboard } from './pages/AnalyticsDashboard';
+import { MaintenanceScheduler } from './pages/MaintenanceScheduler';
 import { MarkdownPage } from './components/MarkdownPage';
 import { storageService } from './services/storage';
 
@@ -204,6 +206,10 @@ function App() {
         return <MarkdownPage title="User Guide" content={userGuideContent} />;
       case 'features':
         return <MarkdownPage title="System Features" content={featuresContent} />;
+      case 'analytics':
+        return <AnalyticsDashboard records={records} />;
+      case 'scheduler':
+        return <MaintenanceScheduler />;
       case 'record-detail':
         return <RecordForm key={selectedRecord?.id || 'detail'} initialData={selectedRecord} onSave={handleSave} onNavigate={handleNavigate} />;
       case 'search':
