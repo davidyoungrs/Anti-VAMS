@@ -1,6 +1,6 @@
-# GVS-VAMS User Guide
+# GVS-VAMS User Guide V0.0.1
 
-Welcome to the Global Valve REgister -Valve Asset Management System (Anti-VAMS). This specific guide will help you manage valve records, perform inspections, run tests, and generate professional PDF reports.
+Welcome to the Global Valve Register - Valve Asset Management System (AntiGVR-VAMS). This specific guide will help you manage valve records, perform inspections, run tests, and generate professional PDF reports.
 
 ---
 
