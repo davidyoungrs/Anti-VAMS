@@ -122,6 +122,11 @@ export const Layout = ({ children, activeView, onNavigate }) => {
                       Features
                     </a>
                   </li>
+                  <li style={{ marginBottom: '0.5rem' }}>
+                    <a onClick={() => onNavigate('roadmap')} style={{ ...getItemStyle('roadmap'), fontSize: '0.9rem' }}>
+                      Strategic Roadmap
+                    </a>
+                  </li>
                 </ul>
               )}
             </li>

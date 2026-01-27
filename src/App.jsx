@@ -21,6 +21,7 @@ import { storageService } from './services/storage';
 // Import Markdown Content
 import featuresContent from '../FEATURES.md?raw';
 import userGuideContent from '../USER_GUIDE.md?raw';
+import roadmapContent from '../ROADMAP.md?raw';
 
 function App() {
   const [currentView, setCurrentView] = useState('dashboard');
@@ -206,6 +207,8 @@ function App() {
         return <MarkdownPage title="User Guide" content={userGuideContent} />;
       case 'features':
         return <MarkdownPage title="System Features" content={featuresContent} />;
+      case 'roadmap':
+        return <MarkdownPage title="Strategic Development Roadmap" content={roadmapContent} />;
       case 'analytics':
         return <AnalyticsDashboard records={records} />;
       case 'scheduler':

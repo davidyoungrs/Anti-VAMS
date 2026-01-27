@@ -13,52 +13,15 @@ const loadImage = (url) => {
 };
 
 export const generateFullReport = async (valveRecord, inspectionData = [], testData = []) => {
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    let currentY = 50;
+    // 1. Generate QR Code (Early)
+    let qrDataUrl = null;
+    try {
+        qrDataUrl = await generateValveQR(valveRecord);
+    } catch (e) {
+        console.warn("Failed to generate QR for report", e);
+    }
 
-    // Define Header/Footer Generators
-    const drawHeader = (doc) => {
-        // Branding Top Right
-        doc.setFontSize(16);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(52, 73, 94);
-        doc.text("Global Valve Record", pageWidth - 14, 20, { align: 'right' });
-
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(100, 100, 100);
-        doc.text([
-            "TheValve.pro",
-            "PO Box 212359",
-            "Dubai",
-            "United Arab Emirates"
-        ], pageWidth - 14, 26, { align: 'right' });
-
-        // Logo (Left of "Global Valve Record")
-        if (logoImg) {
-            try {
-                const logoHeight = 12;
-                const aspect = logoImg.width / logoImg.height;
-                const logoWidth = logoHeight * aspect;
-                const textWidth = doc.getTextWidth("Global Valve Record");
-                const logoX = pageWidth - 14 - textWidth - logoWidth - 5;
-                doc.addImage(logoImg, 'PNG', logoX, 12, logoWidth, logoHeight);
-            } catch (e) {
-                // Ignore drawing error
-            }
-        }
-    };
-
-    const drawFooter = (doc, pageNumber, totalPages) => {
-        doc.setFontSize(8);
-        doc.setTextColor(150);
-        const dateStr = new Date().toLocaleString();
-        doc.text(`Generated on: ${dateStr} | Page ${pageNumber} of ${totalPages}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
-    };
-
-    // Load Logo with retry/check
+    // 2. Load Logo (Early)
     let logoImg = null;
     try {
         logoImg = await loadImage('/logo.png');
@@ -66,11 +29,83 @@ export const generateFullReport = async (valveRecord, inspectionData = [], testD
         console.warn("Could not load logo.png", e);
     }
 
+    // 3. Initialize Doc
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    let currentY = 50; // Start content below header
 
+    // --- Define Header Generator ---
+    const drawHeader = (doc, pageNumber) => {
+        const rightEdge = pageWidth - 14;
 
-    // Header Helper
+        // A. QR Code (Top Left) - ONLY ON PAGE 1
+        if (qrDataUrl && pageNumber === 1) {
+            doc.addImage(qrDataUrl, 'PNG', 14, 10, 25, 25);
+            doc.setFontSize(8);
+            doc.setTextColor(100, 100, 100);
+            doc.setFont('helvetica', 'normal');
+            doc.text("Scan for Digital Record", 14, 38);
+        }
+
+        // B. Header Text (Top Right)
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(52, 73, 94);
+        doc.text("Global Valve Record", rightEdge, 20, { align: 'right' });
+
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100, 100, 100);
+        const addressLines = [
+            "TheValve.pro",
+            "PO Box 212359",
+            "Dubai",
+            "United Arab Emirates"
+        ];
+        doc.text(addressLines, rightEdge, 26, { align: 'right' });
+
+        // C. Logo (Left of Text - Calculated to avoid overlap)
+        if (logoImg) {
+            try {
+                // Calculate width of the text block to safely position logo
+                doc.setFontSize(16);
+                doc.setFont('helvetica', 'bold');
+                const titleWidth = doc.getTextWidth("Global Valve Record");
+
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+                // Find widest line in address
+                const addressWidth = Math.max(...addressLines.map(l => doc.getTextWidth(l)));
+
+                const maxTextWidth = Math.max(titleWidth, addressWidth);
+
+                // Logo Dimensions
+                const logoHeight = 15;
+                const aspect = logoImg.width / logoImg.height;
+                const logoWidth = logoHeight * aspect;
+
+                // Position: RightEdge - TextWidth - Padding - LogoWidth
+                const logoX = rightEdge - maxTextWidth - 8 - logoWidth;
+
+                doc.addImage(logoImg, 'PNG', logoX, 12, logoWidth, logoHeight);
+            } catch (e) {
+                // Ignore drawing error
+            }
+        }
+    };
+
+    // --- Define Footer Generator ---
+    const drawFooter = (doc, pageNumber, totalPages) => {
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        const dateStr = new Date().toLocaleString();
+        doc.text(`Generated on: ${dateStr} | Page ${pageNumber} of ${totalPages}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+    };
+
+    // --- Content Generation Helpers ---
     const addSectionHeader = (title) => {
-        if (currentY + 15 > pageHeight - 20) { // Check against page height minus footer margin
+        if (currentY + 15 > pageHeight - 20) {
             doc.addPage();
             currentY = 50;
         }
@@ -81,19 +116,17 @@ export const generateFullReport = async (valveRecord, inspectionData = [], testD
         doc.setLineWidth(0.5);
         doc.line(14, currentY + 2, pageWidth - 14, currentY + 2);
         currentY += 10;
-        doc.setTextColor(0, 0, 0); // Reset to black
+        doc.setTextColor(0, 0, 0); // Reset
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
     };
 
-    // --- 1. Title & Metadata ---
-    // Title is now below the header
-
-    // Main Title (Centered)
+    // --- 1. Title (Document Body) ---
     doc.setFontSize(22);
     doc.setTextColor(44, 62, 80);
-    doc.text("Valve Inspection & Test Report", pageWidth / 2, currentY + 5, { align: 'center' }); // Reduced spacing
-    currentY += 20;
+    // Center title in available space? Or just center page.
+    doc.text("Valve Inspection & Test Report", pageWidth / 2, 50, { align: 'center' });
+    currentY = 70; // Set explicit Y after main title
 
     // --- 2. Valve Data ---
     addSectionHeader("Valve Data");
@@ -177,43 +210,24 @@ export const generateFullReport = async (valveRecord, inspectionData = [], testD
     // --- 3. Inspection Checklist ---
     addSectionHeader("Inspection Checklist");
 
-    // Use latest inspection if multiple exist, otherwise empty object
     const latestInspection = inspectionData.length > 0 ? inspectionData[0] : {};
     const componentsData = latestInspection.components || {};
 
-    // Display Header Info even if no inspection exists
     doc.text(`Inspection Date: ${latestInspection.inspectionDate ? new Date(latestInspection.inspectionDate).toLocaleDateString() : 'Not Inspected'}`, 14, currentY);
     doc.text(`Inspector: ${latestInspection.inspectorName || '-'}`, 120, currentY);
     currentY += 8;
 
-    // Determine Valve Type and get Config
-    // We need to import these constants at the top of the file, but since this is a pure function replacement,
-    // we will access them via the passed arguments or global scope if possible.
-    // However, clean way is to rely on the imports being added to the file header.
-    // For now, let's assume imports are added. 
-
-    const valveType = valveRecord.valveType || 'Gate Valve'; // Default if missing
-    // Fallback to 'Gate Valve' config if specific type not found, or 'Other'
+    const valveType = valveRecord.valveType || 'Gate Valve';
     const valveConfig = VALVE_COMPONENT_CONFIGS[valveType] || VALVE_COMPONENT_CONFIGS['Gate Valve'];
 
     const checklistRows = [];
 
-    // Iterate through Categories in the Config
     Object.entries(valveConfig).forEach(([categoryName, partsList]) => {
-        // Add Category Header Row
         checklistRows.push([{ content: categoryName.toUpperCase(), colSpan: 4, styles: { fillColor: [240, 240, 240], fontStyle: 'bold' } }]);
-
-        // Iterate through Parts in that Category
         partsList.forEach(partKey => {
-            const label = COMPONENT_LABELS[partKey] || partKey.replace(/([A-Z])/g, ' $1').trim(); // Fallback label
+            const label = COMPONENT_LABELS[partKey] || partKey.replace(/([A-Z])/g, ' $1').trim();
             const partData = componentsData[partKey] || {};
-
-            checklistRows.push([
-                label,
-                partData.condition || '-',
-                partData.action || '-',
-                partData.notes || '-'
-            ]);
+            checklistRows.push([label, partData.condition || '-', partData.action || '-', partData.notes || '-']);
         });
     });
 
@@ -239,52 +253,17 @@ export const generateFullReport = async (valveRecord, inspectionData = [], testD
     }
     currentY += 15;
 
-
     // --- 4. Test Results ---
     addSectionHeader("Test Results");
 
     const latestTest = testData.length > 0 ? testData[0] : null;
     if (latestTest && latestTest.pressureTest) {
         const pt = latestTest.pressureTest;
-
-        // Prepare table data for Pressure Tests
         const testTableData = [];
 
-        // Hydrotest
-        testTableData.push([
-            'Hydrotest',
-            pt.hydrotest?.actual || '-',
-            pt.hydrotest?.allowable || '-',
-            pt.hydrotest?.unit || '-',
-            pt.hydrotest?.duration || '-',
-            '-',
-            '-',
-            '-'
-        ]);
-
-        // Low Pressure Gas
-        testTableData.push([
-            'Low Pressure Gas',
-            pt.lowPressureGas?.actual || '-',
-            pt.lowPressureGas?.allowable || '-',
-            pt.lowPressureGas?.unit || '-',
-            pt.lowPressureGas?.duration || '-',
-            pt.lowPressureGas?.actualLeakage || '-',
-            pt.lowPressureGas?.allowableLeakage || '-',
-            pt.lowPressureGas?.leakageUnit || '-'
-        ]);
-
-        // High Pressure Liquid
-        testTableData.push([
-            'High Pressure Liquid',
-            pt.highPressureLiquid?.actual || '-',
-            pt.highPressureLiquid?.allowable || '-',
-            pt.highPressureLiquid?.unit || '-',
-            pt.highPressureLiquid?.duration || '-',
-            pt.highPressureLiquid?.actualLeakage || '-',
-            pt.highPressureLiquid?.allowableLeakage || '-',
-            pt.highPressureLiquid?.leakageUnit || '-'
-        ]);
+        testTableData.push(['Hydrotest', pt.hydrotest?.actual || '-', pt.hydrotest?.allowable || '-', pt.hydrotest?.unit || '-', pt.hydrotest?.duration || '-', '-', '-', '-']);
+        testTableData.push(['Low Pressure Gas', pt.lowPressureGas?.actual || '-', pt.lowPressureGas?.allowable || '-', pt.lowPressureGas?.unit || '-', pt.lowPressureGas?.duration || '-', pt.lowPressureGas?.actualLeakage || '-', pt.lowPressureGas?.allowableLeakage || '-', pt.lowPressureGas?.leakageUnit || '-']);
+        testTableData.push(['High Pressure Liquid', pt.highPressureLiquid?.actual || '-', pt.highPressureLiquid?.allowable || '-', pt.highPressureLiquid?.unit || '-', pt.highPressureLiquid?.duration || '-', pt.highPressureLiquid?.actualLeakage || '-', pt.highPressureLiquid?.allowableLeakage || '-', pt.highPressureLiquid?.leakageUnit || '-']);
 
         autoTable(doc, {
             startY: currentY,
@@ -296,18 +275,11 @@ export const generateFullReport = async (valveRecord, inspectionData = [], testD
         });
         currentY = doc.lastAutoTable.finalY + 10;
 
-        // Stroke Test if applicable
         if (latestTest.strokeTest && latestTest.strokeTest.details && latestTest.strokeTest.details.length > 0) {
             doc.setFont('helvetica', 'bold');
             doc.text("Stroke Test / Control Valve", 14, currentY);
             currentY += 6;
-
-            const strokeRows = latestTest.strokeTest.details.map(row => [
-                row.signal || '-',
-                row.expectedTravel || '-',
-                row.actual || '-'
-            ]);
-
+            const strokeRows = latestTest.strokeTest.details.map(row => [row.signal || '-', row.expectedTravel || '-', row.actual || '-']);
             autoTable(doc, {
                 startY: currentY,
                 head: [['Stroke Signal', 'Expect Stroke %', 'Actual stroke %']],
@@ -327,26 +299,17 @@ export const generateFullReport = async (valveRecord, inspectionData = [], testD
     // --- 5. Inspection Photos ---
     if (latestInspection.inspectionPhotos && latestInspection.inspectionPhotos.length > 0) {
         addSectionHeader("Inspection Photos");
-
         const photoWidth = 80;
         const photoHeight = 60;
         let x = 14;
 
         latestInspection.inspectionPhotos.forEach((photoUrl, index) => {
-            // Check if page break is needed
             if (currentY + photoHeight > doc.internal.pageSize.getHeight()) {
                 doc.addPage();
-                currentY = 45;
+                currentY = 50; // Reset to below header
             }
-
             try {
-                // Add image (assuming URL returns valid image data or base64)
-                // Note: jsPDF addImage supports JPEG, PNG, etc.
-                // If these are remote URLs, they might not render in client-side generation without CORS handling or being converted to base64 first.
-                // Assuming for now they work or are base64 from the app.
                 doc.addImage(photoUrl, 'JPEG', x, currentY, photoWidth, photoHeight);
-
-                // Layout logic for 2 per row
                 if ((index + 1) % 2 === 0) {
                     x = 14;
                     currentY += photoHeight + 10;
@@ -354,8 +317,8 @@ export const generateFullReport = async (valveRecord, inspectionData = [], testD
                     x += photoWidth + 10;
                 }
             } catch (err) {
-                console.error("Error adding image to PDF", err);
-                doc.text(`[Error loading image ${index + 1}]`, x, currentY + 10);
+                console.error("Error adding image", err);
+                doc.text(`[Error loading image]`, x, currentY + 10);
                 if ((index + 1) % 2 === 0) {
                     x = 14;
                     currentY += 20;
@@ -366,29 +329,12 @@ export const generateFullReport = async (valveRecord, inspectionData = [], testD
         });
     }
 
-    // --- 6. QR Code ---
-    // Generate QR
-    const qrDataUrl = await generateValveQR(valveRecord);
-    if (qrDataUrl) {
-        // Check if page break is needed
-        if (currentY + 50 > doc.internal.pageSize.getHeight()) {
-            doc.addPage();
-            currentY = 45;
-        } else {
-            currentY += 10;
-        }
-
-        doc.setFontSize(10);
-        doc.setTextColor(0, 0, 0);
-        doc.text("Scan to View Record:", 14, currentY);
-        doc.addImage(qrDataUrl, 'PNG', 14, currentY + 2, 30, 30);
-    }
-
     // --- 6. Add Header & Footer to All Pages ---
+    // (This loops through all pages at the end and stamps the header/footer)
     const pageCount = doc.internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
-        drawHeader(doc);
+        drawHeader(doc, i);
         drawFooter(doc, i, pageCount);
     }
 
