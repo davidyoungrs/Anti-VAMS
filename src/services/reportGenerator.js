@@ -195,7 +195,10 @@ export const generateFullReport = (valveRecord, inspectionData = [], testData = 
             pt.hydrotest?.actual || '-',
             pt.hydrotest?.allowable || '-',
             pt.hydrotest?.unit || '-',
-            pt.hydrotest?.duration || '-'
+            pt.hydrotest?.duration || '-',
+            '-',
+            '-',
+            '-'
         ]);
 
         // Low Pressure Gas
@@ -204,7 +207,10 @@ export const generateFullReport = (valveRecord, inspectionData = [], testData = 
             pt.lowPressureGas?.actual || '-',
             pt.lowPressureGas?.allowable || '-',
             pt.lowPressureGas?.unit || '-',
-            pt.lowPressureGas?.duration || '-'
+            pt.lowPressureGas?.duration || '-',
+            pt.lowPressureGas?.actualLeakage || '-',
+            pt.lowPressureGas?.allowableLeakage || '-',
+            pt.lowPressureGas?.leakageUnit || '-'
         ]);
 
         // High Pressure Liquid
@@ -213,14 +219,18 @@ export const generateFullReport = (valveRecord, inspectionData = [], testData = 
             pt.highPressureLiquid?.actual || '-',
             pt.highPressureLiquid?.allowable || '-',
             pt.highPressureLiquid?.unit || '-',
-            pt.highPressureLiquid?.duration || '-'
+            pt.highPressureLiquid?.duration || '-',
+            pt.highPressureLiquid?.actualLeakage || '-',
+            pt.highPressureLiquid?.allowableLeakage || '-',
+            pt.highPressureLiquid?.leakageUnit || '-'
         ]);
 
         autoTable(doc, {
             startY: currentY,
-            head: [['Test Type', 'Actual Pressure', 'Allowable', 'Unit', 'Duration (min)']],
+            head: [['Test Type', 'Pressure (Act)', 'Pressure (All)', 'Unit', 'Time', 'Leak (Act)', 'Leak (All)', 'Leak Unit']],
             body: testTableData,
             headStyles: { fillColor: [52, 73, 94] },
+            styles: { fontSize: 8, cellPadding: 1 },
             margin: { left: 14, right: 14 }
         });
         currentY = doc.lastAutoTable.finalY + 10;

@@ -5,6 +5,7 @@ import { ValveDataHeader } from '../components/inspection/ValveDataHeader';
 import '../styles/InspectionForm.css';
 
 const PRESSURE_UNITS = ['PSI', 'Bar', 'MPa'];
+const LEAKAGE_UNITS = ['bubbles/min', 'ml/min', 'cc/min', 'drops/min'];
 const SIGNAL_TYPES = ['mA', 'PSI', 'Bar'];
 
 export default function TestReportForm({ valveId, reportId, inspectionId, onBack, onSave }) {
@@ -19,8 +20,8 @@ export default function TestReportForm({ valveId, reportId, inspectionId, onBack
         },
         pressureTest: {
             hydrotest: { actual: '', allowable: '', unit: 'PSI', duration: '' },
-            lowPressureGas: { actual: '', allowable: '', unit: 'PSI', duration: '' },
-            highPressureLiquid: { actual: '', allowable: '', unit: 'PSI', duration: '' }
+            lowPressureGas: { actual: '', allowable: '', unit: 'PSI', duration: '', actualLeakage: '', allowableLeakage: '', leakageUnit: 'bubbles/min' },
+            highPressureLiquid: { actual: '', allowable: '', unit: 'PSI', duration: '', actualLeakage: '', allowableLeakage: '', leakageUnit: 'ml/min' }
         },
         strokeTest: {
             signalType: 'mA',
@@ -250,7 +251,7 @@ export default function TestReportForm({ valveId, reportId, inspectionId, onBack
                                     />
                                 </div>
                                 <div className="field-group">
-                                    <label>Unit</label>
+                                    <label>Pressure Unit</label>
                                     <select
                                         value={report.pressureTest.lowPressureGas.unit}
                                         onChange={e => handlePressureChange('lowPressureGas', 'unit', e.target.value)}
@@ -265,6 +266,31 @@ export default function TestReportForm({ valveId, reportId, inspectionId, onBack
                                         value={report.pressureTest.lowPressureGas.duration}
                                         onChange={e => handlePressureChange('lowPressureGas', 'duration', e.target.value)}
                                     />
+                                </div>
+                                <div className="field-group">
+                                    <label>Actual Leakage</label>
+                                    <input
+                                        type="text"
+                                        value={report.pressureTest.lowPressureGas.actualLeakage || ''}
+                                        onChange={e => handlePressureChange('lowPressureGas', 'actualLeakage', e.target.value)}
+                                    />
+                                </div>
+                                <div className="field-group">
+                                    <label>Allowable Leakage</label>
+                                    <input
+                                        type="text"
+                                        value={report.pressureTest.lowPressureGas.allowableLeakage || ''}
+                                        onChange={e => handlePressureChange('lowPressureGas', 'allowableLeakage', e.target.value)}
+                                    />
+                                </div>
+                                <div className="field-group">
+                                    <label>Leakage Unit</label>
+                                    <select
+                                        value={report.pressureTest.lowPressureGas.leakageUnit || 'bubbles/min'}
+                                        onChange={e => handlePressureChange('lowPressureGas', 'leakageUnit', e.target.value)}
+                                    >
+                                        {LEAKAGE_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                                    </select>
                                 </div>
                             </div>
                         </div>
@@ -303,7 +329,7 @@ export default function TestReportForm({ valveId, reportId, inspectionId, onBack
                                     />
                                 </div>
                                 <div className="field-group">
-                                    <label>Unit</label>
+                                    <label>Pressure Unit</label>
                                     <select
                                         value={report.pressureTest.highPressureLiquid.unit}
                                         onChange={e => handlePressureChange('highPressureLiquid', 'unit', e.target.value)}
@@ -318,6 +344,31 @@ export default function TestReportForm({ valveId, reportId, inspectionId, onBack
                                         value={report.pressureTest.highPressureLiquid.duration}
                                         onChange={e => handlePressureChange('highPressureLiquid', 'duration', e.target.value)}
                                     />
+                                </div>
+                                <div className="field-group">
+                                    <label>Actual Leakage</label>
+                                    <input
+                                        type="text"
+                                        value={report.pressureTest.highPressureLiquid.actualLeakage || ''}
+                                        onChange={e => handlePressureChange('highPressureLiquid', 'actualLeakage', e.target.value)}
+                                    />
+                                </div>
+                                <div className="field-group">
+                                    <label>Allowable Leakage</label>
+                                    <input
+                                        type="text"
+                                        value={report.pressureTest.highPressureLiquid.allowableLeakage || ''}
+                                        onChange={e => handlePressureChange('highPressureLiquid', 'allowableLeakage', e.target.value)}
+                                    />
+                                </div>
+                                <div className="field-group">
+                                    <label>Leakage Unit</label>
+                                    <select
+                                        value={report.pressureTest.highPressureLiquid.leakageUnit || 'ml/min'}
+                                        onChange={e => handlePressureChange('highPressureLiquid', 'leakageUnit', e.target.value)}
+                                    >
+                                        {LEAKAGE_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                                    </select>
                                 </div>
                             </div>
                         </div>

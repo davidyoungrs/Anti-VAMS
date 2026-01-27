@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { inspectionService } from '../services/inspectionService';
+import { inspectionService, COMPONENT_LABELS } from '../services/inspectionService';
 import { testReportService } from '../services/testReportService';
 import '../styles/InspectionList.css';
 
@@ -219,7 +219,7 @@ export default function InspectionList({ valveId, onEdit, onNewInspection, onEdi
                                                         .filter(([_, data]) => data && (data.condition || data.action))
                                                         .map(([key, data]) => (
                                                             <div key={key} className="component-row">
-                                                                <span className="component-key">{key}</span>
+                                                                <span className="component-key">{COMPONENT_LABELS[key] || key}</span>
                                                                 <div className="component-info">
                                                                     {data.condition && (
                                                                         <span className="info-tag condition">

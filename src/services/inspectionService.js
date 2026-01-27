@@ -126,6 +126,11 @@ export const COMPONENT_LABELS = {
     solenoid: 'Solenoid',
     tripValve: 'Trip Valve',
     quickExhaust: 'Quick Exhaust',
+    glandPacking: 'Gland Packing',
+    gaskets: 'Gaskets',
+    packing: 'Packing',
+    bolt: 'Bolt',
+    nut: 'Nut',
 
     // Butterfly
     disc: 'Disc',
