@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 export const Layout = ({ children, activeView, onNavigate }) => {
+  const [isAdminOpen, setIsAdminOpen] = useState(false); // Default open for visibility
   const getItemStyle = (viewName) => ({
     display: 'block',
     padding: '0.75rem 1rem',
@@ -55,13 +56,42 @@ export const Layout = ({ children, activeView, onNavigate }) => {
             </li>
             <li style={{ marginBottom: '0.5rem' }}>
               <a onClick={() => onNavigate('map')} style={getItemStyle('map')}>
-                Site Map
+                Valve Map
               </a>
             </li>
             <li style={{ marginBottom: '0.5rem' }}>
-              <a onClick={() => onNavigate('admin')} style={getItemStyle('admin')}>
-                Admin Panel
-              </a>
+              <div
+                onClick={() => setIsAdminOpen(!isAdminOpen)}
+                style={{
+                  ...getItemStyle('admin-group'),
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}
+              >
+                Admin
+                <span style={{ fontSize: '0.8rem' }}>{isAdminOpen ? '▼' : '▶'}</span>
+              </div>
+
+              {isAdminOpen && (
+                <ul style={{ listStyle: 'none', padding: '0.5rem 0 0 1.5rem', margin: 0 }}>
+                  <li style={{ marginBottom: '0.5rem' }}>
+                    <a onClick={() => onNavigate('admin')} style={{ ...getItemStyle('admin'), fontSize: '0.9rem' }}>
+                      Admin Panel
+                    </a>
+                  </li>
+                  <li style={{ marginBottom: '0.5rem' }}>
+                    <a onClick={() => onNavigate('user-guide')} style={{ ...getItemStyle('user-guide'), fontSize: '0.9rem' }}>
+                      User Guide
+                    </a>
+                  </li>
+                  <li style={{ marginBottom: '0.5rem' }}>
+                    <a onClick={() => onNavigate('features')} style={{ ...getItemStyle('features'), fontSize: '0.9rem' }}>
+                      Features
+                    </a>
+                  </li>
+                </ul>
+              )}
             </li>
             <li style={{ marginBottom: '0.5rem' }}> <a href="https://thevalve.pro" target="_blank" rel="noopener noreferrer" style={{ ...getItemStyle('TheValve.pro'), color: 'white', fontWeight: 'bold', border: '1px solid white' }} > TheValve.pro </a>
             </li>

@@ -13,7 +13,12 @@ import { ValveTypeSelector } from './components/inspection/ValveTypeSelector';
 import InspectionList from './pages/InspectionList';
 import TestReportForm from './pages/TestReportForm';
 import { AdminPanel } from './pages/AdminPanel';
+import { MarkdownPage } from './components/MarkdownPage';
 import { storageService } from './services/storage';
+
+// Import Markdown Content
+import featuresContent from '../FEATURES.md?raw';
+import userGuideContent from '../USER_GUIDE.md?raw';
 
 function App() {
   const [currentView, setCurrentView] = useState('dashboard');
@@ -177,6 +182,10 @@ function App() {
         return <RecordForm key="create" onSave={handleSave} onNavigate={handleNavigate} />;
       case 'admin':
         return <AdminPanel />;
+      case 'user-guide':
+        return <MarkdownPage title="User Guide" content={userGuideContent} />;
+      case 'features':
+        return <MarkdownPage title="System Features" content={featuresContent} />;
       case 'record-detail':
         return <RecordForm key={selectedRecord?.id || 'detail'} initialData={selectedRecord} onSave={handleSave} onNavigate={handleNavigate} />;
       case 'search':

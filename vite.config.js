@@ -10,8 +10,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
-        name: 'Anti VAMS',
-        short_name: 'Anti VAMS',
+        name: 'GVR - VAMS',
+        short_name: 'GVR - VAMS',
         description: 'Vandervell Asset Management System',
         theme_color: '#0ea5e9',
         background_color: '#0f172a',
