@@ -404,3 +404,13 @@
     color: #f8f9fa;
     /* Light text for Equipment section on dark glass background */
 }
+
+.pressure-test-section .glass-panel h4 {
+    color: #2c3e50 !important;
+    /* Force dark text for titles */
+}
+
+.pressure-test-section .glass-panel .field-group label {
+    color: #2c3e50 !important;
+    /* Force dark text for input labels in this specific section */
+}

@@ -99,7 +99,7 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
             const tests = await testReportService.getByValveId(initialData.id);
 
             // 2. Generate PDF Blob
-            const pdfBlob = generateFullReport(formData, inspections, tests);
+            const pdfBlob = await generateFullReport(formData, inspections, tests);
 
             // 3. Create a File object
             const fileName = `Report_${formData.serialNumber || 'Valve'}_${new Date().toISOString().split('T')[0]}.pdf`;

@@ -46,7 +46,7 @@ export default function InspectionList({ valveId, onEdit, onNewInspection, onEdi
             }
 
             // 2. Generate PDF Blob
-            const pdfBlob = generateFullReport(valveRecord, inspections, testReports);
+            const pdfBlob = await generateFullReport(valveRecord, inspections, testReports);
 
             // 3. Create File Object
             const fileName = `Report_${valveRecord.serialNumber || 'Valve'}_${new Date().toISOString().split('T')[0]}.pdf`;

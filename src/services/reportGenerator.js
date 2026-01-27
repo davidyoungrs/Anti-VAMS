@@ -2,16 +2,76 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { VALVE_COMPONENT_CONFIGS, COMPONENT_LABELS } from './inspectionService';
 
-export const generateFullReport = (valveRecord, inspectionData = [], testData = []) => {
+const loadImage = (url) => {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.src = url;
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+    });
+};
+
+export const generateFullReport = async (valveRecord, inspectionData = [], testData = []) => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
-    let currentY = 15;
+    const pageHeight = doc.internal.pageSize.getHeight();
+    let currentY = 50;
+
+    // Define Header/Footer Generators
+    const drawHeader = (doc) => {
+        // Branding Top Right
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(52, 73, 94);
+        doc.text("Global Valve Record", pageWidth - 14, 20, { align: 'right' });
+
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100, 100, 100);
+        doc.text([
+            "TheValve.pro",
+            "PO Box 212359",
+            "Dubai",
+            "United Arab Emirates"
+        ], pageWidth - 14, 26, { align: 'right' });
+
+        // Logo (Left of "Global Valve Record")
+        if (logoImg) {
+            try {
+                const logoHeight = 12;
+                const aspect = logoImg.width / logoImg.height;
+                const logoWidth = logoHeight * aspect;
+                const textWidth = doc.getTextWidth("Global Valve Record");
+                const logoX = pageWidth - 14 - textWidth - logoWidth - 5;
+                doc.addImage(logoImg, 'PNG', logoX, 12, logoWidth, logoHeight);
+            } catch (e) {
+                // Ignore drawing error
+            }
+        }
+    };
+
+    const drawFooter = (doc, pageNumber, totalPages) => {
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        const dateStr = new Date().toLocaleString();
+        doc.text(`Generated on: ${dateStr} | Page ${pageNumber} of ${totalPages}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+    };
+
+    // Load Logo with retry/check
+    let logoImg = null;
+    try {
+        logoImg = await loadImage('/logo.png');
+    } catch (e) {
+        console.warn("Could not load logo.png", e);
+    }
+
+
 
     // Header Helper
     const addSectionHeader = (title) => {
-        if (currentY + 15 > doc.internal.pageSize.getHeight()) {
+        if (currentY + 15 > pageHeight - 20) { // Check against page height minus footer margin
             doc.addPage();
-            currentY = 20;
+            currentY = 50;
         }
         doc.setFontSize(14);
         doc.setTextColor(41, 128, 185); // Blue
@@ -26,10 +86,13 @@ export const generateFullReport = (valveRecord, inspectionData = [], testData = 
     };
 
     // --- 1. Title & Metadata ---
+    // Title is now below the header
+
+    // Main Title (Centered)
     doc.setFontSize(22);
     doc.setTextColor(44, 62, 80);
-    doc.text("Valve Inspection & Test Report", pageWidth / 2, currentY, { align: 'center' });
-    currentY += 15;
+    doc.text("Valve Inspection & Test Report", pageWidth / 2, currentY + 5, { align: 'center' }); // Reduced spacing
+    currentY += 20;
 
     // --- 2. Valve Data ---
     addSectionHeader("Valve Data");
@@ -55,7 +118,7 @@ export const generateFullReport = (valveRecord, inspectionData = [], testData = 
             2: { fontStyle: 'bold', cellWidth: 35 },
             3: { cellWidth: 55 }
         },
-        margin: { left: 14, right: 14 }
+        margin: { top: 40, left: 14, right: 14 }
     });
     currentY = doc.lastAutoTable.finalY + 5;
 
@@ -80,7 +143,7 @@ export const generateFullReport = (valveRecord, inspectionData = [], testData = 
             2: { fontStyle: 'bold', cellWidth: 35 },
             3: { cellWidth: 55 }
         },
-        margin: { left: 14, right: 14 }
+        margin: { top: 40, left: 14, right: 14 }
     });
     currentY = doc.lastAutoTable.finalY + 5;
 
@@ -106,12 +169,9 @@ export const generateFullReport = (valveRecord, inspectionData = [], testData = 
             2: { fontStyle: 'bold', cellWidth: 35 },
             3: { cellWidth: 55 }
         },
-        margin: { left: 14, right: 14 }
+        margin: { top: 40, left: 14, right: 14 }
     });
     currentY = doc.lastAutoTable.finalY + 10;
-
-    // --- 3. Inspection Checklist ---
-    addSectionHeader("Inspection Checklist");
 
     // --- 3. Inspection Checklist ---
     addSectionHeader("Inspection Checklist");
@@ -162,7 +222,7 @@ export const generateFullReport = (valveRecord, inspectionData = [], testData = 
         body: checklistRows,
         headStyles: { fillColor: [52, 73, 94] },
         styles: { fontSize: 9 },
-        margin: { left: 14, right: 14 },
+        margin: { top: 40, left: 14, right: 14 },
         pageBreak: 'auto'
     });
     currentY = doc.lastAutoTable.finalY + 10;
@@ -231,7 +291,7 @@ export const generateFullReport = (valveRecord, inspectionData = [], testData = 
             body: testTableData,
             headStyles: { fillColor: [52, 73, 94] },
             styles: { fontSize: 8, cellPadding: 1 },
-            margin: { left: 14, right: 14 }
+            margin: { top: 40, left: 14, right: 14 }
         });
         currentY = doc.lastAutoTable.finalY + 10;
 
@@ -244,15 +304,15 @@ export const generateFullReport = (valveRecord, inspectionData = [], testData = 
             const strokeRows = latestTest.strokeTest.details.map(row => [
                 row.signal || '-',
                 row.expectedTravel || '-',
-                row.allowable || '-'
+                row.actual || '-'
             ]);
 
             autoTable(doc, {
                 startY: currentY,
-                head: [['Signal', '% Travel', 'Allowable Error']],
+                head: [['Stroke Signal', 'Expect Stroke %', 'Actual stroke %']],
                 body: strokeRows,
                 headStyles: { fillColor: [52, 73, 94] },
-                margin: { left: 14, right: 14 }
+                margin: { top: 40, left: 14, right: 14 }
             });
             currentY = doc.lastAutoTable.finalY + 10;
         }
@@ -261,6 +321,57 @@ export const generateFullReport = (valveRecord, inspectionData = [], testData = 
         doc.setFont(undefined, 'italic');
         doc.text("No test results available.", 14, currentY);
         currentY += 10;
+    }
+
+    // --- 5. Inspection Photos ---
+    if (latestInspection.inspectionPhotos && latestInspection.inspectionPhotos.length > 0) {
+        addSectionHeader("Inspection Photos");
+
+        const photoWidth = 80;
+        const photoHeight = 60;
+        let x = 14;
+
+        latestInspection.inspectionPhotos.forEach((photoUrl, index) => {
+            // Check if page break is needed
+            if (currentY + photoHeight > doc.internal.pageSize.getHeight()) {
+                doc.addPage();
+                currentY = 45;
+            }
+
+            try {
+                // Add image (assuming URL returns valid image data or base64)
+                // Note: jsPDF addImage supports JPEG, PNG, etc.
+                // If these are remote URLs, they might not render in client-side generation without CORS handling or being converted to base64 first.
+                // Assuming for now they work or are base64 from the app.
+                doc.addImage(photoUrl, 'JPEG', x, currentY, photoWidth, photoHeight);
+
+                // Layout logic for 2 per row
+                if ((index + 1) % 2 === 0) {
+                    x = 14;
+                    currentY += photoHeight + 10;
+                } else {
+                    x += photoWidth + 10;
+                }
+            } catch (err) {
+                console.error("Error adding image to PDF", err);
+                doc.text(`[Error loading image ${index + 1}]`, x, currentY + 10);
+                if ((index + 1) % 2 === 0) {
+                    x = 14;
+                    currentY += 20;
+                } else {
+                    x += photoWidth + 10;
+                }
+            }
+        });
+    }
+
+    // --- 6. Add Footer to All Pages ---
+    // --- 6. Add Header & Footer to All Pages ---
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        drawHeader(doc);
+        drawFooter(doc, i, pageCount);
     }
 
     return doc.output('blob');

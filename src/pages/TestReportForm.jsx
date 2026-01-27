@@ -28,11 +28,11 @@ export default function TestReportForm({ valveId, reportId, inspectionId, onBack
             minSignal: '',
             maxSignal: '',
             details: [
-                { signal: '4', expectedTravel: '0%', allowable: '' },
-                { signal: '8', expectedTravel: '25%', allowable: '' },
-                { signal: '12', expectedTravel: '50%', allowable: '' },
-                { signal: '16', expectedTravel: '75%', allowable: '' },
-                { signal: '20', expectedTravel: '100%', allowable: '' }
+                { signal: '4', expectedTravel: '0%', actual: '' },
+                { signal: '8', expectedTravel: '25%', actual: '' },
+                { signal: '12', expectedTravel: '50%', actual: '' },
+                { signal: '16', expectedTravel: '75%', actual: '' },
+                { signal: '20', expectedTravel: '100%', actual: '' }
             ]
         },
         equipment: {
@@ -50,6 +50,32 @@ export default function TestReportForm({ valveId, reportId, inspectionId, onBack
 
     const [valveData, setValveData] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+        // Auto-calculate stroke test signals when min/max change
+        const minVal = parseFloat(report.strokeTest.minSignal);
+        const maxVal = parseFloat(report.strokeTest.maxSignal);
+
+        if (!isNaN(minVal) && !isNaN(maxVal)) {
+            const range = maxVal - minVal;
+            const newDetails = report.strokeTest.details.map((row, index) => {
+                // index 0 = 0%, 1=25%, 2=50%, 3=75%, 4=100%
+                const calculatedSignal = minVal + (range * (index * 0.25));
+                return { ...row, signal: Number.isInteger(calculatedSignal) ? calculatedSignal.toString() : calculatedSignal.toFixed(2) };
+            });
+
+            // Check if signals need update to prevent infinite loops (though dependency array handles it well)
+            const currentSignals = report.strokeTest.details.map(d => d.signal).join(',');
+            const newSignals = newDetails.map(d => d.signal).join(',');
+
+            if (currentSignals !== newSignals) {
+                setReport(prev => ({
+                    ...prev,
+                    strokeTest: { ...prev.strokeTest, details: newDetails }
+                }));
+            }
+        }
+    }, [report.strokeTest.minSignal, report.strokeTest.maxSignal]);
 
     useEffect(() => {
         const loadData = async () => {
@@ -70,6 +96,7 @@ export default function TestReportForm({ valveId, reportId, inspectionId, onBack
                         applicableTests: { ...prev.applicableTests, ...(existing.applicableTests || {}) },
                         pressureTest: { ...prev.pressureTest, ...(existing.pressureTest || {}) },
                         strokeTest: { ...prev.strokeTest, ...(existing.strokeTest || {}) },
+                        // Ensure legacy reports have 'actual' field instead of 'allowable' if needed, or initialized
                         equipment: { ...prev.equipment, ...(existing.equipment || {}) },
                         approvals: { ...prev.approvals, ...(existing.approvals || {}) }
                     }));
@@ -157,7 +184,7 @@ export default function TestReportForm({ valveId, reportId, inspectionId, onBack
 
             <form onSubmit={handleSubmit}>
                 {/* Pressure Test Section */}
-                <section className="form-section">
+                <section className="form-section pressure-test-section">
                     <div style={{ marginBottom: '1rem' }}>
                         <h3>Pressure Test</h3>
                     </div>
@@ -415,12 +442,12 @@ export default function TestReportForm({ valveId, reportId, inspectionId, onBack
                         </div>
 
                         <div style={{ overflowX: 'auto', marginTop: '1rem' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', color: 'var(--text-primary)' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', color: '#2c3e50' }}>
                                 <thead>
                                     <tr style={{ background: 'rgba(255,255,255,0.05)' }}>
-                                        <th style={{ padding: '0.75rem', textAlign: 'left' }}>Signal</th>
-                                        <th style={{ padding: '0.75rem', textAlign: 'left' }}>% Valve Travel</th>
-                                        <th style={{ padding: '0.75rem', textAlign: 'left' }}>Allowable Valve Travel</th>
+                                        <th style={{ padding: '0.75rem', textAlign: 'left', color: '#2c3e50' }}>Stroke Signal</th>
+                                        <th style={{ padding: '0.75rem', textAlign: 'left', color: '#2c3e50' }}>Expect Stroke %</th>
+                                        <th style={{ padding: '0.75rem', textAlign: 'left', color: '#2c3e50' }}>Actual stroke %</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -430,8 +457,9 @@ export default function TestReportForm({ valveId, reportId, inspectionId, onBack
                                                 <input
                                                     type="text"
                                                     value={row.signal}
-                                                    onChange={e => updateStrokeRow(idx, 'signal', e.target.value)}
+                                                    readOnly
                                                     className="table-input"
+                                                    style={{ background: 'transparent', border: 'none', color: '#2c3e50' }}
                                                 />
                                             </td>
                                             <td style={{ padding: '0.5rem' }}>
@@ -440,16 +468,16 @@ export default function TestReportForm({ valveId, reportId, inspectionId, onBack
                                                     value={row.expectedTravel}
                                                     readOnly
                                                     className="table-input"
-                                                    style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)' }}
+                                                    style={{ background: 'transparent', border: 'none', color: '#2c3e50' }}
                                                 />
                                             </td>
                                             <td style={{ padding: '0.5rem' }}>
                                                 <input
                                                     type="text"
-                                                    value={row.allowable}
-                                                    onChange={e => updateStrokeRow(idx, 'allowable', e.target.value)}
+                                                    value={row.actual}
+                                                    onChange={e => updateStrokeRow(idx, 'actual', e.target.value)}
                                                     className="table-input"
-                                                    placeholder="Enter allowable..."
+                                                    placeholder="Enter actual..."
                                                 />
                                             </td>
                                         </tr>
