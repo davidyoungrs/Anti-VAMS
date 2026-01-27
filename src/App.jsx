@@ -40,8 +40,26 @@ function App() {
   };
 
   // Load data on mount
+  // Load data on mount
   React.useEffect(() => {
-    loadData();
+    const init = async () => {
+      await loadData();
+
+      // Check for deep link
+      const params = new URLSearchParams(window.location.search);
+      const valveId = params.get('valveId');
+      if (valveId) {
+        // We need to fetch fresh records to ensure we find it
+        const allRecords = await storageService.getAll();
+        const target = allRecords.find(r => r.id === valveId);
+        if (target) {
+          handleRecordClick(target);
+          // Optional: Clean URL so refresh doesn't stick
+          window.history.replaceState({}, '', window.location.pathname);
+        }
+      }
+    };
+    init();
   }, []); // Only load on mount
 
   const handleRecordClick = async (record) => {

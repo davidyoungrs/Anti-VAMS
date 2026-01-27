@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { Checkbox } from '../components/ui/Checkbox';
+import { OCRButton } from '../components/OCRButton';
+import { generateValveQR } from '../utils/qrCode';
 import { FileUpload } from '../components/ui/FileUpload';
 import { storageService } from '../services/storage';
 import { generateFullReport } from '../services/reportGenerator';
@@ -101,29 +103,33 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
             // 2. Generate PDF Blob
             const pdfBlob = await generateFullReport(formData, inspections, tests);
 
-            // 3. Create a File object
+            // 3. Create PDF File object
             const fileName = `Report_${formData.serialNumber || 'Valve'}_${new Date().toISOString().split('T')[0]}.pdf`;
             const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
 
-            // 4. Upload via storageService (simulating a file input change sort of)
-            // We need to add it to the files list and trigger a save
+            // 4. Generate QR Code Image File
+            // Variable was used before initialization. Creating a temp object for QR generation (only needs ID).
+            const qrInputRecord = { ...formData, id: initialData.id };
+            const qrDataUrl = await generateValveQR(qrInputRecord);
 
-            // Since `storageService.save` handles file array uploads, we can append it there.
-            // But `handleFiles` just updates state. We want to persist this immediately.
+            let filesToSave = [...files, pdfFile];
 
-            // Option A: Update state and ask user to save.
-            // Option B: Force a save immediately. 
-            // Let's go with Option B for "One Click" experience.
+            if (qrDataUrl) {
+                // Convert Data URL to File
+                const res = await fetch(qrDataUrl);
+                const blob = await res.blob();
+                const qrFile = new File([blob], `QR_${formData.serialNumber || 'Valve'}.png`, { type: 'image/png' });
+                filesToSave.push(qrFile);
+            }
 
-            // We need to pass the actual File object to storageService.save which handles uploads
-            const updatedFiles = [...files, pdfFile];
-
+            // 5. Upload via storageService
             // Create a temporary record object to save
-            const recordToSave = { ...formData, id: initialData.id, files: updatedFiles };
+            // Use initialData.id specifically
+            const recordToSave = { ...formData, id: initialData.id, files: filesToSave };
             const savedRecord = await storageService.save(recordToSave);
 
             setFiles(savedRecord.files); // Update local state with new URLs
-            alert(`Report generated and attached: ${fileName}`);
+            alert(`Report generated and attached: ${fileName}\nQR Code also saved to attachments.`);
 
         } catch (error) {
             console.error('Report generation failed:', error);
@@ -244,7 +250,21 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
                 <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)', gridColumn: '1 / -1' }}>
                     <h3 className="section-title">Identification</h3>
                     <div className="grid-2">
-                        <Input label="Serial Number" name="serialNumber" value={formData.serialNumber} onChange={handleChange} required />
+                        <div className="form-group">
+                            <label>Serial Number</label>
+                            <div style={{ display: 'flex', alignItems: 'center' }}>
+                                <input
+                                    type="text"
+                                    name="serialNumber"
+                                    value={formData.serialNumber}
+                                    onChange={handleChange}
+                                    required
+                                    className="input-field"
+                                    style={{ flex: 1 }}
+                                />
+                                <OCRButton onScanComplete={(text) => setFormData(prev => ({ ...prev, serialNumber: text }))} />
+                            </div>
+                        </div>
                         <Input label="Customer" name="customer" value={formData.customer} onChange={handleChange} required />
                         <Input label="OEM" name="oem" value={formData.oem} onChange={handleChange} required />
                         <Input label="Job No" name="jobNo" value={formData.jobNo} onChange={handleChange} />

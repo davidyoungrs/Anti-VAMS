@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { VALVE_COMPONENT_CONFIGS, COMPONENT_LABELS } from './inspectionService';
+import { generateValveQR } from '../utils/qrCode';
 
 const loadImage = (url) => {
     return new Promise((resolve, reject) => {
@@ -365,7 +366,24 @@ export const generateFullReport = async (valveRecord, inspectionData = [], testD
         });
     }
 
-    // --- 6. Add Footer to All Pages ---
+    // --- 6. QR Code ---
+    // Generate QR
+    const qrDataUrl = await generateValveQR(valveRecord);
+    if (qrDataUrl) {
+        // Check if page break is needed
+        if (currentY + 50 > doc.internal.pageSize.getHeight()) {
+            doc.addPage();
+            currentY = 45;
+        } else {
+            currentY += 10;
+        }
+
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+        doc.text("Scan to View Record:", 14, currentY);
+        doc.addImage(qrDataUrl, 'PNG', 14, currentY + 2, 30, 30);
+    }
+
     // --- 6. Add Header & Footer to All Pages ---
     const pageCount = doc.internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
