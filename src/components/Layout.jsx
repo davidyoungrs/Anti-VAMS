@@ -132,6 +132,11 @@ export const Layout = ({ children, activeView, onNavigate }) => {
             </li>
             <li style={{ marginBottom: '0.5rem' }}> <a href="https://thevalve.pro" target="_blank" rel="noopener noreferrer" style={{ ...getItemStyle('TheValve.pro'), color: 'white', fontWeight: 'bold', border: '1px solid white' }} > TheValve.pro </a>
             </li>
+            <li style={{ marginBottom: '0.5rem' }}>
+              <a onClick={() => onNavigate('legal')} style={getItemStyle('legal')}>
+                Legal Terms
+              </a>
+            </li>
 
           </ul>
         </nav>

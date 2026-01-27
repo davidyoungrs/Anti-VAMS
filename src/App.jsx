@@ -22,6 +22,7 @@ import { storageService } from './services/storage';
 import featuresContent from '../FEATURES.md?raw';
 import userGuideContent from '../USER_GUIDE.md?raw';
 import roadmapContent from '../ROADMAP.md?raw';
+import legalContent from '../LEGAL_TERMS.md?raw';
 
 function App() {
   const [currentView, setCurrentView] = useState('dashboard');
@@ -209,6 +210,8 @@ function App() {
         return <MarkdownPage title="System Features" content={featuresContent} />;
       case 'roadmap':
         return <MarkdownPage title="Strategic Development Roadmap" content={roadmapContent} />;
+      case 'legal':
+        return <MarkdownPage title="Legal Terms & Conditions" content={legalContent} />;
       case 'analytics':
         return <AnalyticsDashboard records={records} />;
       case 'scheduler':
