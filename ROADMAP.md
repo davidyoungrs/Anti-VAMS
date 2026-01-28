@@ -28,8 +28,8 @@ This document outlines the proposed development path for the GVR-VAMS.
    - **Task**: Canvas-based drawing tool on upload.
 
 5. **Digital Signatures** (Priority: Medium)
-   - **Why**: Makes the PDF a legal document.
-   - **Task**: Signature pad component -> Save as image -> Embed in PDF.
+   - ~~**Why**: Makes the PDF a legal document.~~ <span style="color:green">**(Complete 28th Jan 2026)**</span>
+   - ~~**Task**: Signature pad component -> Save as image -> Embed in PDF.~~
 
 ## Phase 3: Advanced Intelligence & Reporting
 *Features that provide deep value and analytics.*
@@ -43,7 +43,7 @@ This document outlines the proposed development path for the GVR-VAMS.
    - **Complexity**: Requires a "Products/Parts" database.
 
 8. **Bulk Report Export** (Priority: Medium)
-   - **Task**: "Download Job as ZIP".
+   - ~~**Task**: "Download Job as ZIP".~~ <span style="color:green">**(Complete 28th Jan 2026)**</span>
    - **Dependency**: Needs "Job Management" layer first.
 
 ## Phase 4: Experimental / High Complexity

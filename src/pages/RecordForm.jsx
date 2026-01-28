@@ -9,6 +9,7 @@ import { storageService } from '../services/storage';
 import { generateFullReport } from '../services/reportGenerator';
 import { inspectionService } from '../services/inspectionService';
 import { testReportService } from '../services/testReportService';
+import { SignaturePad } from '../components/SignaturePad';
 
 export const RecordForm = ({ initialData, onSave, onNavigate }) => {
     const [formData, setFormData] = useState({
@@ -71,6 +72,7 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
 
     const [files, setFiles] = useState([]);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [showSignaturePad, setShowSignaturePad] = useState(false);
 
     useEffect(() => {
         if (initialData) {
@@ -107,6 +109,11 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
             storageService.delete(initialData.id);
             if (onSave) onSave();
         }
+    };
+
+    const handleSignatureSave = (dataUrl) => {
+        setFormData(prev => ({ ...prev, signatureDataUrl: dataUrl, signedBy: 'Inspector', signedDate: new Date().toISOString() }));
+        setShowSignaturePad(false);
     };
 
     const handleGenerateReport = async () => {
@@ -159,6 +166,13 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        // Mandatory Field Validation
+        if (!formData.serialNumber || !formData.serialNumber.trim()) {
+            alert("Serial Number is mandatory. Please enter a value.");
+            return;
+        }
+
         try {
             const record = { ...formData, files, id: initialData?.id }; // Preserve ID if editing
 
@@ -193,6 +207,16 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
                 </h2>
                 <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                     <button type="button" onClick={() => onNavigate('dashboard')} className="btn-secondary">← Back</button>
+
+                    <button
+                        type="button"
+                        onClick={() => setShowSignaturePad(true)}
+                        className="btn-secondary"
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                    >
+                        <span>✍️</span> {formData.signatureDataUrl ? 'Update Signature' : 'Sign Record'}
+                    </button>
+
                     {initialData && initialData.id && (
                         <button
                             type="button"
@@ -270,17 +294,28 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
                 <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)', gridColumn: '1 / -1' }}>
                     <h3 className="section-title">Identification</h3>
                     <div className="grid-2">
-                        <div className="form-group">
-                            <label>Serial Number</label>
-                            <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <div style={{ marginBottom: '0.5rem' }}>
+                            <label style={{ display: 'block', fontSize: '0.875rem', color: 'var(--text-label)', marginBottom: '0.5rem', fontWeight: '500' }}>
+                                Serial Number <span style={{ color: 'var(--accent)' }}>*</span>
+                            </label>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
                                 <input
                                     type="text"
                                     name="serialNumber"
                                     value={formData.serialNumber}
                                     onChange={handleChange}
                                     required
-                                    className="input-field"
-                                    style={{ flex: 1 }}
+                                    placeholder="Enter Serial Number"
+                                    style={{
+                                        width: '100%',
+                                        padding: '0.75rem',
+                                        backgroundColor: 'var(--bg-input)',
+                                        border: '1px solid var(--border-color)',
+                                        borderRadius: 'var(--radius-md)',
+                                        color: 'var(--text-main)',
+                                        fontSize: '1rem',
+                                        height: '46px'
+                                    }}
                                 />
                                 <OCRButton onScanComplete={(text) => setFormData(prev => ({ ...prev, serialNumber: text }))} />
                             </div>
@@ -559,6 +594,31 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
                 )}
             </div>
 
+            {/* Signature Pad Modal */}
+            {showSignaturePad && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(4px)',
+                    display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 2000, padding: '1rem', paddingTop: '10vh'
+                }}>
+                    <div style={{ width: '100%', maxWidth: '600px' }}>
+                        <SignaturePad
+                            onSave={handleSignatureSave}
+                            onCancel={() => setShowSignaturePad(false)}
+                        />
+                    </div>
+                </div>
+            )}
+
+            {/* Display Signature if exists */}
+            {formData.signatureDataUrl && (
+                <div className="glass-panel" style={{ marginTop: '2rem', padding: '1rem', textAlign: 'center' }}>
+                    <h4 style={{ margin: 0, color: 'var(--text-muted)' }}>Signed by {formData.signedBy || 'Inspector'}</h4>
+                    <img src={formData.signatureDataUrl} alt="Signature" style={{ maxWidth: '200px', margin: '1rem 0', borderBottom: '1px solid var(--border-color)' }} />
+                    <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>{new Date(formData.signedDate || Date.now()).toLocaleString()}</p>
+                </div>
+            )}
+
             {
                 showDeleteConfirm && (
                     <div style={{
@@ -578,35 +638,8 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
                             <h3 style={{ marginTop: 0, color: 'var(--text-primary)' }}>Confirm Deletion</h3>
                             <p style={{ color: 'var(--text-muted)' }}>Are you sure you want to delete this record? This action cannot be undone.</p>
                             <div className="flex-row" style={{ justifyContent: 'center', gap: '1rem', marginTop: '1.5rem' }}>
-                                <button
-                                    type="button"
-                                    onClick={() => setShowDeleteConfirm(false)}
-                                    style={{
-                                        padding: '0.75rem 1.5rem',
-                                        borderRadius: 'var(--radius-md)',
-                                        background: 'transparent',
-                                        border: '1px solid var(--border-color)',
-                                        color: 'var(--text-primary)',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={handleDelete}
-                                    style={{
-                                        padding: '0.75rem 1.5rem',
-                                        borderRadius: 'var(--radius-md)',
-                                        background: '#ef4444',
-                                        border: 'none',
-                                        color: 'white',
-                                        cursor: 'pointer',
-                                        fontWeight: 'bold'
-                                    }}
-                                >
-                                    Delete
-                                </button>
+                                <button type="button" onClick={() => setShowDeleteConfirm(false)} className="btn-secondary">Cancel</button>
+                                <button type="button" onClick={handleDelete} className="btn-primary" style={{ background: '#ef4444' }}>Delete</button>
                             </div>
                         </div>
                     </div>

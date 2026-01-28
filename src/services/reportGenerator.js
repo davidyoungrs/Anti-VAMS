@@ -365,6 +365,34 @@ export const generateFullReport = async (valveRecord, inspectionData = [], testD
         currentY += 10;
     }
 
+    // --- 5. Sign-off ---
+    if (valveRecord.signatureDataUrl) {
+        // Check for page break
+        if (currentY + 50 > pageHeight - 20) {
+            doc.addPage();
+            currentY = 50;
+        }
+
+        addSectionHeader("Sign-off");
+
+        try {
+            // Signature Image
+            doc.addImage(valveRecord.signatureDataUrl, 'PNG', 14, currentY, 50, 20); // W:50, H:20
+
+            // Meta text below signature
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`Signed By: ${valveRecord.signedBy || 'Inspector'}`, 14, currentY + 26);
+            doc.text(`Date: ${new Date(valveRecord.signedDate || Date.now()).toLocaleString()}`, 14, currentY + 32);
+
+            currentY += 40;
+        } catch (e) {
+            console.error("Error adding signature to PDF", e);
+            doc.text("[Signature Error]", 14, currentY + 10);
+            currentY += 20;
+        }
+    }
+
     // --- 5. Inspection Photos ---
     if (latestInspection.inspectionPhotos && latestInspection.inspectionPhotos.length > 0) {
         addSectionHeader("Inspection Photos");

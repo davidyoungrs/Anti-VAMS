@@ -85,6 +85,11 @@ export const storageService = {
                         regulatorModel: r.regulator_model,
                         regulatorSetPoint: r.regulator_set_point,
 
+                        // Signature
+                        signatureDataUrl: r.signature_data_url,
+                        signedBy: r.signed_by,
+                        signedDate: r.signed_date,
+
                         updatedAt: r.updated_at,
                         deletedAt: r.deleted_at, // Map Soft Delete timestamp
                         lastViewedAt: r.last_viewed_at,
@@ -309,6 +314,11 @@ export const storageService = {
                         positioner_other: finalRecord.positionerOther,
                         regulator_model: finalRecord.regulatorModel,
                         regulator_set_point: finalRecord.regulatorSetPoint,
+
+                        // Signature
+                        signature_data_url: finalRecord.signatureDataUrl,
+                        signed_by: sanitizeVal(finalRecord.signedBy),
+                        signed_date: sanitizeVal(finalRecord.signedDate),
 
                         // last_viewed_at: finalRecord.lastViewedAt, // Removed: Local only
                         valve_photo: finalRecord.valvePhoto,
