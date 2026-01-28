@@ -130,17 +130,59 @@ function App() {
     }
   };
 
-  const handleExport = () => {
-    const csvContent = "data:text/csv;charset=utf-8,"
-      + "Serial Number,Customer,OEM,Job No,Tag No,Order No,Date In\n"
-      + records.map(r =>
-        `"${r.serialNumber || ''}","${r.customer || ''}","${r.oem || ''}","${r.jobNo || ''}","${r.tagNo || ''}","${r.orderNo || ''}","${r.dateIn || ''}"`
-      ).join("\n");
+  /* CSV CONSTANTS */
+  const CSV_HEADERS = [
+    "Serial Number", "Job No", "Tag No", "Order No", "Customer", "OEM", "Plant Area", "Site Location",
+    "Date In", "Required Date", "Safety Check", "Decontamination Cert", "LSA Check", "Seized Mid Stroke",
+    "Model No", "Valve Type", "Size Class", "Packing Type", "Flange Type", "MAWP",
+    "Body Material", "Seat Material", "Trim Material", "Obturator Material",
+    "Actuator", "Gear Operator", "Fail Mode",
+    "Body Test Spec", "Seat Test Spec", "Body Pressure", "Body Pressure Unit",
+    "Tested By", "Test Date", "Test Medium", "Pass/Fail",
+    "Latitude", "Longitude"
+  ];
 
+  const CSV_KEYS = [
+    "serialNumber", "jobNo", "tagNo", "orderNo", "customer", "oem", "plantArea", "siteLocation",
+    "dateIn", "requiredDate", "safetyCheck", "decontaminationCert", "lsaCheck", "seizedMidStroke",
+    "modelNo", "valveType", "sizeClass", "packingType", "flangeType", "mawp",
+    "bodyMaterial", "seatMaterial", "trimMaterial", "obturatorMaterial",
+    "actuator", "gearOperator", "failMode",
+    "bodyTestSpec", "seatTestSpec", "bodyPressure", "bodyPressureUnit",
+    "testedBy", "testDate", "testMedium", "passFail",
+    "latitude", "longitude"
+  ];
+
+  const handleDownloadTemplate = () => {
+    const csvContent = "data:text/csv;charset=utf-8," + CSV_HEADERS.join(",");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "valve_records.csv");
+    link.setAttribute("download", "valve_record_template.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExport = () => {
+    const headerRow = CSV_HEADERS.join(",");
+    const dataRows = records.map(r => {
+      return CSV_KEYS.map(key => {
+        let val = r[key];
+        if (val === null || val === undefined) val = "";
+        // Handle boolean fields for CSV readability
+        if (key === 'lsaCheck' || key === 'seizedMidStroke') val = val ? "TRUE" : "FALSE";
+        // Escape quotes
+        const stringVal = String(val).replace(/"/g, '""');
+        return `"${stringVal}"`;
+      }).join(",");
+    });
+
+    const csvContent = "data:text/csv;charset=utf-8," + [headerRow, ...dataRows].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `valve_records_export_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -153,34 +195,88 @@ function App() {
     const reader = new FileReader();
     reader.onload = async (evt) => {
       const text = evt.target.result;
-      const rows = text.split('\n').map(row => row.split(','));
+      const rows = text.split(/\r?\n/); // Handle different newline formats
       let importedCount = 0;
+      let errors = [];
 
+      // Skip header row (i=1)
       for (let i = 1; i < rows.length; i++) {
-        const row = rows[i];
-        if (row.length < 3) continue;
+        const rowText = rows[i];
+        if (!rowText.trim()) continue; // Skip empty lines
 
-        const clean = (val) => val ? val.replace(/"/g, '') : '';
-        const record = {
-          serialNumber: clean(row[0]),
-          customer: clean(row[1]),
-          oem: clean(row[2]),
-          jobNo: clean(row[3]),
-          tagNo: clean(row[4]),
-          orderNo: clean(row[5]),
-          dateIn: clean(row[6]),
-          status: 'Pending',
-          passFail: 'Pending'
-        };
+        // regex to split by comma but ignore commas inside quotes
+        const row = rowText.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
+        // The above simple regex might be flaky for complex CSVs. 
+        // Let's use a slightly more robust manual split or just split(',') if we assume simple structure,
+        // BUT user asked for "standard" CSV.
+        // Let's assume standard "val1","val2" format from our export or template.
+        // A simpler split approach for now that handles basic quoted strings:
 
-        if (record.serialNumber) {
+        // Manual CSV parse for the line to handle commas in quotes
+        const matches = [];
+        let inQuote = false;
+        let currentToken = '';
+        for (let charIndex = 0; charIndex < rowText.length; charIndex++) {
+          const char = rowText[charIndex];
+          if (char === '"') {
+            inQuote = !inQuote;
+          } else if (char === ',' && !inQuote) {
+            matches.push(currentToken);
+            currentToken = '';
+          } else {
+            currentToken += char;
+          }
+        }
+        matches.push(currentToken); // push last token
+
+        // Clean up quotes
+        const cleanRow = matches.map(val => val.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+
+        if (cleanRow.length < 2) continue; // Not enough data
+
+        const record = {};
+        let hasData = false;
+
+        CSV_KEYS.forEach((key, index) => {
+          let val = cleanRow[index] || '';
+
+          // Transform booleans
+          if (key === 'lsaCheck' || key === 'seizedMidStroke') {
+            record[key] = (val.toUpperCase() === 'TRUE' || val.toUpperCase() === 'YES' || val === '1');
+          } else {
+            record[key] = val;
+          }
+
+          if (val) hasData = true;
+        });
+
+        // Basic validation: Serial Number is required
+        if (!record.serialNumber) {
+          // Try to generate one or skip? Let's skip and log error if completely empty
+          if (hasData) errors.push(`Row ${i + 1}: Missing Serial Number`);
+          continue;
+        }
+
+        // Set default status
+        record.status = 'Pending';
+        if (!record.passFail) record.passFail = 'Pending';
+
+        try {
           await storageService.save(record);
           importedCount++;
+        } catch (err) {
+          console.error(err);
+          errors.push(`Row ${i + 1}: Save failed (${err.message})`);
         }
       }
 
+      let msg = `Successfully imported ${importedCount} records!`;
+      if (errors.length > 0) {
+        msg += `\n\nErrors:\n${errors.slice(0, 10).join('\n')}${errors.length > 10 ? '...' : ''}`;
+      }
+      alert(msg);
+
       if (importedCount > 0) {
-        alert(`Successfully imported ${importedCount} records!`);
         const allRecords = await storageService.getAll();
         setRecords(allRecords);
         setStats({
@@ -558,6 +654,22 @@ function App() {
               <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                 <button
                   className="btn-secondary"
+                  onClick={handleDownloadTemplate}
+                  style={{
+                    background: 'var(--bg-card)',
+                    border: '1px solid var(--text-muted)',
+                    color: 'var(--text-primary)',
+                    padding: '0.75rem 1.5rem',
+                    borderRadius: 'var(--radius-md)',
+                    cursor: 'pointer',
+                    fontWeight: '600'
+                  }}
+                >
+                  📄 Download Template
+                </button>
+
+                <button
+                  className="btn-secondary"
                   onClick={handleExport}
                   style={{
                     background: 'var(--bg-card)',
@@ -569,14 +681,14 @@ function App() {
                     fontWeight: '600'
                   }}
                 >
-                  📥 Export / Template
+                  📥 Export Records
                 </button>
 
                 <label
                   style={{
-                    background: 'var(--bg-card)',
-                    border: '1px solid var(--text-muted)',
-                    color: 'var(--text-primary)',
+                    background: 'var(--primary)',
+                    border: 'none',
+                    color: 'white',
                     padding: '0.75rem 1.5rem',
                     borderRadius: 'var(--radius-md)',
                     cursor: 'pointer',
