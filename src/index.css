@@ -159,6 +159,8 @@ button {
   display: flex;
   align-items: center;
   gap: 1rem;
+  flex-wrap: wrap;
+  /* Allow wrapping on small screens */
 }
 
 .flex-col {
@@ -269,17 +271,12 @@ button {
     box-sizing: border-box !important;
   }
 
-  .main-content {
-    padding: 1rem !important;
-    width: 100% !important;
-    overflow-x: hidden;
-  }
+}
 
-  /* Allow horizontal scrolling specifically for wide tables if needed, 
+/* Allow horizontal scrolling specifically for wide tables if needed, 
      but prevent them from breaking the page layout */
-  .table-container {
-    overflow-x: auto;
-    width: 100%;
-    display: block;
-  }
+.table-container {
+  overflow-x: auto;
+  width: 100%;
+  display: block;
 }
