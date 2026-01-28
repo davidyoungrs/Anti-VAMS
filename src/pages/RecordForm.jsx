@@ -413,7 +413,7 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
 
                     <h4 className="mt-4 mb-4" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>Actuation</h4>
                     {formData.valveType === 'Globe Control Valve' ? (
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                        <div className="grid-2 manual-grid" style={{ gap: '2rem' }}>
                             {/* Actuator Column */}
                             <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
                                 <h5 style={{ color: 'var(--primary)', margin: '0 0 1rem 0' }}>Actuator</h5>

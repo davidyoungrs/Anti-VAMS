@@ -208,12 +208,25 @@ button {
     grid-template-columns: 1fr;
     grid-template-rows: auto 1fr;
     height: 100vh;
+    width: 100%;
+    overflow-x: hidden;
+    /* Prevent horizontal scroll */
+  }
+
+  /* Ensure main content doesn't force width */
+  .main-content {
+    padding: 1rem;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
   }
 
   aside {
     border-right: none !important;
     border-bottom: 1px solid var(--border-color);
     padding: 1rem !important;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   aside h1 {
@@ -234,6 +247,12 @@ button {
 
   .grid-2,
   .grid-3 {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+  }
+
+  /* Force Actuation and other dynamic grids to stack */
+  .manual-grid {
     grid-template-columns: 1fr !important;
     gap: 1rem !important;
   }
