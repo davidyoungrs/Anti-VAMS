@@ -131,14 +131,29 @@ export const generateFullReport = async (valveRecord, inspectionData = [], testD
     // --- 2. Valve Data ---
     addSectionHeader("Valve Data");
 
-    const valveRows = [
-        ['Serial Number', valveRecord.serialNumber || 'N/A', 'Customer', valveRecord.customer || 'N/A'],
-        ['Job No', valveRecord.jobNo || 'N/A', 'Tag No', valveRecord.tagNo || 'N/A'],
-        ['Order No', valveRecord.orderNo || 'N/A', 'OEM', valveRecord.oem || 'N/A'],
-        ['Valve Type', valveRecord.valveType || 'N/A', 'Size / Class', valveRecord.sizeClass || 'N/A'],
-        ['Plant Area', valveRecord.plantArea || 'N/A', 'Location', valveRecord.siteLocation || 'N/A'],
-        ['Model No', valveRecord.modelNo || 'N/A', 'Actuator', valveRecord.actuator || 'N/A']
-    ];
+    // Dynamic rows based on valve type
+    let valveRows = [];
+    if (valveRecord.valveType === 'Globe Control Valve') {
+        // Detailed Globe Control Valve Layout
+        valveRows = [
+            ['Serial Number', valveRecord.serialNumber || 'N/A', 'Customer', valveRecord.customer || 'N/A'],
+            ['Job No', valveRecord.jobNo || 'N/A', 'Tag No', valveRecord.tagNo || 'N/A'],
+            ['Order No', valveRecord.orderNo || 'N/A', 'OEM', valveRecord.oem || 'N/A'],
+            ['Valve Type', valveRecord.valveType || 'N/A', 'Size / Class', valveRecord.sizeClass || 'N/A'],
+            ['Plant Area', valveRecord.plantArea || 'N/A', 'Location', valveRecord.siteLocation || 'N/A'],
+            ['Model No', valveRecord.modelNo || 'N/A', ' ', ' ']
+        ];
+    } else {
+        // Standard Valve Layout
+        valveRows = [
+            ['Serial Number', valveRecord.serialNumber || 'N/A', 'Customer', valveRecord.customer || 'N/A'],
+            ['Job No', valveRecord.jobNo || 'N/A', 'Tag No', valveRecord.tagNo || 'N/A'],
+            ['Order No', valveRecord.orderNo || 'N/A', 'OEM', valveRecord.oem || 'N/A'],
+            ['Valve Type', valveRecord.valveType || 'N/A', 'Size / Class', valveRecord.sizeClass || 'N/A'],
+            ['Plant Area', valveRecord.plantArea || 'N/A', 'Location', valveRecord.siteLocation || 'N/A'],
+            ['Model No', valveRecord.modelNo || 'N/A', 'Actuator', valveRecord.actuator || 'N/A']
+        ];
+    }
 
     autoTable(doc, {
         startY: currentY,
@@ -180,6 +195,60 @@ export const generateFullReport = async (valveRecord, inspectionData = [], testD
         margin: { top: 40, left: 14, right: 14 }
     });
     currentY = doc.lastAutoTable.finalY + 5;
+
+    // --- SPECIAL SECTION: GLOBE CONTROL VALVE ACTUATION ---
+    if (valveRecord.valveType === 'Globe Control Valve') {
+        // Actuator Table
+        const actuatorRows = [
+            ['Serial', valveRecord.actuatorSerial || '', 'Make', valveRecord.actuatorMake || ''],
+            ['Model', valveRecord.actuatorModel || '', 'Type', valveRecord.actuatorType || ''],
+            ['Size', valveRecord.actuatorSize || '', 'Range/Bench', valveRecord.actuatorRange || ''],
+            ['Travel', valveRecord.actuatorTravel || '', 'Other', valveRecord.actuatorOther || '']
+        ];
+
+        autoTable(doc, {
+            startY: currentY,
+            head: [[' Extended Actuator Details', '', '', '']],
+            body: actuatorRows,
+            theme: 'striped',
+            headStyles: { fillColor: [220, 230, 241], textColor: [0, 0, 0], fontStyle: 'bold' }, // Light Blue Header
+            styles: { fontSize: 10, cellPadding: 1.5 },
+            columnStyles: {
+                0: { fontStyle: 'bold', cellWidth: 35 },
+                1: { cellWidth: 55 },
+                2: { fontStyle: 'bold', cellWidth: 35 },
+                3: { cellWidth: 55 }
+            },
+            margin: { top: 40, left: 14, right: 14 }
+        });
+        currentY = doc.lastAutoTable.finalY + 5;
+
+        // Instrumentation Table
+        const instrRows = [
+            ['Pos. Model', valveRecord.positionerModel || '', 'Pos. Serial', valveRecord.positionerSerial || ''],
+            ['Pos. Mode', valveRecord.positionerMode || '', 'Pos. Signal', valveRecord.positionerSignal || ''],
+            ['Pos. Charact.', valveRecord.positionerCharacteristic || '', 'Pos. Supply', valveRecord.positionerSupply || ''],
+            ['Reg. Model', valveRecord.regulatorModel || '', 'Reg. Set Point', valveRecord.regulatorSetPoint || ''],
+            ['Other', valveRecord.positionerOther || '', ' ', ' ']
+        ];
+
+        autoTable(doc, {
+            startY: currentY,
+            head: [[' Instrumentation Details', '', '', '']],
+            body: instrRows,
+            theme: 'striped',
+            headStyles: { fillColor: [220, 230, 241], textColor: [0, 0, 0], fontStyle: 'bold' },
+            styles: { fontSize: 10, cellPadding: 1.5 },
+            columnStyles: {
+                0: { fontStyle: 'bold', cellWidth: 35 },
+                1: { cellWidth: 55 },
+                2: { fontStyle: 'bold', cellWidth: 35 },
+                3: { cellWidth: 55 }
+            },
+            margin: { top: 40, left: 14, right: 14 }
+        });
+        currentY = doc.lastAutoTable.finalY + 5;
+    }
 
     // --- 2.2 Service & Testing Specs ---
     const serviceRows = [

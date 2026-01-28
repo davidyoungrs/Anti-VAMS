@@ -48,7 +48,25 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
         testMedium: '',
         passFail: '',
         latitude: '',
-        longitude: ''
+        longitude: '',
+        // Globe Control Valve Specifics
+        actuatorSerial: '',
+        actuatorMake: '',
+        actuatorModel: '',
+        actuatorType: '',
+        actuatorOther: '',
+        actuatorSize: '',
+        actuatorRange: '',
+        actuatorTravel: '',
+        positionerModel: '',
+        positionerSerial: '',
+        positionerMode: '',
+        positionerSignal: '',
+        positionerCharacteristic: '',
+        positionerSupply: '',
+        positionerOther: '',
+        regulatorModel: '',
+        regulatorSetPoint: ''
     });
 
     const [files, setFiles] = useState([]);
@@ -64,7 +82,9 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
         } else {
             // Reset to defaults if initialData is null (essential for "New Record" switch if component is reused)
             setFormData({
-                serialNumber: '', jobNo: '', tagNo: '', orderNo: '', customer: '', oem: '', plantArea: '', siteLocation: '', dateIn: '', requiredDate: '', safetyCheck: '', decontaminationCert: 'N', lsaCheck: false, seizedMidStroke: false, modelNo: '', valveType: '', sizeClass: '', packingType: '', flangeType: '', mawp: '', bodyMaterial: '', seatMaterial: '', trimMaterial: '', obturatorMaterial: '', actuator: '', gearOperator: '', failMode: '', bodyTestSpec: '', seatTestSpec: '', bodyPressure: '', bodyPressureUnit: 'PSI', testedBy: '', testDate: '', testMedium: '', passFail: ''
+                serialNumber: '', jobNo: '', tagNo: '', orderNo: '', customer: '', oem: '', plantArea: '', siteLocation: '', dateIn: '', requiredDate: '', safetyCheck: '', decontaminationCert: 'N', lsaCheck: false, seizedMidStroke: false, modelNo: '', valveType: '', sizeClass: '', packingType: '', flangeType: '', mawp: '', bodyMaterial: '', seatMaterial: '', trimMaterial: '', obturatorMaterial: '', actuator: '', gearOperator: '', failMode: '', bodyTestSpec: '', seatTestSpec: '', bodyPressure: '', bodyPressureUnit: 'PSI', testedBy: '', testDate: '', testMedium: '', passFail: '',
+                actuatorSerial: '', actuatorMake: '', actuatorModel: '', actuatorType: '', actuatorOther: '', actuatorSize: '', actuatorRange: '', actuatorTravel: '',
+                positionerModel: '', positionerSerial: '', positionerMode: '', positionerSignal: '', positionerCharacteristic: '', positionerSupply: '', positionerOther: '', regulatorModel: '', regulatorSetPoint: ''
             });
             setFiles([]);
         }
@@ -392,11 +412,47 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
                     </div>
 
                     <h4 className="mt-4 mb-4" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>Actuation</h4>
-                    <div className="grid-3">
-                        <Input label="Actuator" name="actuator" value={formData.actuator} onChange={handleChange} />
-                        <Input label="Gear Operator" name="gearOperator" value={formData.gearOperator} onChange={handleChange} />
-                        <Input label="Fail Mode" name="failMode" value={formData.failMode} onChange={handleChange} />
-                    </div>
+                    {formData.valveType === 'Globe Control Valve' ? (
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                            {/* Actuator Column */}
+                            <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
+                                <h5 style={{ color: 'var(--primary)', margin: '0 0 1rem 0' }}>Actuator</h5>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.75rem' }}>
+                                    <Input label="Serial" name="actuatorSerial" value={formData.actuatorSerial} onChange={handleChange} />
+                                    <Input label="Make" name="actuatorMake" value={formData.actuatorMake} onChange={handleChange} />
+                                    <Input label="Model" name="actuatorModel" value={formData.actuatorModel} onChange={handleChange} />
+                                    <Input label="Type" name="actuatorType" value={formData.actuatorType} onChange={handleChange} />
+                                    <Input label="Other" name="actuatorOther" value={formData.actuatorOther} onChange={handleChange} />
+                                    <Input label="Size" name="actuatorSize" value={formData.actuatorSize} onChange={handleChange} />
+                                    <Input label="Range/Bench" name="actuatorRange" value={formData.actuatorRange} onChange={handleChange} />
+                                    <Input label="Travel" name="actuatorTravel" value={formData.actuatorTravel} onChange={handleChange} />
+                                    <Input label="Fail Mode" name="failMode" value={formData.failMode} onChange={handleChange} />
+                                </div>
+                            </div>
+
+                            {/* Instrumentation Column */}
+                            <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
+                                <h5 style={{ color: 'var(--primary)', margin: '0 0 1rem 0' }}>Instrumentation</h5>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.75rem' }}>
+                                    <Input label="Posit. Model Number" name="positionerModel" value={formData.positionerModel} onChange={handleChange} />
+                                    <Input label="Posit. Serial Number" name="positionerSerial" value={formData.positionerSerial} onChange={handleChange} />
+                                    <Input label="Posit. Characteristic" name="positionerCharacteristic" value={formData.positionerCharacteristic} onChange={handleChange} />
+                                    <Input label="Posit. Supply" name="positionerSupply" value={formData.positionerSupply} onChange={handleChange} />
+                                    <Input label="Posit. Mode" name="positionerMode" value={formData.positionerMode} onChange={handleChange} />
+                                    <Input label="Posit. Signal" name="positionerSignal" value={formData.positionerSignal} onChange={handleChange} />
+                                    <Input label="Regulator Model" name="regulatorModel" value={formData.regulatorModel} onChange={handleChange} />
+                                    <Input label="Regulator Set Point" name="regulatorSetPoint" value={formData.regulatorSetPoint} onChange={handleChange} />
+                                    <Input label="Other" name="positionerOther" value={formData.positionerOther} onChange={handleChange} />
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="grid-3">
+                            <Input label="Actuator" name="actuator" value={formData.actuator} onChange={handleChange} />
+                            <Input label="Gear Operator" name="gearOperator" value={formData.gearOperator} onChange={handleChange} />
+                            <Input label="Fail Mode" name="failMode" value={formData.failMode} onChange={handleChange} />
+                        </div>
+                    )}
                 </div>
 
                 {/* Section 3: Dates & Checks */}

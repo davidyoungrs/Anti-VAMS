@@ -137,6 +137,12 @@ function App() {
     "Model No", "Valve Type", "Size Class", "Packing Type", "Flange Type", "MAWP",
     "Body Material", "Seat Material", "Trim Material", "Obturator Material",
     "Actuator", "Gear Operator", "Fail Mode",
+    // Globe Control Valve Specifics
+    "Actuator Serial", "Actuator Make", "Actuator Model", "Actuator Type", "Actuator Other",
+    "Actuator Size", "Actuator Range", "Actuator Travel",
+    "Positioner Model", "Positioner Serial", "Positioner Mode", "Positioner Signal",
+    "Positioner Characteristic", "Positioner Supply", "Positioner Other",
+    "Regulator Model", "Regulator Set Point",
     "Body Test Spec", "Seat Test Spec", "Body Pressure", "Body Pressure Unit",
     "Tested By", "Test Date", "Test Medium", "Pass/Fail",
     "Latitude", "Longitude"
@@ -148,6 +154,12 @@ function App() {
     "modelNo", "valveType", "sizeClass", "packingType", "flangeType", "mawp",
     "bodyMaterial", "seatMaterial", "trimMaterial", "obturatorMaterial",
     "actuator", "gearOperator", "failMode",
+    // Globe Control Valve Specifics
+    "actuatorSerial", "actuatorMake", "actuatorModel", "actuatorType", "actuatorOther",
+    "actuatorSize", "actuatorRange", "actuatorTravel",
+    "positionerModel", "positionerSerial", "positionerMode", "positionerSignal",
+    "positionerCharacteristic", "positionerSupply", "positionerOther",
+    "regulatorModel", "regulatorSetPoint",
     "bodyTestSpec", "seatTestSpec", "bodyPressure", "bodyPressureUnit",
     "testedBy", "testDate", "testMedium", "passFail",
     "latitude", "longitude"
