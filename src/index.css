@@ -1,3 +1,7 @@
+* {
+  box-sizing: border-box;
+}
+
 :root {
   /* Premium Dark Theme Palette */
   --bg-app: #0f172a;
@@ -205,12 +209,11 @@ button {
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
   .dashboard-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 100% !important;
     grid-template-rows: auto 1fr;
     height: 100vh;
-    width: 100%;
+    width: 100% !important;
     overflow-x: hidden;
-    /* Prevent horizontal scroll */
   }
 
   /* Ensure main content doesn't force width */
@@ -225,8 +228,7 @@ button {
     border-right: none !important;
     border-bottom: 1px solid var(--border-color);
     padding: 1rem !important;
-    width: 100%;
-    box-sizing: border-box;
+    width: 100% !important;
   }
 
   aside h1 {
@@ -246,18 +248,38 @@ button {
   }
 
   .grid-2,
-  .grid-3 {
-    grid-template-columns: 1fr !important;
+  .grid-3,
+  .manual-grid {
+    grid-template-columns: 100% !important;
     gap: 1rem !important;
+    display: flex !important;
+    flex-direction: column !important;
   }
 
-  /* Force Actuation and other dynamic grids to stack */
-  .manual-grid {
-    grid-template-columns: 1fr !important;
-    gap: 1rem !important;
+  /* CRITICAL: Force all containers to respect viewport width */
+  .main-content,
+  .glass-panel,
+  form,
+  div,
+  input,
+  textarea,
+  select,
+  button {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
   }
 
   .main-content {
-    padding: 1rem;
+    padding: 1rem !important;
+    width: 100% !important;
+    overflow-x: hidden;
+  }
+
+  /* Allow horizontal scrolling specifically for wide tables if needed, 
+     but prevent them from breaking the page layout */
+  .table-container {
+    overflow-x: auto;
+    width: 100%;
+    display: block;
   }
 }
