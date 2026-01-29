@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { inspectionService, COMPONENT_LABELS } from '../services/inspectionService';
 import { testReportService } from '../services/testReportService';
 import '../styles/InspectionList.css';
@@ -7,6 +8,8 @@ import { storageService } from '../services/storage';
 import { generateFullReport } from '../services/reportGenerator';
 
 export default function InspectionList({ valveId, onEdit, onNewInspection, onEditReport, onNewReport }) {
+    const { role } = useAuth();
+    const isClient = role === 'client';
     const [inspections, setInspections] = useState([]);
     const [testReports, setTestReports] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -149,12 +152,16 @@ export default function InspectionList({ valveId, onEdit, onNewInspection, onEdi
                     >
                         <span>📄</span> Generate PDF Report
                     </button>
-                    <button onClick={onNewReport} className="btn-secondary" style={{ fontSize: '0.9rem', padding: '0.5rem 1rem' }}>
-                        📄 New Test Report (Standalone)
-                    </button>
-                    <button onClick={onNewInspection} className="new-inspection-button">
-                        ➕ New Inspection
-                    </button>
+                    {!isClient && (
+                        <button onClick={onNewReport} className="btn-secondary" style={{ fontSize: '0.9rem', padding: '0.5rem 1rem' }}>
+                            📄 New Test Report (Standalone)
+                        </button>
+                    )}
+                    {!isClient && (
+                        <button onClick={onNewInspection} className="new-inspection-button">
+                            ➕ New Inspection
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -163,9 +170,12 @@ export default function InspectionList({ valveId, onEdit, onNewInspection, onEdi
                     <div className="empty-icon">📋</div>
                     <h4>No Inspections Yet</h4>
                     <p>Start by creating your first inspection record for this valve.</p>
-                    <button onClick={onNewInspection} className="empty-action-button">
-                        Create First Inspection
-                    </button>
+                    <p>Start by creating your first inspection record for this valve.</p>
+                    {!isClient && (
+                        <button onClick={onNewInspection} className="empty-action-button">
+                            Create First Inspection
+                        </button>
+                    )}
                 </div>
             ) : (
                 <div className="inspections-grid">
@@ -216,7 +226,7 @@ export default function InspectionList({ valveId, onEdit, onNewInspection, onEdi
                                                 <h5>Component Details</h5>
                                                 <div className="component-summary">
                                                     {Object.entries(inspection.components)
-                                                        .filter(([_, data]) => data && (data.condition || data.action))
+                                                        .filter(([, data]) => data && (data.condition || data.action))
                                                         .map(([key, data]) => (
                                                             <div key={key} className="component-row">
                                                                 <span className="component-key">{COMPONENT_LABELS[key] || key}</span>
@@ -266,12 +276,14 @@ export default function InspectionList({ valveId, onEdit, onNewInspection, onEdi
                                                         📄 View Test Report
                                                     </button>
                                                 ) : (
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); onNewReport(inspection.id); }}
-                                                        className="btn-secondary"
-                                                    >
-                                                        ➕ Create Test Record
-                                                    </button>
+                                                    !isClient && (
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); onNewReport(inspection.id); }}
+                                                            className="btn-secondary"
+                                                        >
+                                                            ➕ Create Test Record
+                                                        </button>
+                                                    )
                                                 )}
                                             </div>
 
@@ -280,14 +292,16 @@ export default function InspectionList({ valveId, onEdit, onNewInspection, onEdi
                                                     onClick={() => onEdit(inspection.id)}
                                                     className="edit-button"
                                                 >
-                                                    ✏️ Edit
+                                                    {isClient ? '👁️ View' : '✏️ Edit'}
                                                 </button>
-                                                <button
-                                                    onClick={() => handleDelete(inspection.id)}
-                                                    className="delete-button"
-                                                >
-                                                    🗑️ Delete
-                                                </button>
+                                                {!isClient && (
+                                                    <button
+                                                        onClick={() => handleDelete(inspection.id)}
+                                                        className="delete-button"
+                                                    >
+                                                        🗑️ Delete
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     </div>

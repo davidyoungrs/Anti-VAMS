@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { Checkbox } from '../components/ui/Checkbox';
@@ -10,8 +11,13 @@ import { generateFullReport } from '../services/reportGenerator';
 import { inspectionService } from '../services/inspectionService';
 import { testReportService } from '../services/testReportService';
 import { SignaturePad } from '../components/SignaturePad';
+import { ImageAnnotator } from '../components/ImageAnnotator';
 
 export const RecordForm = ({ initialData, onSave, onNavigate }) => {
+    const { role } = useAuth();
+    const isReadOnly = role === 'client';
+    const canDelete = role === 'admin';
+
     const [formData, setFormData] = useState({
         serialNumber: '',
         jobNo: '',
@@ -73,6 +79,7 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
     const [files, setFiles] = useState([]);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showSignaturePad, setShowSignaturePad] = useState(false);
+    const [annotatingFile, setAnnotatingFile] = useState(null); // { file: File|string, index: number }
 
     useEffect(() => {
         if (initialData) {
@@ -114,6 +121,24 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
     const handleSignatureSave = (dataUrl) => {
         setFormData(prev => ({ ...prev, signatureDataUrl: dataUrl, signedBy: 'Inspector', signedDate: new Date().toISOString() }));
         setShowSignaturePad(false);
+    };
+
+    const handleAnnotationSave = async (dataUrl) => {
+        if (!annotatingFile) return;
+
+        // Create a new File object from the Data URL
+        const res = await fetch(dataUrl);
+        const blob = await res.blob();
+
+        const originalName = typeof annotatingFile.file === 'string'
+            ? annotatingFile.file.split('/').pop().replace(/\.[^/.]+$/, "")
+            : annotatingFile.file.name.replace(/\.[^/.]+$/, "");
+
+        const newFile = new File([blob], `${originalName}_annotated.png`, { type: 'image/png' });
+
+        // Add as a new file, or replace? Let's add as new to keep original.
+        setFiles(prev => [...prev, newFile]);
+        setAnnotatingFile(null);
     };
 
     const handleGenerateReport = async () => {
@@ -208,16 +233,18 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
                 <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                     <button type="button" onClick={() => onNavigate('dashboard')} className="btn-secondary">← Back</button>
 
-                    <button
-                        type="button"
-                        onClick={() => setShowSignaturePad(true)}
-                        className="btn-secondary"
-                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-                    >
-                        <span>✍️</span> {formData.signatureDataUrl ? 'Update Signature' : 'Sign Record'}
-                    </button>
+                    {!isReadOnly && (
+                        <button
+                            type="button"
+                            onClick={() => setShowSignaturePad(true)}
+                            className="btn-secondary"
+                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                        >
+                            <span>✍️</span> {formData.signatureDataUrl ? 'Update Signature' : 'Sign Record'}
+                        </button>
+                    )}
 
-                    {initialData && initialData.id && (
+                    {initialData && initialData.id && !isReadOnly && (
                         <button
                             type="button"
                             onClick={handleGenerateReport}
@@ -227,7 +254,7 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
                             <span>📄</span> Generate PDF Report
                         </button>
                     )}
-                    {initialData && initialData.id && (
+                    {initialData && initialData.id && !isReadOnly && (
                         <button
                             type="button"
                             onClick={() => {
@@ -259,25 +286,7 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
                         <button
                             type="button"
                             onClick={() => {
-                                if (onNavigate) {
-                                    // We need to pass a special flag or handle this via App.jsx to jump straight to a new test
-                                    // For now, let's navigate to inspection-list but with a "new test" intent if possible, 
-                                    // OR simpler: App.jsx needs to support jumping to 'test-report-form' with a null reportId
-                                    // Looking at App.jsx, it has 'onNewReport' prop passed to InspectionList, but here we only have 'onNavigate'.
-                                    // Let's check App.jsx again. It handles 'data' arg in 'handleNavigate'.
-                                    // We might need to update App.jsx to handle a 'new-test' action, OR just route to inspection-list and let them click 'New Test' there (which we just made easier).
-                                    // Actually, let's try to be clever. App.jsx: handleNavigate('test-report-form', { valveId: initialData.id, reportId: null })
-                                    // But wait, App.jsx 'handleNavigate' sets 'selectedRecord' with data. It doesn't set 'inspectionData'.
-                                    // We might need to stick to "Inspections & Tests" being the hub for now to avoid App.jsx refactor.
-                                    // BUT the user asked for "make suggestions for updates".
-                                    // I'll stick to renaming the button for now as it solves the clarity issue, and later we can add direct deep linking if needed.
-                                    // Wait, I can trigger a new report via InspectionList if I pass a param? No.
-                                    // Let's stick to the plan: Rename button + Add 'New Test' button to RECORD FORM?
-                                    // If I add 'New Test' button here, I need to know how to trigger it.
-                                    // App.jsx doesn't seem to expose a direct "create test" route nicely without `inspectionData` state.
-                                    // I'll stick to just renaming "View Inspections" -> "Inspections & Tests" as the PRIMARY improvement for now.
-                                    // It reduces clutter.
-                                }
+                                // Logic preserved but hidden
                             }}
                             className="btn-secondary"
                             style={{ display: 'none' }} // Hidden for now until App.jsx routing supports direct deep link
@@ -285,7 +294,7 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
                             🧪 New Test
                         </button>
                     )}
-                    <button type="submit" className="btn-primary">Save Record</button>
+                    {!isReadOnly && <button type="submit" className="btn-primary">Save Record</button>}
                 </div>
             </div>
 
@@ -293,217 +302,228 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
                 {/* Section 1: Identification */}
                 <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)', gridColumn: '1 / -1' }}>
                     <h3 className="section-title">Identification</h3>
-                    <div className="grid-2">
-                        <div style={{ marginBottom: '0.5rem' }}>
-                            <label style={{ display: 'block', fontSize: '0.875rem', color: 'var(--text-label)', marginBottom: '0.5rem', fontWeight: '500' }}>
-                                Serial Number <span style={{ color: 'var(--accent)' }}>*</span>
-                            </label>
-                            <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                <input
-                                    type="text"
-                                    name="serialNumber"
-                                    value={formData.serialNumber}
-                                    onChange={handleChange}
-                                    required
-                                    placeholder="Enter Serial Number"
-                                    style={{
-                                        width: '100%',
-                                        padding: '0.75rem',
-                                        backgroundColor: 'var(--bg-input)',
-                                        border: '1px solid var(--border-color)',
-                                        borderRadius: 'var(--radius-md)',
-                                        color: 'var(--text-main)',
-                                        fontSize: '1rem',
-                                        height: '46px'
-                                    }}
-                                />
-                                <OCRButton onScanComplete={(text) => setFormData(prev => ({ ...prev, serialNumber: text }))} />
-                            </div>
-                        </div>
-                        <Input label="Customer" name="customer" value={formData.customer} onChange={handleChange} required />
-                        <Input label="OEM" name="oem" value={formData.oem} onChange={handleChange} required />
-                        <Input label="Job No" name="jobNo" value={formData.jobNo} onChange={handleChange} />
-                        <Input label="Tag No" name="tagNo" value={formData.tagNo} onChange={handleChange} />
-                        <Input label="Order No" name="orderNo" value={formData.orderNo} onChange={handleChange} />
-                        <Input label="Plant Area" name="plantArea" value={formData.plantArea} onChange={handleChange} />
-                        <Input label="Site Location" name="siteLocation" value={formData.siteLocation} onChange={handleChange} />
-
-                        {/* Valve Photo Section */}
-                        <div style={{ gridColumn: 'span 2', marginTop: '1rem', padding: '1rem', background: 'var(--bg-card)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
-                            <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: 'var(--text-muted)' }}>📸 Valve Identification Photo</h4>
-                            <p style={{ margin: '0 0 1rem 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                                Upload a photo of the valve for visual identification on the map and record.
-                            </p>
-
-                            {formData.valvePhoto && (
-                                <div style={{ marginBottom: '1rem' }}>
-                                    <img
-                                        src={typeof formData.valvePhoto === 'string' ? formData.valvePhoto : URL.createObjectURL(formData.valvePhoto)}
-                                        alt="Valve preview"
+                    <fieldset disabled={isReadOnly} style={{ border: 'none', padding: 0, margin: 0, display: 'contents' }}>
+                        <div className="grid-2">
+                            <div style={{ marginBottom: '0.5rem' }}>
+                                <label style={{ display: 'block', fontSize: '0.875rem', color: 'var(--text-label)', marginBottom: '0.5rem', fontWeight: '500' }}>
+                                    Serial Number <span style={{ color: 'var(--accent)' }}>*</span>
+                                </label>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                    <input
+                                        type="text"
+                                        name="serialNumber"
+                                        value={formData.serialNumber}
+                                        onChange={handleChange}
+                                        required
+                                        placeholder="Enter Serial Number"
+                                        readOnly={isReadOnly}
                                         style={{
                                             width: '100%',
-                                            maxWidth: '300px',
-                                            height: '200px',
-                                            objectFit: 'cover',
+                                            padding: '0.75rem',
+                                            backgroundColor: isReadOnly ? 'rgba(0,0,0,0.2)' : 'var(--bg-input)',
+                                            border: '1px solid var(--border-color)',
                                             borderRadius: 'var(--radius-md)',
-                                            border: '2px solid var(--primary)'
+                                            color: 'var(--text-main)',
+                                            fontSize: '1rem',
+                                            height: '46px'
                                         }}
                                     />
+                                    {!isReadOnly && <OCRButton onScanComplete={(text) => setFormData(prev => ({ ...prev, serialNumber: text }))} />}
                                 </div>
-                            )}
+                            </div>
+                            <Input label="Customer" name="customer" value={formData.customer} onChange={handleChange} required readOnly={isReadOnly} />
+                            <Input label="OEM" name="oem" value={formData.oem} onChange={handleChange} required readOnly={isReadOnly} />
+                            <Input label="Job No" name="jobNo" value={formData.jobNo} onChange={handleChange} readOnly={isReadOnly} />
+                            <Input label="Tag No" name="tagNo" value={formData.tagNo} onChange={handleChange} readOnly={isReadOnly} />
+                            <Input label="Order No" name="orderNo" value={formData.orderNo} onChange={handleChange} readOnly={isReadOnly} />
+                            <Input label="Plant Area" name="plantArea" value={formData.plantArea} onChange={handleChange} readOnly={isReadOnly} />
+                            <Input label="Site Location" name="siteLocation" value={formData.siteLocation} onChange={handleChange} readOnly={isReadOnly} />
 
-                            <input
-                                type="file"
-                                accept="image/*"
-                                id="valve-photo-input"
-                                style={{ display: 'none' }}
-                                onChange={(e) => {
-                                    if (e.target.files && e.target.files[0]) {
-                                        setFormData(prev => ({ ...prev, valvePhoto: e.target.files[0] }));
-                                    }
-                                }}
-                            />
-                            <button
-                                type="button"
-                                className="btn-secondary"
-                                onClick={() => document.getElementById('valve-photo-input').click()}
-                                style={{ width: '100%' }}
-                            >
-                                {formData.valvePhoto ? '📷 Change Photo' : '📷 Upload Photo'}
-                            </button>
+                            {/* Valve Photo Section */}
+                            <div style={{ gridColumn: 'span 2', marginTop: '1rem', padding: '1rem', background: 'var(--bg-card)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+                                <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: 'var(--text-muted)' }}>📸 Valve Identification Photo</h4>
+                                <p style={{ margin: '0 0 1rem 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                    Upload a photo of the valve for visual identification on the map and record.
+                                </p>
+
+                                {formData.valvePhoto && (
+                                    <div style={{ marginBottom: '1rem' }}>
+                                        <img
+                                            src={typeof formData.valvePhoto === 'string' ? formData.valvePhoto : URL.createObjectURL(formData.valvePhoto)}
+                                            alt="Valve preview"
+                                            style={{
+                                                width: '100%',
+                                                maxWidth: '300px',
+                                                height: '200px',
+                                                objectFit: 'cover',
+                                                borderRadius: 'var(--radius-md)',
+                                                border: '2px solid var(--primary)'
+                                            }}
+                                        />
+                                    </div>
+                                )}
+
+                                {!isReadOnly && (
+                                    <>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            id="valve-photo-input"
+                                            style={{ display: 'none' }}
+                                            onChange={(e) => {
+                                                if (e.target.files && e.target.files[0]) {
+                                                    setFormData(prev => ({ ...prev, valvePhoto: e.target.files[0] }));
+                                                }
+                                            }}
+                                        />
+                                        <button
+                                            type="button"
+                                            className="btn-secondary"
+                                            onClick={() => document.getElementById('valve-photo-input').click()}
+                                            style={{ width: '100%' }}
+                                        >
+                                            {formData.valvePhoto ? '📷 Change Photo' : '📷 Upload Photo'}
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+
+                            <Input type="number" step="any" label="Latitude (GPS)" name="latitude" value={formData.latitude} onChange={handleChange} placeholder="e.g. 51.505" />
+                            <Input type="number" step="any" label="Longitude (GPS)" name="longitude" value={formData.longitude} onChange={handleChange} placeholder="e.g. -0.09" />
+
+                            <div style={{ gridColumn: 'span 2', display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                                <button
+                                    type="button"
+                                    className="btn-secondary"
+                                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                    onClick={() => {
+                                        if (navigator.geolocation) {
+                                            navigator.geolocation.getCurrentPosition((position) => {
+                                                setFormData(prev => ({
+                                                    ...prev,
+                                                    latitude: position.coords.latitude,
+                                                    longitude: position.coords.longitude
+                                                }));
+                                            }, (err) => alert("Could not get location: " + err.message));
+                                        } else {
+                                            alert("Geolocation is not supported by your browser");
+                                        }
+                                    }}
+                                >
+                                    📍 Get Precise Location
+                                </button>
+                                <button
+                                    type="button"
+                                    className="btn-secondary"
+                                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                    onClick={() => onNavigate('single-map', formData)}
+                                >
+                                    🗺️ View on Site Map
+                                </button>
+                            </div>
                         </div>
-
-                        <Input type="number" step="any" label="Latitude (GPS)" name="latitude" value={formData.latitude} onChange={handleChange} placeholder="e.g. 51.505" />
-                        <Input type="number" step="any" label="Longitude (GPS)" name="longitude" value={formData.longitude} onChange={handleChange} placeholder="e.g. -0.09" />
-
-                        <div style={{ gridColumn: 'span 2', display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                            <button
-                                type="button"
-                                className="btn-secondary"
-                                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                                onClick={() => {
-                                    if (navigator.geolocation) {
-                                        navigator.geolocation.getCurrentPosition((position) => {
-                                            setFormData(prev => ({
-                                                ...prev,
-                                                latitude: position.coords.latitude,
-                                                longitude: position.coords.longitude
-                                            }));
-                                        }, (err) => alert("Could not get location: " + err.message));
-                                    } else {
-                                        alert("Geolocation is not supported by your browser");
-                                    }
-                                }}
-                            >
-                                📍 Get Precise Location
-                            </button>
-                            <button
-                                type="button"
-                                className="btn-secondary"
-                                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                                onClick={() => onNavigate('single-map', formData)}
-                            >
-                                🗺️ View on Site Map
-                            </button>
-                        </div>
-                    </div>
+                    </fieldset>
                 </div>
 
                 {/* Section 2: Specifications */}
                 <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)', gridColumn: '1 / -1' }}>
                     <h3 className="section-title">Specifications</h3>
-                    <div className="grid-3">
-                        <Input label="Make (Model No)" name="modelNo" value={formData.modelNo} onChange={handleChange} />
-                        <Select
-                            label="Valve Type"
-                            name="valveType"
-                            value={formData.valveType}
-                            onChange={handleChange}
-                            options={[
-                                'Ball Valve',
-                                'Gate Valve',
-                                'Globe Control Valve',
-                                'Butterfly Valve',
-                                'Check Valve',
-                                'Plug Valve',
-                                'Pressure Relief Valve'
-                            ]}
-                        />
-                        <Input label="Valve Size" name="sizeClass" value={formData.sizeClass} onChange={handleChange} />
-                        <Input label="Packing Type" name="packingType" value={formData.packingType} onChange={handleChange} />
-                        <Select
-                            label="End Connection"
-                            name="flangeType"
-                            value={formData.flangeType}
-                            onChange={handleChange}
-                            options={['FF', 'RF', 'RTJ', 'BW', 'SW', 'Threaded', 'Hub / Clamp', 'Compression']}
-                        />
-                        <Input label="Pressure Class" name="mawp" value={formData.mawp} onChange={handleChange} />
-
-                        <Input label="Body Material" name="bodyMaterial" value={formData.bodyMaterial} onChange={handleChange} />
-                        <Input label="Seat Material" name="seatMaterial" value={formData.seatMaterial} onChange={handleChange} />
-                        <Input label="Trim Material" name="trimMaterial" value={formData.trimMaterial} onChange={handleChange} />
-                        <Input label="Obturator Material" name="obturatorMaterial" value={formData.obturatorMaterial} onChange={handleChange} />
-                    </div>
-
-                    <h4 className="mt-4 mb-4" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>Actuation</h4>
-                    {formData.valveType === 'Globe Control Valve' ? (
-                        <div className="grid-2 manual-grid" style={{ gap: '2rem' }}>
-                            {/* Actuator Column */}
-                            <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
-                                <h5 style={{ color: 'var(--primary)', margin: '0 0 1rem 0' }}>Actuator</h5>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.75rem' }}>
-                                    <Input label="Serial" name="actuatorSerial" value={formData.actuatorSerial} onChange={handleChange} />
-                                    <Input label="Make" name="actuatorMake" value={formData.actuatorMake} onChange={handleChange} />
-                                    <Input label="Model" name="actuatorModel" value={formData.actuatorModel} onChange={handleChange} />
-                                    <Input label="Type" name="actuatorType" value={formData.actuatorType} onChange={handleChange} />
-                                    <Input label="Other" name="actuatorOther" value={formData.actuatorOther} onChange={handleChange} />
-                                    <Input label="Size" name="actuatorSize" value={formData.actuatorSize} onChange={handleChange} />
-                                    <Input label="Range/Bench" name="actuatorRange" value={formData.actuatorRange} onChange={handleChange} />
-                                    <Input label="Travel" name="actuatorTravel" value={formData.actuatorTravel} onChange={handleChange} />
-                                    <Input label="Fail Mode" name="failMode" value={formData.failMode} onChange={handleChange} />
-                                </div>
-                            </div>
-
-                            {/* Instrumentation Column */}
-                            <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
-                                <h5 style={{ color: 'var(--primary)', margin: '0 0 1rem 0' }}>Instrumentation</h5>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.75rem' }}>
-                                    <Input label="Posit. Model Number" name="positionerModel" value={formData.positionerModel} onChange={handleChange} />
-                                    <Input label="Posit. Serial Number" name="positionerSerial" value={formData.positionerSerial} onChange={handleChange} />
-                                    <Input label="Posit. Characteristic" name="positionerCharacteristic" value={formData.positionerCharacteristic} onChange={handleChange} />
-                                    <Input label="Posit. Supply" name="positionerSupply" value={formData.positionerSupply} onChange={handleChange} />
-                                    <Input label="Posit. Mode" name="positionerMode" value={formData.positionerMode} onChange={handleChange} />
-                                    <Input label="Posit. Signal" name="positionerSignal" value={formData.positionerSignal} onChange={handleChange} />
-                                    <Input label="Regulator Model" name="regulatorModel" value={formData.regulatorModel} onChange={handleChange} />
-                                    <Input label="Regulator Set Point" name="regulatorSetPoint" value={formData.regulatorSetPoint} onChange={handleChange} />
-                                    <Input label="Other" name="positionerOther" value={formData.positionerOther} onChange={handleChange} />
-                                </div>
-                            </div>
-                        </div>
-                    ) : (
+                    <fieldset disabled={isReadOnly} style={{ border: 'none', padding: 0, margin: 0, display: 'contents' }}>
                         <div className="grid-3">
-                            <Input label="Actuator" name="actuator" value={formData.actuator} onChange={handleChange} />
-                            <Input label="Gear Operator" name="gearOperator" value={formData.gearOperator} onChange={handleChange} />
-                            <Input label="Fail Mode" name="failMode" value={formData.failMode} onChange={handleChange} />
+                            <Input label="Make (Model No)" name="modelNo" value={formData.modelNo} onChange={handleChange} />
+                            <Select
+                                label="Valve Type"
+                                name="valveType"
+                                value={formData.valveType}
+                                onChange={handleChange}
+                                options={[
+                                    'Ball Valve',
+                                    'Gate Valve',
+                                    'Globe Control Valve',
+                                    'Butterfly Valve',
+                                    'Check Valve',
+                                    'Plug Valve',
+                                    'Pressure Relief Valve'
+                                ]}
+                            />
+                            <Input label="Valve Size" name="sizeClass" value={formData.sizeClass} onChange={handleChange} />
+                            <Input label="Packing Type" name="packingType" value={formData.packingType} onChange={handleChange} />
+                            <Select
+                                label="End Connection"
+                                name="flangeType"
+                                value={formData.flangeType}
+                                onChange={handleChange}
+                                options={['FF', 'RF', 'RTJ', 'BW', 'SW', 'Threaded', 'Hub / Clamp', 'Compression']}
+                            />
+                            <Input label="Pressure Class" name="mawp" value={formData.mawp} onChange={handleChange} />
+
+                            <Input label="Body Material" name="bodyMaterial" value={formData.bodyMaterial} onChange={handleChange} />
+                            <Input label="Seat Material" name="seatMaterial" value={formData.seatMaterial} onChange={handleChange} />
+                            <Input label="Trim Material" name="trimMaterial" value={formData.trimMaterial} onChange={handleChange} />
+                            <Input label="Obturator Material" name="obturatorMaterial" value={formData.obturatorMaterial} onChange={handleChange} />
                         </div>
-                    )}
+
+                        <h4 className="mt-4 mb-4" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>Actuation</h4>
+                        {formData.valveType === 'Globe Control Valve' ? (
+                            <div className="grid-2 manual-grid" style={{ gap: '2rem' }}>
+                                {/* Actuator Column */}
+                                <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
+                                    <h5 style={{ color: 'var(--primary)', margin: '0 0 1rem 0' }}>Actuator</h5>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.75rem' }}>
+                                        <Input label="Serial" name="actuatorSerial" value={formData.actuatorSerial} onChange={handleChange} />
+                                        <Input label="Make" name="actuatorMake" value={formData.actuatorMake} onChange={handleChange} />
+                                        <Input label="Model" name="actuatorModel" value={formData.actuatorModel} onChange={handleChange} />
+                                        <Input label="Type" name="actuatorType" value={formData.actuatorType} onChange={handleChange} />
+                                        <Input label="Other" name="actuatorOther" value={formData.actuatorOther} onChange={handleChange} />
+                                        <Input label="Size" name="actuatorSize" value={formData.actuatorSize} onChange={handleChange} />
+                                        <Input label="Range/Bench" name="actuatorRange" value={formData.actuatorRange} onChange={handleChange} />
+                                        <Input label="Travel" name="actuatorTravel" value={formData.actuatorTravel} onChange={handleChange} />
+                                        <Input label="Fail Mode" name="failMode" value={formData.failMode} onChange={handleChange} />
+                                    </div>
+                                </div>
+
+                                {/* Instrumentation Column */}
+                                <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
+                                    <h5 style={{ color: 'var(--primary)', margin: '0 0 1rem 0' }}>Instrumentation</h5>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.75rem' }}>
+                                        <Input label="Posit. Model Number" name="positionerModel" value={formData.positionerModel} onChange={handleChange} />
+                                        <Input label="Posit. Serial Number" name="positionerSerial" value={formData.positionerSerial} onChange={handleChange} />
+                                        <Input label="Posit. Characteristic" name="positionerCharacteristic" value={formData.positionerCharacteristic} onChange={handleChange} />
+                                        <Input label="Posit. Supply" name="positionerSupply" value={formData.positionerSupply} onChange={handleChange} />
+                                        <Input label="Posit. Mode" name="positionerMode" value={formData.positionerMode} onChange={handleChange} />
+                                        <Input label="Posit. Signal" name="positionerSignal" value={formData.positionerSignal} onChange={handleChange} />
+                                        <Input label="Regulator Model" name="regulatorModel" value={formData.regulatorModel} onChange={handleChange} />
+                                        <Input label="Regulator Set Point" name="regulatorSetPoint" value={formData.regulatorSetPoint} onChange={handleChange} />
+                                        <Input label="Other" name="positionerOther" value={formData.positionerOther} onChange={handleChange} />
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="grid-3">
+                                <Input label="Actuator" name="actuator" value={formData.actuator} onChange={handleChange} />
+                                <Input label="Gear Operator" name="gearOperator" value={formData.gearOperator} onChange={handleChange} />
+                                <Input label="Fail Mode" name="failMode" value={formData.failMode} onChange={handleChange} />
+                            </div>
+                        )}
+                    </fieldset>
                 </div>
 
                 {/* Section 3: Dates & Checks */}
                 <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)', gridColumn: '1 / -1' }}>
                     <h3 className="section-title">Status & Dates</h3>
-                    <div className="grid-2">
-                        <Input type="date" label="Date In" name="dateIn" value={formData.dateIn} onChange={handleChange} />
-                        <Input type="date" label="Required Date" name="requiredDate" value={formData.requiredDate} onChange={handleChange} />
-                        <Input label="Safety Check" name="safetyCheck" value={formData.safetyCheck} onChange={handleChange} />
-                        <Select label="Decontamination Cert" name="decontaminationCert" value={formData.decontaminationCert} onChange={handleChange} options={['Y', 'N']} />
+                    <fieldset disabled={isReadOnly} style={{ border: 'none', padding: 0, margin: 0, display: 'contents' }}>
+                        <div className="grid-2">
+                            <Input type="date" label="Date In" name="dateIn" value={formData.dateIn} onChange={handleChange} />
+                            <Input type="date" label="Required Date" name="requiredDate" value={formData.requiredDate} onChange={handleChange} />
+                            <Input label="Safety Check" name="safetyCheck" value={formData.safetyCheck} onChange={handleChange} />
+                            <Select label="Decontamination Cert" name="decontaminationCert" value={formData.decontaminationCert} onChange={handleChange} options={['Y', 'N']} />
 
-                        <div style={{ gridColumn: 'span 2' }}>
-                            <Checkbox label="LSA Check" name="lsaCheck" checked={formData.lsaCheck} onChange={handleChange} />
-                            <Checkbox label="Seized Mid Stroke" name="seizedMidStroke" checked={formData.seizedMidStroke} onChange={handleChange} />
+                            <div style={{ gridColumn: 'span 2' }}>
+                                <Checkbox label="LSA Check" name="lsaCheck" checked={formData.lsaCheck} onChange={handleChange} />
+                                <Checkbox label="Seized Mid Stroke" name="seizedMidStroke" checked={formData.seizedMidStroke} onChange={handleChange} />
+                            </div>
                         </div>
-                    </div>
+                    </fieldset>
                 </div>
 
                 {/* Section 4: Testing Results - REMOVED */}
@@ -511,63 +531,81 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
                 {/* Section 5: Attachments */}
                 <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)', gridColumn: '1 / -1' }}>
                     <h3 className="section-title">Attachments</h3>
-                    <FileUpload label="Upload Images or PDFs" onFilesSelected={handleFiles} />
+                    <fieldset disabled={isReadOnly} style={{ border: 'none', padding: 0, margin: 0, width: '100%', display: 'block' }}>
+                        {!isReadOnly && <FileUpload label="Upload Images or PDFs" onFilesSelected={handleFiles} />}
 
-                    <div className="mt-4" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
-                        <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-                            📎 Attached Files ({files.length})
-                        </h4>
+                        <div className="mt-4" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
+                            <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                                📎 Attached Files ({files.length})
+                            </h4>
 
-                        {files.length === 0 ? (
-                            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontStyle: 'italic' }}>
-                                No attachments found for this record.
-                            </p>
-                        ) : (
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
-                                {files.map((f, i) => {
-                                    const isUrl = typeof f === 'string';
-                                    let name = isUrl ? f.split('/').pop() : (f.name || `File ${i + 1}`);
+                            {files.length === 0 ? (
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontStyle: 'italic' }}>
+                                    No attachments found for this record.
+                                </p>
+                            ) : (
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
+                                    {files.map((f, i) => {
+                                        const isUrl = typeof f === 'string';
+                                        let name = isUrl ? f.split('/').pop() : (f.name || `File ${i + 1}`);
 
-                                    // Remove auto-generated timestamp prefix for cleaner display (e.g., "12345_Report.pdf" -> "Report.pdf")
-                                    if (name.match(/^\d+_.+/)) {
-                                        name = name.replace(/^\d+_/, '');
-                                    }
+                                        // Remove auto-generated timestamp prefix for cleaner display (e.g., "12345_Report.pdf" -> "Report.pdf")
+                                        if (name.match(/^\d+_.+/)) {
+                                            name = name.replace(/^\d+_/, '');
+                                        }
 
-                                    const size = isUrl ? '' : (f.size ? `(${Math.round(f.size / 1024)} KB)` : '');
+                                        const size = isUrl ? '' : (f.size ? `(${Math.round(f.size / 1024)} KB)` : '');
 
-                                    return (
-                                        <div key={i} className="glass-panel" style={{ padding: '0.75rem', fontSize: '0.9rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', border: '1px solid var(--primary-light)' }}>
-                                            <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 'bold' }} title={name}>
-                                                {name}
+                                        return (
+                                            <div key={i} className="glass-panel" style={{ padding: '0.75rem', fontSize: '0.9rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', border: '1px solid var(--primary-light)' }}>
+                                                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 'bold' }} title={name}>
+                                                    {name}
+                                                </div>
+                                                {size && <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{size}</div>}
+                                                <div className="flex-row" style={{ gap: '0.5rem', marginTop: '0.25rem' }}>
+                                                    {isUrl ? (
+                                                        <a href={f} target="_blank" rel="noopener noreferrer" className="btn-primary" style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', textDecoration: 'none', textAlign: 'center', flex: 1 }}>
+                                                            Browse File
+                                                        </a>
+                                                    ) : (
+                                                        <span style={{ color: 'var(--accent)', fontWeight: 'bold', fontSize: '0.8rem', flex: 1 }}>Pending Save</span>
+                                                    )}
+
+                                                    {/* Annotation Button - Only for images */}
+                                                    {(isUrl ? f.match(/\.(jpeg|jpg|png|webp)$/i) : f.type?.startsWith('image/')) && !isReadOnly && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const src = isUrl ? f : URL.createObjectURL(f);
+                                                                setAnnotatingFile({ file: f, index: i, src });
+                                                            }}
+                                                            style={{ background: 'rgba(14, 165, 233, 0.1)', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.8rem', padding: '0.35rem', borderRadius: '4px' }}
+                                                            title="Annotate Image"
+                                                        >
+                                                            ✏️
+                                                        </button>
+                                                    )}
+
+                                                    {!isReadOnly && <button
+                                                        type="button"
+                                                        onClick={() => setFiles(prev => prev.filter((_, index) => index !== i))}
+                                                        style={{ background: 'rgba(239, 68, 68, 0.1)', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.8rem', padding: '0.35rem', borderRadius: '4px' }}
+                                                    >
+                                                        Remove
+                                                    </button>}
+                                                </div>
                                             </div>
-                                            {size && <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{size}</div>}
-                                            <div className="flex-row" style={{ gap: '0.5rem', marginTop: '0.25rem' }}>
-                                                {isUrl ? (
-                                                    <a href={f} target="_blank" rel="noopener noreferrer" className="btn-primary" style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', textDecoration: 'none', textAlign: 'center', flex: 1 }}>
-                                                        Browse File
-                                                    </a>
-                                                ) : (
-                                                    <span style={{ color: 'var(--accent)', fontWeight: 'bold', fontSize: '0.8rem', flex: 1 }}>Pending Save</span>
-                                                )}
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setFiles(prev => prev.filter((_, index) => index !== i))}
-                                                    style={{ background: 'rgba(239, 68, 68, 0.1)', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.8rem', padding: '0.35rem', borderRadius: '4px' }}
-                                                >
-                                                    Remove
-                                                </button>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </fieldset>
                 </div>
 
 
 
-                {initialData && (
+                {initialData && canDelete && (
                     <div style={{ gridColumn: '1 / -1', marginTop: '2rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
                         <button
                             type="button"
@@ -610,12 +648,29 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
                 </div>
             )}
 
+            {/* Image Annotation Modal */}
+            {annotatingFile && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(4px)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '2rem'
+                }}>
+                    <div style={{ width: '100%', maxWidth: '900px', height: '80vh' }}>
+                        <ImageAnnotator
+                            imageSrc={annotatingFile.src}
+                            onSave={handleAnnotationSave}
+                            onCancel={() => setAnnotatingFile(null)}
+                        />
+                    </div>
+                </div>
+            )}
+
             {/* Display Signature if exists */}
             {formData.signatureDataUrl && (
                 <div className="glass-panel" style={{ marginTop: '2rem', padding: '1rem', textAlign: 'center' }}>
                     <h4 style={{ margin: 0, color: 'var(--text-muted)' }}>Signed by {formData.signedBy || 'Inspector'}</h4>
                     <img src={formData.signatureDataUrl} alt="Signature" style={{ maxWidth: '200px', margin: '1rem 0', borderBottom: '1px solid var(--border-color)' }} />
-                    <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>{new Date(formData.signedDate || Date.now()).toLocaleString()}</p>
+                    <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>{new Date(formData.signedDate || new Date()).toLocaleString()}</p>
                 </div>
             )}
 

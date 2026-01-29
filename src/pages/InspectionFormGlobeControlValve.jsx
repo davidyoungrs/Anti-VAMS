@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 import {
     inspectionService,
     VALVE_COMPONENT_CONFIGS,
@@ -13,6 +14,8 @@ import { InspectionPhotos } from '../components/inspection/InspectionPhotos';
 import '../styles/InspectionForm.css';
 
 export default function InspectionFormGlobeControlValve({ valveId, inspectionId, onBack, onSave }) {
+    const { role } = useAuth();
+    const isReadOnly = role === 'client';
     const [inspection, setInspection] = useState({
         valveId: valveId,
         inspectionDate: new Date().toISOString().split('T')[0],
@@ -124,123 +127,128 @@ export default function InspectionFormGlobeControlValve({ valveId, inspectionId,
             <ValveDataHeader valveData={valveData} />
 
             <form onSubmit={handleSubmit}>
-                <InspectionGeneralInfo
-                    inspection={inspection}
-                    onChange={handleFieldChange}
-                />
-
-                <section className="form-section">
-                    <h3>Component Inspection</h3>
-                    <p className="section-description">
-                        Inspect each component and record condition, action taken, and details.
-                    </p>
-
-                    {Object.entries(componentGroups).map(([groupName, components]) => (
-                        <div key={groupName} className="component-group">
-                            <div
-                                className="group-header"
-                                onClick={() => toggleSection(groupName)}
-                            >
-                                <h4>{groupName}</h4>
-                                <span className="toggle-icon">
-                                    {expandedSections[groupName] ? '▼' : '▶'}
-                                </span>
-                            </div>
-
-                            {expandedSections[groupName] && (
-                                <div className="component-list">
-                                    {components.map(componentKey => (
-                                        <div key={componentKey} className="component-item">
-                                            <div className="component-name">
-                                                {COMPONENT_LABELS[componentKey] || componentKey}
-                                            </div>
-                                            <div className="component-fields">
-                                                <div className="field-group">
-                                                    <label>Condition</label>
-                                                    <select
-                                                        value={inspection.components[componentKey]?.condition || ''}
-                                                        onChange={(e) => handleComponentChange(componentKey, 'condition', e.target.value)}
-                                                    >
-                                                        {CONDITION_OPTIONS.map(opt => (
-                                                            <option key={opt.value} value={opt.value}>
-                                                                {opt.label}
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-                                                <div className="field-group">
-                                                    <label>Action</label>
-                                                    <select
-                                                        value={inspection.components[componentKey]?.action || ''}
-                                                        onChange={(e) => handleComponentChange(componentKey, 'action', e.target.value)}
-                                                    >
-                                                        {ACTION_OPTIONS.map(opt => (
-                                                            <option key={opt.value} value={opt.value}>
-                                                                {opt.label}
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-                                                <div className="field-group">
-                                                    <label>Part Number</label>
-                                                    <input
-                                                        type="text"
-                                                        value={inspection.components[componentKey]?.partNumber || ''}
-                                                        onChange={(e) => handleComponentChange(componentKey, 'partNumber', e.target.value)}
-                                                        placeholder="Part #"
-                                                    />
-                                                </div>
-                                                <div className="field-group">
-                                                    <label>Material</label>
-                                                    <input
-                                                        type="text"
-                                                        value={inspection.components[componentKey]?.material || ''}
-                                                        onChange={(e) => handleComponentChange(componentKey, 'material', e.target.value)}
-                                                        placeholder="Material"
-                                                    />
-                                                </div>
-                                                <div className="field-group full-width">
-                                                    <label>Comments</label>
-                                                    <input
-                                                        type="text"
-                                                        value={inspection.components[componentKey]?.comments || ''}
-                                                        onChange={(e) => handleComponentChange(componentKey, 'comments', e.target.value)}
-                                                        placeholder="Additional notes"
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    ))}
-                </section>
-
-                <section className="form-section">
-                    <h3>Repair Notes</h3>
-                    <textarea
-                        value={inspection.repairNotes || ''}
-                        onChange={(e) => handleFieldChange('repairNotes', e.target.value)}
-                        placeholder="Enter detailed repair notes, observations, or recommendations..."
-                        rows="6"
+                <fieldset disabled={isReadOnly} style={{ border: 'none', padding: 0, margin: 0, display: 'contents' }}>
+                    <InspectionGeneralInfo
+                        inspection={inspection}
+                        onChange={handleFieldChange}
                     />
-                </section>
 
-                <InspectionPhotos
-                    photoFiles={photoFiles}
-                    existingPhotos={inspection.inspectionPhotos}
-                    onAddPhotos={handlePhotoChange}
-                    onRemoveNewPhoto={removePhoto}
-                />
+                    <section className="form-section">
+                        <h3>Component Inspection</h3>
+                        <p className="section-description">
+                            Inspect each component and record condition, action taken, and details.
+                        </p>
+
+                        {Object.entries(componentGroups).map(([groupName, components]) => (
+                            <div key={groupName} className="component-group">
+                                <div
+                                    className="group-header"
+                                    onClick={() => toggleSection(groupName)}
+                                >
+                                    <h4>{groupName}</h4>
+                                    <span className="toggle-icon">
+                                        {expandedSections[groupName] ? '▼' : '▶'}
+                                    </span>
+                                </div>
+
+                                {expandedSections[groupName] && (
+                                    <div className="component-list">
+                                        {components.map(componentKey => (
+                                            <div key={componentKey} className="component-item">
+                                                <div className="component-name">
+                                                    {COMPONENT_LABELS[componentKey] || componentKey}
+                                                </div>
+                                                <div className="component-fields">
+                                                    <div className="field-group">
+                                                        <label>Condition</label>
+                                                        <select
+                                                            value={inspection.components[componentKey]?.condition || ''}
+                                                            onChange={(e) => handleComponentChange(componentKey, 'condition', e.target.value)}
+                                                        >
+                                                            {CONDITION_OPTIONS.map(opt => (
+                                                                <option key={opt.value} value={opt.value}>
+                                                                    {opt.label}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                    <div className="field-group">
+                                                        <label>Action</label>
+                                                        <select
+                                                            value={inspection.components[componentKey]?.action || ''}
+                                                            onChange={(e) => handleComponentChange(componentKey, 'action', e.target.value)}
+                                                        >
+                                                            {ACTION_OPTIONS.map(opt => (
+                                                                <option key={opt.value} value={opt.value}>
+                                                                    {opt.label}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                    <div className="field-group">
+                                                        <label>Part Number</label>
+                                                        <input
+                                                            type="text"
+                                                            value={inspection.components[componentKey]?.partNumber || ''}
+                                                            onChange={(e) => handleComponentChange(componentKey, 'partNumber', e.target.value)}
+                                                            placeholder="Part #"
+                                                        />
+                                                    </div>
+                                                    <div className="field-group">
+                                                        <label>Material</label>
+                                                        <input
+                                                            type="text"
+                                                            value={inspection.components[componentKey]?.material || ''}
+                                                            onChange={(e) => handleComponentChange(componentKey, 'material', e.target.value)}
+                                                            placeholder="Material"
+                                                        />
+                                                    </div>
+                                                    <div className="field-group full-width">
+                                                        <label>Comments</label>
+                                                        <input
+                                                            type="text"
+                                                            value={inspection.components[componentKey]?.comments || ''}
+                                                            onChange={(e) => handleComponentChange(componentKey, 'comments', e.target.value)}
+                                                            placeholder="Additional notes"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </section>
+
+                    <section className="form-section">
+                        <h3>Repair Notes</h3>
+                        <textarea
+                            value={inspection.repairNotes || ''}
+                            onChange={(e) => handleFieldChange('repairNotes', e.target.value)}
+                            placeholder="Enter detailed repair notes, observations, or recommendations..."
+                            rows="6"
+                        />
+                    </section>
+
+                    <InspectionPhotos
+                        photoFiles={photoFiles}
+                        existingPhotos={inspection.inspectionPhotos}
+                        onAddPhotos={handlePhotoChange}
+                        onRemoveNewPhoto={removePhoto}
+                        readOnly={isReadOnly}
+                    />
+                </fieldset>
 
                 <div className="form-actions">
                     <button type="button" onClick={onBack} className="cancel-button">
-                        Cancel
+                        {isReadOnly ? 'Back' : 'Cancel'}
                     </button>
-                    <button type="submit" disabled={isSaving} className="save-button">
-                        {isSaving ? 'Saving...' : 'Save Inspection'}
-                    </button>
+                    {!isReadOnly && (
+                        <button type="submit" disabled={isSaving} className="save-button">
+                            {isSaving ? 'Saving...' : 'Save Inspection'}
+                        </button>
+                    )}
                 </div>
             </form>
         </div>

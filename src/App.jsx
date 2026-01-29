@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useAuth } from './context/AuthContext';
+import { Login } from './pages/Login';
 import { Layout } from './components/Layout';
 import { RecordForm } from './pages/RecordForm';
 import { MapView } from './pages/MapView';
@@ -25,6 +27,7 @@ import roadmapContent from '../ROADMAP.md?raw';
 import legalContent from '../LEGAL_TERMS.md?raw';
 
 function App() {
+  const { user, role, signOut } = useAuth();
   const [currentView, setCurrentView] = useState('dashboard');
   const [stats, setStats] = useState({ total: 0, testPending: 0 });
   const [records, setRecords] = useState([]);
@@ -35,6 +38,7 @@ function App() {
 
   // Load data on mount and view change
   const loadData = async () => {
+    // Basic permissions check needed here? for now just load all.
     const allRecords = await storageService.getAll();
     setStats({
       total: allRecords.length,
@@ -311,6 +315,7 @@ function App() {
       case 'create':
         return <RecordForm key="create" onSave={handleSave} onNavigate={handleNavigate} />;
       case 'admin':
+        if (role !== 'admin') return <div className="glass-panel" style={{ padding: '2rem' }}><h2>Access Denied</h2><p>You do not have permission to view this page.</p></div>;
         return <AdminPanel />;
       case 'user-guide':
         return <MarkdownPage title="User Guide" content={userGuideContent} />;
@@ -539,39 +544,46 @@ function App() {
                 <p style={{ color: 'var(--text-muted)' }}>
                   Welcome to the Global Valve Record system. Select an option from the sidebar to begin.
                 </p>
+                <div style={{ marginTop: '1rem', fontStyle: 'italic', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                  Logged in as: {user?.email} ({role}) <button onClick={signOut} style={{ marginLeft: '10px', background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', textDecoration: 'underline' }}>Sign Out</button>
+                </div>
               </div>
               <div style={{ display: 'flex', gap: '1rem' }}>
-                <button
-                  className="btn-primary"
-                  onClick={() => handleNavigate('create')}
-                  style={{
-                    background: 'var(--primary)',
-                    color: 'white',
-                    border: 'none',
-                    boxShadow: '0 4px 15px rgba(14, 165, 233, 0.3)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    fontWeight: 'bold'
-                  }}
-                >
-                  + New Record
-                </button>
-                <button
-                  className="btn-primary"
-                  onClick={handleSync}
-                  style={{
-                    background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-                    color: 'white',
-                    border: 'none',
-                    boxShadow: '0 4px 15px rgba(245, 158, 11, 0.3)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    fontWeight: 'bold'
-                  }}
-                >
-                  ☁️ Sync Local to Cloud
-                </button>
+                {(role === 'admin' || role === 'inspector') && (
+                  <button
+                    className="btn-primary"
+                    onClick={() => handleNavigate('create')}
+                    style={{
+                      background: 'var(--primary)',
+                      color: 'white',
+                      border: 'none',
+                      boxShadow: '0 4px 15px rgba(14, 165, 233, 0.3)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    + New Record
+                  </button>
+                )}
+                {role !== 'client' && (
+                  <button
+                    className="btn-primary"
+                    onClick={handleSync}
+                    style={{
+                      background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                      color: 'white',
+                      border: 'none',
+                      boxShadow: '0 4px 15px rgba(245, 158, 11, 0.3)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    ☁️ Sync Local to Cloud
+                  </button>
+                )}
               </div>
             </div>
 
@@ -696,26 +708,28 @@ function App() {
                   📥 Export Records
                 </button>
 
-                <label
-                  style={{
-                    background: 'var(--primary)',
-                    border: 'none',
-                    color: 'white',
-                    padding: '0.75rem 1.5rem',
-                    borderRadius: 'var(--radius-md)',
-                    cursor: 'pointer',
-                    fontWeight: '600',
-                    display: 'inline-block'
-                  }}
-                >
-                  📤 Import CSV
-                  <input
-                    type="file"
-                    accept=".csv"
-                    onChange={handleImport}
-                    style={{ display: 'none' }}
-                  />
-                </label>
+                {(role === 'admin' || role === 'inspector') && (
+                  <label
+                    style={{
+                      background: 'var(--primary)',
+                      border: 'none',
+                      color: 'white',
+                      padding: '0.75rem 1.5rem',
+                      borderRadius: 'var(--radius-md)',
+                      cursor: 'pointer',
+                      fontWeight: '600',
+                      display: 'inline-block'
+                    }}
+                  >
+                    📤 Import CSV
+                    <input
+                      type="file"
+                      accept=".csv"
+                      onChange={handleImport}
+                      style={{ display: 'none' }}
+                    />
+                  </label>
+                )}
               </div>
             </div>
           </div>
@@ -723,8 +737,12 @@ function App() {
     }
   };
 
+  if (!user) {
+    return <Login />;
+  }
+
   return (
-    <Layout activeView={currentView} onNavigate={handleNavigate} >
+    <Layout activeView={currentView} onNavigate={handleNavigate} userRole={role} onLogout={signOut}>
       {renderContent()}
     </Layout >
   );

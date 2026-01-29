@@ -24,8 +24,8 @@ This document outlines the proposed development path for the GVR-VAMS.
    - **Benefit**: Instant "Pass/Fail" determination based on input pressure/size.
 
 4. **Image Annotation** (Priority: Medium)
-   - **Why**: "A picture is worth 1000 words, but a circle on a crack is worth 1000 pictures."
-   - **Task**: Canvas-based drawing tool on upload.
+   - ~~**Why**: "A picture is worth 1000 words, but a circle on a crack is worth 1000 pictures."~~ <span style="color:green">**(Complete 28th Jan 2026)**</span>
+   - ~~**Task**: Canvas-based drawing tool on upload.~~
 
 5. **Digital Signatures** (Priority: Medium)
    - ~~**Why**: Makes the PDF a legal document.~~ <span style="color:green">**(Complete 28th Jan 2026)**</span>

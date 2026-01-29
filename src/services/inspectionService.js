@@ -205,8 +205,6 @@ export const COMPONENT_LABELS = {
     bearingCap: 'Bearing Cap',
     capscrews: 'Capscrews',
     stemNut: 'Stem Nut',
-    upperBearing: 'Upper Bearing',
-    lowerBearing: 'Lower Bearing',
     greaseFitting: 'Grease Fitting',
     handwheelOring: 'Handwheel Operator O-ring',
     stemProtectorAssembly: 'Stem Protector Assembly',
@@ -230,7 +228,6 @@ export const COMPONENT_LABELS = {
     seatRearOrings: 'Seat Rear O-rings x2',
     yokeTubeGasket: 'Yoke Tube Gasket',
     gateSegmentAssembly: 'Gate & Segment Assembly',
-    seatAssembly: 'Seat Assembly x2',
     gateSkirt: 'Gate Skirt',
     seatSkirt: 'Seat Skirt',
     other: 'Other'

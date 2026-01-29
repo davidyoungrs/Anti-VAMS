@@ -1,16 +1,31 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { storageService } from '../services/storage';
+import { supabase } from '../services/supabaseClient';
 
 export const AdminPanel = () => {
-    const [activeTab, setActiveTab] = useState('trash'); // 'trash' | 'history'
+    const { role } = useAuth();
+    const [activeTab, setActiveTab] = useState('trash'); // 'trash' | 'history' | 'users'
     const [deletedRecords, setDeletedRecords] = useState([]);
     const [history, setHistory] = useState([]);
     const [currentRecords, setCurrentRecords] = useState([]);
+    const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        loadData();
-    }, [activeTab]);
+        if (role === 'admin') {
+            loadData();
+        }
+    }, [activeTab, role]);
+
+    if (role !== 'admin') {
+        return (
+            <div style={{ padding: '2rem', textAlign: 'center' }}>
+                <h2 style={{ color: '#ef4444' }}>Access Denied</h2>
+                <p>You need Administrator privileges to view this page.</p>
+            </div>
+        );
+    }
 
     const loadData = async () => {
         setLoading(true);
@@ -22,6 +37,13 @@ export const AdminPanel = () => {
                 // Let's rely on the service.
                 const records = await storageService.getDeletedRecords();
                 setDeletedRecords(records);
+            } else if (activeTab === 'users') {
+                const { data, error } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .order('email');
+                if (error) throw error;
+                setUsers(data);
             } else {
                 // Fetch both history and current records for comparison
                 const [historyData, allRecords] = await Promise.all([
@@ -91,6 +113,23 @@ export const AdminPanel = () => {
         }
     };
 
+    const handleRoleUpdate = async (userId, newRole) => {
+        if (!window.confirm(`Are you sure you want to change this user's role to ${newRole.toUpperCase()}?`)) return;
+
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .update({ role: newRole })
+                .eq('id', userId);
+
+            if (error) throw error;
+            alert('User role updated successfully!');
+            loadData();
+        } catch (e) {
+            alert('Failed to update role: ' + e.message);
+        }
+    };
+
     const getDaysRemaining = (deletedAt) => {
         if (!deletedAt) return 5;
         const deleteDate = new Date(deletedAt);
@@ -135,6 +174,20 @@ export const AdminPanel = () => {
                     }}
                 >
                     📜 Change History
+                </button>
+                <button
+                    onClick={() => setActiveTab('users')}
+                    style={{
+                        padding: '1rem 2rem',
+                        background: activeTab === 'users' ? 'var(--primary)' : 'var(--bg-card)',
+                        color: activeTab === 'users' ? 'white' : 'var(--text-muted)',
+                        border: 'none',
+                        borderRadius: 'var(--radius-md)',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                    }}
+                >
+                    👥 User Management
                 </button>
             </div>
 
@@ -266,6 +319,64 @@ export const AdminPanel = () => {
                                     })}
                                 </div>
                             )}
+                        </div>
+                    )}
+
+                    {activeTab === 'users' && (
+                        <div>
+                            <h3 style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem', marginBottom: '1rem' }}>
+                                Manage Users & Roles
+                            </h3>
+                            <div style={{ overflowX: 'auto' }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', color: 'var(--text-primary)' }}>
+                                    <thead>
+                                        <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border-color)' }}>
+                                            <th style={{ padding: '1rem' }}>Email</th>
+                                            <th style={{ padding: '1rem' }}>Current Role</th>
+                                            <th style={{ padding: '1rem' }}>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {users.map(user => (
+                                            <tr key={user.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                                <td style={{ padding: '1rem' }}>{user.email}</td>
+                                                <td style={{ padding: '1rem' }}>
+                                                    <span style={{
+                                                        padding: '0.25rem 0.5rem',
+                                                        borderRadius: '4px',
+                                                        fontSize: '0.85rem',
+                                                        background: user.role === 'admin' ? 'rgba(239, 68, 68, 0.2)' :
+                                                            user.role === 'inspector' ? 'rgba(59, 130, 246, 0.2)' :
+                                                                'rgba(107, 114, 128, 0.2)',
+                                                        color: user.role === 'admin' ? '#f87171' :
+                                                            user.role === 'inspector' ? '#60a5fa' :
+                                                                '#9ca3af'
+                                                    }}>
+                                                        {user.role.toUpperCase()}
+                                                    </span>
+                                                </td>
+                                                <td style={{ padding: '1rem' }}>
+                                                    <select
+                                                        value={user.role}
+                                                        onChange={(e) => handleRoleUpdate(user.id, e.target.value)}
+                                                        style={{
+                                                            padding: '0.5rem',
+                                                            borderRadius: 'var(--radius-sm)',
+                                                            border: '1px solid var(--border-color)',
+                                                            background: 'var(--bg-input)',
+                                                            color: 'var(--text-primary)'
+                                                        }}
+                                                    >
+                                                        <option value="client">Client</option>
+                                                        <option value="inspector">Inspector</option>
+                                                        <option value="admin">Admin</option>
+                                                    </select>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     )}
                 </div>

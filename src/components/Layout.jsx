@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 
-export const Layout = ({ children, activeView, onNavigate }) => {
+export const Layout = ({ children, activeView, onNavigate, userRole }) => {
+  const { signOut } = useAuth();
   const [isAdminOpen, setIsAdminOpen] = useState(false); // Default collapsed
   const [isChartsOpen, setIsChartsOpen] = useState(false); // Default collapsedn for visibility
   const getItemStyle = (viewName) => ({
@@ -45,21 +47,25 @@ export const Layout = ({ children, activeView, onNavigate }) => {
                 Dashboard
               </a>
             </li>
-            <li style={{ marginBottom: '0.5rem' }}>
-              <a onClick={() => onNavigate('create')} style={getItemStyle('create')}>
-                Add New Record
-              </a>
-            </li>
+            {userRole !== 'client' && (
+              <li style={{ marginBottom: '0.5rem' }}>
+                <a onClick={() => onNavigate('create')} style={getItemStyle('create')}>
+                  Add New Record
+                </a>
+              </li>
+            )}
             <li style={{ marginBottom: '0.5rem' }}>
               <a onClick={() => onNavigate('search')} style={getItemStyle('search')}>
                 Search Records
               </a>
             </li>
-            <li style={{ marginBottom: '0.5rem' }}>
-              <a onClick={() => onNavigate('map')} style={getItemStyle('map')}>
-                Valve Map
-              </a>
-            </li>
+            {userRole !== 'client' && (
+              <li style={{ marginBottom: '0.5rem' }}>
+                <a onClick={() => onNavigate('map')} style={getItemStyle('map')}>
+                  Valve Map
+                </a>
+              </li>
+            )}
             {/* Dashboards and Charts Group */}
             <li style={{ marginBottom: '0.5rem' }}>
               <div
@@ -143,8 +149,28 @@ export const Layout = ({ children, activeView, onNavigate }) => {
 
         <div style={{ padding: '1rem', borderTop: '1px solid var(--border-color)' }}>
           <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
-            User: Admin
+            User: {userRole ? userRole.toUpperCase() : 'UNKNOWN'}
           </div>
+          <button
+            onClick={async () => {
+              if (window.confirm('Are you sure you want to sign out?')) {
+                await signOut();
+              }
+            }}
+            style={{
+              background: 'transparent',
+              border: '1px solid var(--border-color)',
+              color: 'var(--text-muted)',
+              width: '100%',
+              padding: '0.5rem',
+              borderRadius: 'var(--radius-sm)',
+              cursor: 'pointer',
+              fontSize: '0.8rem',
+              marginBottom: '1rem'
+            }}
+          >
+            Sign Out
+          </button>
           <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', opacity: 0.8 }}>
             Copyright © 2026 TheValve.pro. All rights reserved.
           </div>
