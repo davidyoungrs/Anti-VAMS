@@ -462,179 +462,106 @@ export const storageService = {
         let lastError = null;
 
         // We need to process records one by one (or in chunks) to handle file uploads
+        // EMERGENCY DEBUG SYNC: Skipping ALL file uploads to isolate "AbortError"
+        // If this works, the issue is DEFINITELY file size/network blocking uploads.
+
+        const BATCH_SIZE = 1;
+        const recordsToUpsert = [];
+
         for (let i = 0; i < localRecords.length; i++) {
             let record = { ...localRecords[i] };
-            let recordModified = false;
 
+            // SKIP ALL FILE PROCESSING logic for now.
+            // Just ensure timestamp
+            if (!record.updatedAt) {
+                record.updatedAt = new Date().toISOString();
+            }
+
+            // Sanitize
+            const sanitizeVal = (val) => (!val || val === '') ? null : val;
+            const sanitizeNum = (val) => {
+                if (val === '' || val === null || val === undefined) return null;
+                return isNaN(val) ? null : val;
+            };
+
+            // STRICTLY NO FILES
+            recordsToUpsert.push({
+                id: record.id,
+                created_at: sanitizeVal(record.createdAt),
+                updated_at: sanitizeVal(record.updatedAt),
+                deleted_at: sanitizeVal(record.deletedAt),
+                serial_number: record.serialNumber,
+                customer: record.customer,
+                oem: record.oem,
+                job_no: record.jobNo,
+                tag_no: record.tagNo,
+                order_no: record.orderNo,
+                date_in: sanitizeVal(record.dateIn),
+                status: record.status,
+                pass_fail: record.passFail,
+                plant_area: record.plantArea,
+                site_location: record.siteLocation,
+                required_date: sanitizeVal(record.requiredDate),
+                safety_check: record.safetyCheck,
+                decontamination_cert: record.decontaminationCert,
+                lsa_check: record.lsaCheck,
+                seized_mid_stroke: record.seizedMidStroke,
+                model_no: record.modelNo,
+                valve_type: record.valveType,
+                size_class: sanitizeVal(record.sizeClass),
+                packing_type: record.packingType,
+                flange_type: record.flangeType,
+                mawp: sanitizeNum(record.mawp),
+                body_material: record.bodyMaterial,
+                seat_material: record.seatMaterial,
+                trim_material: record.trimMaterial,
+                obturator_material: record.obturatorMaterial,
+                actuator: record.actuator,
+                gear_operator: record.gearOperator,
+                fail_mode: record.failMode,
+                body_test_spec: record.bodyTestSpec,
+                seat_test_spec: record.seat_test_spec,
+                body_pressure: sanitizeNum(record.bodyPressure),
+                body_pressure_unit: record.bodyPressureUnit,
+                tested_by: record.testedBy,
+                test_date: sanitizeVal(record.testDate),
+                test_medium: record.testMedium,
+                latitude: sanitizeNum(record.latitude),
+                longitude: sanitizeNum(record.longitude),
+                valve_photo: null, // Force Null
+                file_urls: []      // Force Empty
+            });
+        }
+
+        console.log('[SyncDebug] Emergency Mode: Attempting to sync ' + recordsToUpsert.length + ' records (TEXT ONLY)');
+
+        // 3. Batch Upsert to Supabase
+        if (recordsToUpsert.length > 0) {
             try {
-                // 1. Process Files: Upload Base64 strings to Supabase Storage
-                if (record.files && record.files.length > 0) {
-                    const processedFiles = await Promise.all(record.files.map(async (file) => {
-                        // Check if it's a Base64 string (starts with data:)
-                        if (typeof file === 'string' && file.startsWith('data:')) {
-                            try {
-                                // Convert Base64 to Blob
-                                const res = await fetch(file);
-                                const blob = await res.blob();
+                for (let i = 0; i < recordsToUpsert.length; i += BATCH_SIZE) {
+                    const chunk = recordsToUpsert.slice(i, i + BATCH_SIZE);
+                    const { error } = await supabase.from('valve_records').upsert(chunk, { onConflict: 'id' });
 
-                                // Generate path
-                                const fileExt = file.substring(file.indexOf('/') + 1, file.indexOf(';'));
-                                const fileName = `${Date.now()}_offline_upload.${fileExt}`;
-                                const filePath = `${record.id}/${fileName}`;
-
-                                // Upload
-                                const { error: uploadError } = await supabase.storage
-                                    .from('valve-attachment')
-                                    .upload(filePath, blob);
-
-                                if (!uploadError) {
-                                    const { data: { publicUrl } } = supabase.storage
-                                        .from('valve-attachment')
-                                        .getPublicUrl(filePath);
-                                    recordModified = true;
-                                    return publicUrl;
-                                } else {
-                                    console.warn('Failed to upload offline file during sync:', uploadError);
-                                    return file; // Keep Base64 if upload fails? Or fail the sync? Let's keep it for now.
-                                }
-                            } catch (err) {
-                                console.error('Error processing offline file:', err);
-                                return file;
-                            }
-                        }
-                        return file; // Already a URL or normal string
-                    }));
-
-                    record.files = processedFiles;
-                }
-
-                // 2. Process Valve Photo: Same logic
-                if (record.valvePhoto && typeof record.valvePhoto === 'string' && record.valvePhoto.startsWith('data:')) {
-                    try {
-                        const res = await fetch(record.valvePhoto);
-                        const blob = await res.blob();
-                        const fileExt = record.valvePhoto.substring(record.valvePhoto.indexOf('/') + 1, record.valvePhoto.indexOf(';'));
-                        const filePath = `${record.id}/valve-photo-${Date.now()}.${fileExt}`;
-
-                        const { error: uploadError } = await supabase.storage
-                            .from('valve-attachment')
-                            .upload(filePath, blob);
-
-                        if (!uploadError) {
-                            const { data: { publicUrl } } = supabase.storage
-                                .from('valve-attachment')
-                                .getPublicUrl(filePath);
-                            record.valvePhoto = publicUrl;
-                            recordModified = true;
-                        }
-                    } catch (err) {
-                        console.error('Error processing valve photo:', err);
-                    }
-                }
-
-                // 2b. Ensure timestamp exists (Legacy record fix)
-                if (!record.updatedAt) {
-                    record.updatedAt = new Date().toISOString();
-                    recordModified = true;
-                }
-
-                // Helper to sanitize fields (Supabase/Postgres dislikes empty strings for dates & numbers)
-                const sanitizeVal = (val) => (!val || val === '') ? null : val;
-
-                // Helper for numeric fields that might be strings in JS
-                const sanitizeNum = (val) => {
-                    if (val === '' || val === null || val === undefined) return null;
-                    return isNaN(val) ? null : val;
-                };
-
-                // 3. Upsert to Supabase
-                const response = supabase
-                    .from('valve_records')
-                    .upsert({
-                        id: record.id,
-                        created_at: sanitizeVal(record.createdAt),
-                        updated_at: sanitizeVal(record.updatedAt), // Re-enabled: Column added by user
-                        deleted_at: sanitizeVal(record.deletedAt), // Soft Delete Support
-                        serial_number: record.serialNumber,
-                        customer: record.customer,
-                        oem: record.oem,
-                        job_no: record.jobNo,
-                        tag_no: record.tagNo,
-                        order_no: record.orderNo,
-                        date_in: sanitizeVal(record.dateIn),
-                        status: record.status,
-                        pass_fail: record.passFail,
-                        plant_area: record.plantArea,
-                        site_location: record.siteLocation,
-                        required_date: sanitizeVal(record.requiredDate),
-                        safety_check: record.safetyCheck,
-                        decontamination_cert: record.decontaminationCert,
-                        lsa_check: record.lsaCheck,
-                        seized_mid_stroke: record.seizedMidStroke,
-                        model_no: record.modelNo,
-                        valve_type: record.valveType,
-                        size_class: sanitizeVal(record.sizeClass), // Often mixed type, safest to treat as string or null if empty
-                        packing_type: record.packingType,
-                        flange_type: record.flangeType,
-                        mawp: sanitizeNum(record.mawp), // Likely numeric
-                        body_material: record.bodyMaterial,
-                        seat_material: record.seatMaterial,
-                        trim_material: record.trimMaterial,
-                        obturator_material: record.obturatorMaterial,
-                        actuator: record.actuator,
-                        gear_operator: record.gearOperator,
-                        fail_mode: record.failMode,
-                        body_test_spec: record.bodyTestSpec,
-                        seat_test_spec: record.seat_test_spec,
-                        body_pressure: sanitizeNum(record.bodyPressure), // Likely numeric
-                        body_pressure_unit: record.bodyPressureUnit,
-                        tested_by: record.testedBy,
-                        test_date: sanitizeVal(record.testDate),
-                        test_medium: record.testMedium,
-                        latitude: sanitizeNum(record.latitude),
-                        longitude: sanitizeNum(record.longitude),
-                        // last_viewed_at: sanitizeVal(record.lastViewedAt), // Removed: Column missing in DB, preventing sync. Local only feature for now.
-                        valve_photo: record.valvePhoto,
-                        file_urls: record.files || []
-                    }, { onConflict: 'id' });
-
-                // verify write
-                const { data, error } = await response.select();
-
-                if (error || (data && data.length === 0)) {
-                    failedRecords.push(record.id);
-                    if (data && data.length === 0) {
-                        lastError = { message: "Write ignored by database. Check Supabase RLS Policies." };
-                        console.warn(`Record ${record.serialNumber} sync ignored (RLS blocked?)`);
-                    } else {
+                    if (error) {
+                        console.error('Batch sync failed:', error);
                         lastError = error;
-                        console.error(`Failed to sync record ${record.serialNumber}. Error: ${error.message} (Code: ${error.code})`, error);
-                    }
-                } else {
-                    syncedCount++;
-                    // 4. Update Local Storage if we successfully uploaded files (converted Base64 -> URL)
-                    if (recordModified) {
-                        localRecords[i] = record;
+                        chunk.forEach(r => failedRecords.push(r.id));
+                    } else {
+                        syncedCount += chunk.length;
                     }
                 }
-
-            } catch (err) {
-                console.error(`Exception syncing record ${localRecords[i].serialNumber}:`, err);
-                failedRecords.push(localRecords[i].id);
-                lastError = err;
+            } catch (batchErr) {
+                console.error('Batch exception:', batchErr);
+                lastError = batchErr;
+                failedRecords.push('batch-failure');
             }
         }
 
-        // Save back any URL updates to local storage
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(localRecords));
-
+        // Skip local storage update since we didn't process files
         if (failedRecords.length > 0) {
-            // Return detailed error for the user
-            const errorMsg = lastError ? (lastError.message || JSON.stringify(lastError)) : 'Unknown error';
-            return { success: false, count: syncedCount, error: `Failed to sync ${failedRecords.length} records. Last Error: ${errorMsg}` };
+            return { success: false, count: syncedCount, error: `Failed to sync. Last Error: ${lastError?.message}` };
         }
 
-        // Final Verify: Get total count from cloud
         let cloudTotal = 'unknown';
         if (supabase) {
             const { count } = await supabase.from('valve_records').select('*', { count: 'exact', head: true });

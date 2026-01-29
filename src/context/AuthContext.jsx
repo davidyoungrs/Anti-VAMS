@@ -167,14 +167,25 @@ export const AuthProvider = ({ children }) => {
     const signOut = async () => {
         console.log('[Auth] Signing out...');
         try {
+            // 1. Clear Context State
             setUser(null);
             setRole(null);
-            localStorage.removeItem('sb-' + import.meta.env.VITE_SUPABASE_URL + '-auth-token');
+
+            // 2. Clear Local Storage (Robust)
+            // Remove any keys starting with 'sb-' to handle potential key mismatches
+            Object.keys(localStorage).forEach(key => {
+                if (key.startsWith('sb-')) {
+                    localStorage.removeItem(key);
+                }
+            });
+
+            // 3. Supabase SignOut (Best Effort)
             if (supabase) await supabase.auth.signOut();
         } catch (e) {
-            console.error(e);
+            console.error('SignOut Exception:', e);
         } finally {
-            window.location.reload();
+            // 4. Force Redirect to Login (avoids infinite reload loops)
+            window.location.href = '/login';
         }
     };
 
