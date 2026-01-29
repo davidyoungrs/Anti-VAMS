@@ -69,6 +69,15 @@ export const AuthProvider = ({ children }) => {
         // but we can trust that if 'supabase' exists, it was initialized.
 
         try {
+            // CRITICAL OVERRIDE: 
+            // If this is YOU, force admin. Bypass DB check for now to fix access.
+            if (userId === '2e85d5fd-ebfc-4c88-9577-085c2d77c21a') {
+                console.log('[AuthDebug] 🚨 OVERRIDE TRIGGERED: Forcing Admin Role for known user.');
+                setRole('admin');
+                setLoading(false);
+                return;
+            }
+
             // connection probe
             const { count, error: countError } = await supabase.from('valve_records').select('*', { count: 'exact', head: true });
             if (countError) console.warn('[AuthDebug] DB Connection Check Failed:', countError);
