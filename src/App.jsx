@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from './context/AuthContext';
+import { supabase } from './services/supabaseClient';
 import { Login } from './pages/Login';
 import { Layout } from './components/Layout';
 import { RecordForm } from './pages/RecordForm';
@@ -49,6 +50,7 @@ function App() {
 
   // Load data on mount
   // Load data on mount
+  // Load data on mount and set up Real-Time subscription
   React.useEffect(() => {
     const init = async () => {
       await loadData();
@@ -62,12 +64,25 @@ function App() {
         const target = allRecords.find(r => r.id === valveId);
         if (target) {
           handleRecordClick(target);
-          // Optional: Clean URL so refresh doesn't stick
           window.history.replaceState({}, '', window.location.pathname);
         }
       }
     };
     init();
+
+    // Set up Real-Time Subscription
+    const channel = supabase
+      .channel('public:valve_records')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'valve_records' }, (payload) => {
+        console.log('Real-Time Change detected:', payload);
+        // Refresh data to reflect changes from other devices
+        loadData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []); // Only load on mount
 
   const handleRecordClick = async (record) => {
