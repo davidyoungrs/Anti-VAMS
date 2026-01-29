@@ -156,8 +156,17 @@ export const AuthProvider = ({ children }) => {
     };
 
     const signOut = async () => {
-        if (!supabase) return;
-        return supabase.auth.signOut();
+        console.log('[Auth] Signing out...');
+        try {
+            setUser(null);
+            setRole(null);
+            localStorage.removeItem('sb-' + import.meta.env.VITE_SUPABASE_URL + '-auth-token');
+            if (supabase) await supabase.auth.signOut();
+        } catch (e) {
+            console.error(e);
+        } finally {
+            window.location.reload();
+        }
     };
 
     const signUp = async (email, password) => {
