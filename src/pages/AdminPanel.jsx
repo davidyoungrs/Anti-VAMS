@@ -42,12 +42,14 @@ export const AdminPanel = () => {
                 const records = await storageService.getDeletedRecords();
                 setDeletedRecords(records);
             } else if (activeTab === 'users') {
-                const { data, error } = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .order('email');
-                if (error) throw error;
-                setUsers(data);
+                // Switch to Secure RPC to avoid RLS issues
+                const { data, error } = await supabase.rpc('get_all_profiles');
+
+                if (error) {
+                    console.error("RPC Fetch Users Error:", error);
+                    throw error;
+                }
+                setUsers(data || []);
             } else {
                 // Fetch both history and current records for comparison
                 const [historyData, allRecords] = await Promise.all([
@@ -121,10 +123,10 @@ export const AdminPanel = () => {
         if (!window.confirm(`Are you sure you want to change this user's role to ${newRole.toUpperCase()}?`)) return;
 
         try {
-            const { error } = await supabase
-                .from('profiles')
-                .update({ role: newRole })
-                .eq('id', userId);
+            const { error } = await supabase.rpc('update_user_profile', {
+                target_user_id: userId,
+                new_role: newRole
+            });
 
             if (error) throw error;
             alert('User role updated successfully!');
@@ -140,10 +142,10 @@ export const AdminPanel = () => {
         // Or inline input with onBlur.
 
         try {
-            const { error } = await supabase
-                .from('profiles')
-                .update({ allowed_customers: newAllowed })
-                .eq('id', userId);
+            const { error } = await supabase.rpc('update_user_profile', {
+                target_user_id: userId,
+                new_allowed_customers: newAllowed
+            });
 
             if (error) throw error;
             // No alert needed for smooth editing, or maybe a toast?
