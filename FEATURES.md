@@ -31,6 +31,7 @@
   - Inspection Results & Checklist.
   - Test Data (Pressure & Stroke).
   - Inspection Photo Gallery.
+- **Digital Signatures**: Capture technician and witness signatures on the device, embedded directly into the report for authentication.
 - **Embedded QR Code**: Every report includes a unique QR code for instant digital access.
 - **Layout automation**: Smart pagination to prevent table rows from breaking awkwardly or overlapping headers.
 - **Traceability**: Footer on every page with generation Date/Time and Page Numbers.
@@ -38,8 +39,9 @@
 ## 5. Data Management
 - **Hybrid Storage**: 
   - **Local First**: Works offline using browser LocalStorage.
-  - **Cloud Sync**: One-click synchronization with Supabase for data backup and team collaboration.
-- **Media Handling**: Securely uploads and retrieves images for inspection reports.
+  - **Cloud Sync**: One-click, intelligent synchronization with Supabase.
+  - **Real-Time Collaboration**: Updates from other devices appear instantly on your dashboard.
+- **Sequential Media Uploads**: Robust file handling optimized for field network conditions (prevents timeouts).
 
 ## 6. Analytics & Intelligence
 - **Visual Dashboard**:

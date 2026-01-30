@@ -74,8 +74,12 @@ Once a valve has an inspection or test record, you can generate a full PDF repor
 
 1. Open the **Valve Record**.
 2. Click the **"Generate PDF Report"** button.
-3. **Wait a moment**: The system fetches the logo, generates a QR code, and formats the document.
-4. **Download**: The PDF will automatically download to your device.
+3. **Signatures**: You will be prompted to sign on-screen.
+   - **Tested By**: Technician signature.
+   - **Witnessed By**: Client/Inspector signature (optional).
+   - Click "Save" to capture.
+4. **Wait a moment**: The system fetches the logo, generates a QR code, embeds your signature, and formats the document.
+5. **Download**: The PDF will automatically download to your device.
 
 ### QR Code Integration
 - **In the Report**: A unique QR code is stamped on the last page of the PDF.
