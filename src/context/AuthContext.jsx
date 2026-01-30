@@ -47,10 +47,25 @@ export const AuthProvider = ({ children }) => {
                 // If user changed or just signed in, we need to ensure role is fetched before rendering children
                 // SET LOADING TRUE to block UI until role is ready
                 if (_event === 'SIGNED_IN' || !user || user.id !== session.user.id) {
+                    // Only block if we really need to (new user or fresh login)
+                    // If just refreshing token for same user, maybe we don't need to block?
+                    // But we re-fetch role just in case RLS changed.
                     setLoading(true);
+
+                    // Safety timeout for this specific operation
+                    const safetyTimer = setTimeout(() => {
+                        console.warn('[Auth] Role fetch timed out, forcing UI to load.');
+                        setLoading(false);
+                    }, 5000);
+
                     setUser(session.user);
-                    await fetchRole(session.user.id);
-                    // fetchRole handles setLoading(false) internally at the end
+
+                    fetchRole(session.user.id).then(() => {
+                        clearTimeout(safetyTimer);
+                    }).catch(() => {
+                        clearTimeout(safetyTimer);
+                        setLoading(false);
+                    });
                 } else {
                     setUser(session.user);
                 }
