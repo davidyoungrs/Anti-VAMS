@@ -549,9 +549,20 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
                                         const isUrl = typeof f === 'string';
                                         let name = isUrl ? f.split('/').pop() : (f.name || `File ${i + 1}`);
 
-                                        // Remove auto-generated timestamp prefix for cleaner display (e.g., "12345_Report.pdf" -> "Report.pdf")
+                                        // Remove auto-generated timestamp (Prefix OR Suffix) for cleaner display
+                                        // 1. Prefix: 12345_Name.pdf
                                         if (name.match(/^\d+_.+/)) {
                                             name = name.replace(/^\d+_/, '');
+                                        }
+                                        // 2. Suffix: Name_12345.pdf (New Format)
+                                        // Regex: Look for _\d+\.ext$
+                                        // We need to be careful not to remove valid numbers in names (e.g. Valve_101.pdf)
+                                        // But our timestamp is Date.now() (13 digits). We can be specific.
+                                        // Match underscore + 10-15 digits + dot + extension at end of string
+                                        const suffixMatch = name.match(/_(\d{10,15})\./);
+                                        if (suffixMatch) {
+                                            // Remove the _TIMESTAMP part, keep extension
+                                            name = name.replace(`_${suffixMatch[1]}`, '');
                                         }
 
                                         const size = isUrl ? '' : (f.size ? `(${Math.round(f.size / 1024)} KB)` : '');

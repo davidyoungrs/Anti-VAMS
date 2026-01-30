@@ -192,8 +192,9 @@ export const storageService = {
                     if (supabase) {
                         try {
                             const fileExt = file.name.split('.').pop();
-                            // Use timestamp to prevent collisions
-                            const filePath = `${finalRecord.id}/${Date.now()}_${file.name}`;
+                            const fileNameWithoutExt = file.name.substring(0, file.name.lastIndexOf('.'));
+                            // User request: Show original name first. We use suffix for uniqueness.
+                            const filePath = `${finalRecord.id}/${fileNameWithoutExt}_${Date.now()}.${fileExt}`;
 
                             const { error: uploadError } = await supabase.storage
                                 .from('valve-attachment')
