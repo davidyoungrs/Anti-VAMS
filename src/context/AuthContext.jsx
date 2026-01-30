@@ -28,8 +28,8 @@ export const AuthProvider = ({ children }) => {
                 const { data: { session } } = await supabase.auth.getSession();
                 if (session?.user) {
                     setUser(session.user);
-                    // Don't await role fetch to block UI, let it populate async
-                    fetchRole(session.user.id);
+                    // Await role to ensure correct state before first render
+                    await fetchRole(session.user.id);
                 }
             } catch (err) {
                 console.error("Session check failed", err);
@@ -44,14 +44,20 @@ export const AuthProvider = ({ children }) => {
         // Listen for changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
             if (session?.user) {
-                setUser(session.user);
-                if (_event === 'SIGNED_IN') {
+                // If user changed or just signed in, we need to ensure role is fetched before rendering children
+                // SET LOADING TRUE to block UI until role is ready
+                if (_event === 'SIGNED_IN' || !user || user.id !== session.user.id) {
+                    setLoading(true);
+                    setUser(session.user);
                     await fetchRole(session.user.id);
+                    // fetchRole handles setLoading(false) internally at the end
+                } else {
+                    setUser(session.user);
                 }
             } else {
                 setUser(null);
                 setRole(null);
-                // Ensure loading is false on sign out
+                setAllowedCustomers('');
                 setLoading(false);
             }
         });
