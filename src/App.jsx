@@ -105,6 +105,26 @@ function App() {
     };
   }, [allowedCustomers, role]); // Only load on mount or permission change
 
+  // Force Dashboard View on Login/User Change
+  React.useEffect(() => {
+    if (user) {
+      // If we have a deep link param, we might want to respect it, 
+      // but the user explicitly requested "show dashboard".
+      // However, the deep link logic (lines 78-89) runs on mount.
+      // If we just logged in, we probably want dashboard unless a link brought us here.
+      // Let's reset ONLY if we are not handling a deep link?
+      // Actually, simpler: just reset. Deep link logic runs AFTER this in 'init' usually?
+      // Wait, init runs on mount. This runs on user change.
+      // If user logs in, user changes.
+      // Let's reset to dashboard to satisfy the request. 
+      // If deep linking is needed later, we can add logic to skip this if URL has params.
+      const params = new URLSearchParams(window.location.search);
+      if (!params.get('valveId')) {
+        setCurrentView('dashboard');
+      }
+    }
+  }, [user]);
+
   const handleRecordClick = async (record) => {
     // Update last viewed timestamp without blocking
     const updatedRecord = { ...record, lastViewedAt: new Date().toISOString() };
@@ -350,7 +370,7 @@ function App() {
       case 'create':
         return <RecordForm key="create" onSave={handleSave} onNavigate={handleNavigate} />;
       case 'admin':
-        if (role !== 'admin') return <div className="glass-panel" style={{ padding: '2rem' }}><h2>Access Denied</h2><p>You do not have permission to view this page.</p></div>;
+        if (!['admin', 'super_user'].includes(role)) return <div className="glass-panel" style={{ padding: '2rem' }}><h2>Access Denied</h2><p>You do not have permission to view this page.</p></div>;
         return <AdminPanel />;
       case 'user-guide':
         return <MarkdownPage title="User Guide" content={userGuideContent} />;
@@ -584,7 +604,7 @@ function App() {
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '1rem' }}>
-                {(role === 'admin' || role === 'inspector') && (
+                {(role === 'admin' || role === 'super_user' || role === 'inspector') && (
                   <button
                     className="btn-primary"
                     onClick={() => handleNavigate('create')}
@@ -743,7 +763,7 @@ function App() {
                   📥 Export Records
                 </button>
 
-                {(role === 'admin' || role === 'inspector') && (
+                {(role === 'admin' || role === 'super_user' || role === 'inspector') && (
                   <label
                     style={{
                       background: 'var(--primary)',

@@ -83,17 +83,27 @@ The application currently operates on a **"Local-First"** architecture with opti
 ## 2. Vulnerability Analysis
 
 ### 2.1 Identity & Access Management (IAM)
-*   **Current State:** Implementation of Supabase Auth with RLS allows granular permission control (Admin, Client, Inspector).
+*   **Current State:** **Enhanced / Critical Milestone Met**
+*   **Implementation:** Granular Role-Based Access Control (RBAC) via Supabase Auth.
+    *   **Roles:** Admin, Inspector, Client, and **Super User**.
+    *   **Enforcement:** Strict **Row Level Security (RLS)** policies enforce permissions at the database engine level.
+    *   **Isolation:** Client data is cryptographically isolated using `allowed_customers` logic.
 *   **Risk (Low):** Risks mitigated by server-side RLS enforcement.
 
 ### 2.2 Data Protection
-*   **Local Storage:** Data is stored in browser `localStorage`.
-*   **Recommendation:** Move to IndexedDB with encryption for large datasets.
+*   **Current State:** **Pending Upgrade**
+*   **Storage:** Data is currently stored in browser `localStorage`.
+    *   *Pro:* Simple, fast for small datasets.
+    *   *Con:* Unencrypted, limited storage size (5MB).
+*   **Recommendation:** Move to **IndexedDB** for larger datasets and implement **encrypt-at-rest** for offline data to meet SOC2 compliance.
 
 ### 2.3 Network Security & API
-*   **Current State:** `storageService.js` syncs sequentially to prevent timeouts. RLS prevents unauthorized writes.
+*   **Current State:** **Secure**
+*   **Implementation:**
+    *   `storageService.js` uses sequential batching to prevent API flooding and timeouts.
+    *   Write access is strictly limited to authenticated users via RLS.
 
 ## 4. Conclusion
-Security hardening is largely complete with the implementation of RLS and Auth Logic.
+Security hardening is robust in Identity and Network layers.
 
-**Verdict:** *Safe for enterprise deployment.*
+**Verdict:** *Identity & Network are Enterprise Ready. Local Data Protection requires upgrade to IndexedDB for full SOC2 compliance.*

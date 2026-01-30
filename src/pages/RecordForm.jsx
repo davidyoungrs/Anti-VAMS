@@ -16,7 +16,7 @@ import { ImageAnnotator } from '../components/ImageAnnotator';
 export const RecordForm = ({ initialData, onSave, onNavigate }) => {
     const { role } = useAuth();
     const isReadOnly = role === 'client';
-    const canDelete = role === 'admin';
+    const canDelete = ['admin', 'super_user'].includes(role);
 
     const [formData, setFormData] = useState({
         serialNumber: '',

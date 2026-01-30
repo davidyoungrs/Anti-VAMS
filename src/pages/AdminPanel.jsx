@@ -2,6 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { storageService } from '../services/storage';
 import { supabase } from '../services/supabaseClient';
+import { inspectionService } from '../services/inspectionService';
+import { testReportService } from '../services/testReportService';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 
 export const AdminPanel = () => {
     const { role } = useAuth();
@@ -13,12 +17,12 @@ export const AdminPanel = () => {
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        if (role === 'admin') {
+        if (['admin', 'super_user'].includes(role)) {
             loadData();
         }
     }, [activeTab, role]);
 
-    if (role !== 'admin') {
+    if (!['admin', 'super_user'].includes(role)) {
         return (
             <div style={{ padding: '2rem', textAlign: 'center' }}>
                 <h2 style={{ color: '#ef4444' }}>Access Denied</h2>
@@ -162,6 +166,100 @@ export const AdminPanel = () => {
         return diffDays > 0 ? diffDays : 0;
     };
 
+    const handleBulkDownload = async () => {
+        if (!window.confirm("This will download ALL data including attachments. It may take some time. Continue?")) return;
+        setLoading(true);
+        try {
+            const zip = new JSZip();
+            // Create main folder: bulk download+DATETIMESTAMP
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+            const rootFolderName = `bulk download+${timestamp}`;
+            const rootFolder = zip.folder(rootFolderName);
+
+            // Fetch ALL records
+            const allRecords = await storageService.getAll();
+
+            // Loop with async concurrency control could be better, but sequential is safer for rate limits
+            for (const record of allRecords) {
+                // Folder for each valve: SerialNo (or ID if missing)
+                const safeSerial = (record.serialNumber || 'NoSerial').replace(/[^a-z0-9]/gi, '_');
+                const startId = record.id.substring(0, 6);
+                const recordFolderName = `${safeSerial}_${startId}`;
+                const recordFolder = rootFolder.folder(recordFolderName);
+
+                // 1. Valve Data JSON
+                recordFolder.file("valve_data.json", JSON.stringify(record, null, 2));
+
+                // 2. Attachments
+                const urls = record.file_urls || [];
+                if (urls.length > 0) {
+                    const attachmentsFolder = recordFolder.folder("Attachments");
+                    for (const url of urls) {
+                        try {
+                            const fileName = url.split('/').pop().split('?')[0]; // Clean filename
+                            const response = await fetch(url);
+                            if (response.ok) {
+                                const blob = await response.blob();
+                                attachmentsFolder.file(fileName, blob);
+                            } else {
+                                console.warn(`Failed to fetch attachment: ${url}`);
+                            }
+                        } catch (err) {
+                            console.error(`Error downloading attachment ${url}`, err);
+                        }
+                    }
+                }
+
+                // 3. Inspections & Reports
+                // Fetch related data
+                // Note: This is N+1 fetching, but acceptable for admin download action.
+                try {
+                    const inspections = await inspectionService.getByValveId(record.id);
+                    const reports = await testReportService.getByValveId(record.id);
+
+                    if (inspections && inspections.length > 0) {
+                        recordFolder.file("inspections.json", JSON.stringify(inspections, null, 2));
+
+                        // Inspection Photos
+                        const photoFolder = recordFolder.folder("Inspection_Photos");
+                        for (const insp of inspections) {
+                            if (insp.inspectionPhotos && insp.inspectionPhotos.length > 0) {
+                                for (let i = 0; i < insp.inspectionPhotos.length; i++) {
+                                    const pUrl = insp.inspectionPhotos[i];
+                                    try {
+                                        const pName = `Insp_${insp.id.substring(0, 4)}_${i + 1}.jpg`;
+                                        const res = await fetch(pUrl);
+                                        if (res.ok) {
+                                            const blob = await res.blob();
+                                            photoFolder.file(pName, blob);
+                                        }
+                                    } catch (perr) { }
+                                }
+                            }
+                        }
+                    }
+
+                    if (reports && reports.length > 0) {
+                        recordFolder.file("test_reports.json", JSON.stringify(reports, null, 2));
+                    }
+                } catch (relatedErr) {
+                    console.error(`Error fetching related data for ${record.id}`, relatedErr);
+                }
+            }
+
+            // Generate Zip
+            const content = await zip.generateAsync({ type: "blob" });
+            saveAs(content, `${rootFolderName}.zip`);
+            alert("Download complete!");
+
+        } catch (error) {
+            console.error("Bulk download failed:", error);
+            alert("Bulk download failed: " + error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
             <h2 className="section-title">Admin Panel</h2>
@@ -195,20 +293,43 @@ export const AdminPanel = () => {
                 >
                     📜 Change History
                 </button>
-                <button
-                    onClick={() => setActiveTab('users')}
-                    style={{
-                        padding: '1rem 2rem',
-                        background: activeTab === 'users' ? 'var(--primary)' : 'var(--bg-card)',
-                        color: activeTab === 'users' ? 'white' : 'var(--text-muted)',
-                        border: 'none',
-                        borderRadius: 'var(--radius-md)',
-                        fontWeight: 'bold',
-                        cursor: 'pointer'
-                    }}
-                >
-                    👥 User Management
-                </button>
+                {role === 'super_user' && (
+                    <button
+                        onClick={() => setActiveTab('users')}
+                        style={{
+                            padding: '1rem 2rem',
+                            background: activeTab === 'users' ? 'var(--primary)' : 'var(--bg-card)',
+                            color: activeTab === 'users' ? 'white' : 'var(--text-muted)',
+                            border: 'none',
+                            borderRadius: 'var(--radius-md)',
+                            fontWeight: 'bold',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        👥 User Management
+                    </button>
+                )}
+                {role === 'super_user' && (
+                    <button
+                        onClick={handleBulkDownload}
+                        style={{
+                            padding: '1rem 2rem',
+                            background: 'linear-gradient(135deg, #10b981, #059669)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: 'var(--radius-md)',
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            marginLeft: 'auto' // Push to right
+                        }}
+                        title="Download all records, attachments, and data as a ZIP file"
+                    >
+                        📦 Bulk Export
+                    </button>
+                )}
             </div>
 
             {loading ? (
@@ -407,6 +528,7 @@ export const AdminPanel = () => {
                                                         <option value="client">Client</option>
                                                         <option value="inspector">Inspector</option>
                                                         <option value="admin">Admin</option>
+                                                        <option value="super_user">Super User</option>
                                                     </select>
                                                 </td>
                                             </tr>
