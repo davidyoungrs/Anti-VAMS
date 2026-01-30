@@ -1,10 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 
 export const Layout = ({ children, activeView, onNavigate, userRole }) => {
   const { signOut } = useAuth();
   const [isAdminOpen, setIsAdminOpen] = useState(false); // Default collapsed
   const [isChartsOpen, setIsChartsOpen] = useState(false); // Default collapsedn for visibility
+  const mainContentRef = useRef(null);
+
+  // Scroll to top whenever the active view changes
+  useEffect(() => {
+    if (mainContentRef.current) {
+      mainContentRef.current.scrollTop = 0;
+    }
+  }, [activeView]);
+
   const getItemStyle = (viewName) => ({
     display: 'block',
     padding: '0.75rem 1rem',
@@ -178,7 +187,7 @@ export const Layout = ({ children, activeView, onNavigate, userRole }) => {
       </aside >
 
       {/* Main Content */}
-      < main className="main-content" >
+      < main className="main-content" ref={mainContentRef} >
         {children}
         <footer style={{ marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)', textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-muted)', opacity: 0.7 }}>
           Copyright © 2026 TheValve.pro All rights reserved.

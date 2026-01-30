@@ -73,6 +73,8 @@ The following open-source software libraries are used under their respective lic
 | **Mapping Engine** | [Leaflet](https://leafletjs.com/) | BSD-2-Clause |
 | **OCR Scanner** | [Tesseract.js](https://tesseract.projectnaptha.com/) | Apache 2.0 |
 | **QR Code** | [node-qrcode](https://github.com/soldair/node-qrcode) | MIT |
+| **Digital Signatures** | [react-signature-canvas](https://github.com/agilgur5/react-signature-canvas) | MIT |
+| **Image Annotation** | [react-sketch-canvas](https://github.com/vinothpandian/react-sketch-canvas) | MIT |
 
 ### Data Sources & Content
 We utilize external data services for mapping features. These require specific attribution:

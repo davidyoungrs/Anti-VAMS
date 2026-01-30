@@ -228,7 +228,7 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
         <form onSubmit={handleSubmit} className="glass-panel" style={{ padding: '2rem', borderRadius: 'var(--radius-lg)' }}>
             <div className="flex-row" style={{ justifyContent: 'space-between', marginBottom: '2rem' }}>
                 <h2 className="section-title" style={{ margin: 0, border: 'none' }}>
-                    {initialData ? 'Edit Valve Record' : 'New Valve Record'}
+                    {!initialData ? 'New Valve Record' : (role === 'client' ? 'View Valve Record' : 'View / Edit Valve Record')}
                 </h2>
                 <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                     <button type="button" onClick={() => onNavigate('dashboard')} className="btn-secondary">← Back</button>

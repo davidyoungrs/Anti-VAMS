@@ -11,8 +11,8 @@ This document outlines the proposed development path for the GVR-VAMS.
    - **Benefit**: Batch reporting, progress tracking (e.g., "Job #101 is 80% complete").
 
 2. **Multi-User Roles & Permissions** (Priority: High)
-   - **Why**: Essential for data integrity.
-   - **Task**: Implement `Admin` (can delete/configure), `Inspector` (can edit/inspect), `Client` (read-only).
+   - ~~**Why**: Essential for data integrity.~~ <span style="color:green">**(Complete 29th Jan 2026)**</span>
+   - ~~**Task**: Implement `Admin` (can delete/configure), `Inspector` (can edit/inspect), `Client` (read-only).~~
    - **Benefit**: Prevents field errors; enables the Client Portal.
 
 ## Phase 2: Inspection Efficiency (The "Wow" Factor)
@@ -53,8 +53,8 @@ This document outlines the proposed development path for the GVR-VAMS.
 
 ## Phase 5: Client Engagement
 10. **Client "Live View" Portal**
-    - **Task**: Read-only views for specific Job IDs.
-    - **Dependency**: Needs "Job Management" and "Roles" (Public/Guest access).
+    - ~~**Task**: Read-only views for specific Job IDs.~~ <span style="color:green">**(Complete 30th Jan 2026)**</span>
+    - ~~**Dependency**: Needs "Job Management" and "Roles" (Public/Guest access).~~
 
 ## Phase 6: Enterprise Security & Compliance
 11. **Enterprise Hardening** (Priority: Critical for Scale)
