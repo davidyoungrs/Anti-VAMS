@@ -26,6 +26,7 @@ import featuresContent from '../FEATURES.md?raw';
 import userGuideContent from '../USER_GUIDE.md?raw';
 import roadmapContent from '../ROADMAP.md?raw';
 import legalContent from '../LEGAL_TERMS.md?raw';
+import licensesContent from '../LICENSES.md?raw';
 
 function App() {
   const { user, role, allowedCustomers, signOut } = useAuth();
@@ -380,6 +381,8 @@ function App() {
         return <MarkdownPage title="Strategic Development Roadmap" content={roadmapContent} />;
       case 'legal':
         return <MarkdownPage title="Legal Terms & Conditions" content={legalContent} />;
+      case 'licenses':
+        return <MarkdownPage title="Licenses & Attribution" content={licensesContent} />;
       case 'analytics':
         return <AnalyticsDashboard records={records} />;
       case 'scheduler':

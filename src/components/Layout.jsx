@@ -142,6 +142,11 @@ export const Layout = ({ children, activeView, onNavigate, userRole }) => {
                       Strategic Roadmap
                     </a>
                   </li>
+                  <li style={{ marginBottom: '0.5rem' }}>
+                    <a onClick={() => onNavigate('licenses')} style={{ ...getItemStyle('licenses'), fontSize: '0.9rem' }}>
+                      Licenses
+                    </a>
+                  </li>
                 </ul>
               )}
             </li>
