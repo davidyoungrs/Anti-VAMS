@@ -90,32 +90,51 @@ export const AuthProvider = ({ children }) => {
             if (countError) console.warn('[AuthDebug] DB Connection Check Failed:', countError);
             else console.log('[AuthDebug] DB Connection Check Passed. Record count:', count);
 
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('role, allowed_customers')
-                .eq('id', userId)
-                .single();
+            // TRY 1: Secure RPC (Bypasses RLS)
+            let profileData = null;
+            let profileError = null;
 
-            if (error) {
-                console.warn(`Error fetching role (Attempts left: ${retries}):`, error.message);
+            try {
+                const { data: rpcData, error: rpcError } = await supabase.rpc('get_active_user_role');
+                if (!rpcError && rpcData) {
+                    console.log('[AuthDebug] RPC Role Fetch Successful:', rpcData);
+                    profileData = rpcData;
+                } else {
+                    if (rpcError) console.warn('[AuthDebug] RPC Fetch failed (function might not exist yet):', rpcError.message);
+                }
+            } catch (rpcEx) {
+                console.warn('[AuthDebug] RPC Exception:', rpcEx);
+            }
+
+            // TRY 2: Legacy Direct Select (Fall back if RPC fails/doesn't exist)
+            if (!profileData) {
+                console.log('[AuthDebug] Falling back to direct DB select...');
+                const { data, error } = await supabase
+                    .from('profiles')
+                    .select('role, allowed_customers')
+                    .eq('id', userId)
+                    .single();
+
+                if (error) {
+                    profileError = error;
+                } else {
+                    profileData = data;
+                }
+            }
+
+            if (profileError) {
+                console.warn(`Error fetching role (Attempts left: ${retries}):`, profileError.message);
 
                 // Auto-Recovery: If profile is missing (PGRST116), try to create it
-                if (error.code === 'PGRST116' && userId) {
+                if (profileError.code === 'PGRST116' && userId) {
                     console.warn("Profile missing. Attempting auto-recovery...");
                     try {
                         const { error: insertError } = await supabase
                             .from('profiles')
-                            // We don't know the email here easily without creating a circular dep or refetching user
-                            // checking if 'user' state is available, but it might not be set yet.
-                            // However, RLS policy for insert likely requires auth.uid() match.
-                            // We can just set id, and let defaults handle role. 
-                            // Note: We might need email for the profile if the table requires it.
-                            // Let's assume table has id and role default.
                             .insert([{ id: userId, role: 'client' }]);
 
                         if (!insertError) {
                             console.log("Auto-recovery successful. Profile created.");
-                            // Retry fetch immediately
                             if (retries > 0) {
                                 setTimeout(() => fetchRole(userId, retries - 1), 500);
                                 return;
@@ -133,21 +152,15 @@ export const AuthProvider = ({ children }) => {
                     return;
                 }
 
-                console.error('Final error fetching role for user:', userId, error);
+                console.error('Final error fetching role for user:', userId, profileError);
 
                 // Fallback to client if error or no profile
                 setRole('client');
                 setLoading(false);
             } else {
-                console.log('[AuthDebug] Role fetch raw data:', data);
-                if (!data) {
-                    console.warn('[AuthDebug] Data object is null/undefined!');
-                } else if (!data.role) {
-                    console.warn('[AuthDebug] Role field is missing or null in data:', data);
-                }
-
-                const finalRole = data?.role || 'client';
-                const allowedCustomers = data?.allowed_customers || ''; // New Field
+                console.log('[AuthDebug] Role fetch raw data:', profileData);
+                const finalRole = profileData?.role || 'client';
+                const allowedCustomers = profileData?.allowed_customers || '';
                 console.log(`[AuthDebug] Setting final role to: ${finalRole}, Allowed: ${allowedCustomers}`);
                 setRole(finalRole);
                 setAllowedCustomers(allowedCustomers);

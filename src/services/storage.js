@@ -1,16 +1,64 @@
 import { supabase } from './supabaseClient';
+import { dbService } from './db';
+import { securityService } from './security';
 
-const STORAGE_KEY = 'global_valve_records';
+const STORAGE_KEY = 'global_valve_records'; // Legacy key for migration
 
 export const storageService = {
+    // 0. Migration Helper
+    migrateFromLocalStorage: async () => {
+        try {
+            const legacyData = localStorage.getItem(STORAGE_KEY);
+            if (legacyData) {
+                console.log('Migrating legacy data to Encrypted IndexedDB...');
+                const records = JSON.parse(legacyData);
+
+                // Encrypt and store each record
+                const encryptedRecords = records.map(r => ({
+                    id: r.id, // Keep ID cleartext for indexing? dbService uses it as key. 
+                    // Yes, ObjectStore keyPath 'id' needs to exist.
+                    // So we store { id, data: <encrypted_blob> } OR we encrypt fields?
+                    // Plan said "Encrypts JSON objects to AES strings". 
+                    // If we store the whole object as a string, IDB can't index 'id'.
+                    // Better pattern: Store { id: ..., _encrypted: <ciphertext> } 
+                    // OR keep 'id' and 'updatedAt' cleartext, encrypt the rest.
+                    // Let's stick to simple: { id: r.id, ...r } but we encrypt the WHOLE content into a blob?
+                    // No, IDB needs the key. 
+                    // Let's store: { id: r.id, encryptedData: securityService.encrypt(r) }
+                    id: r.id,
+                    encryptedData: securityService.encrypt(r)
+                }));
+
+                await dbService.bulkPut(encryptedRecords);
+                localStorage.removeItem(STORAGE_KEY); // Clear legacy
+                console.log('Migration complete.');
+            }
+        } catch (e) {
+            console.error('Migration failed:', e);
+        }
+    },
+
     getAll: async () => {
-        // 1. Baseline: Load from LocalStorage
+        // Run migration on first load (lazy check)
+        await storageService.migrateFromLocalStorage();
+
+        // 1. Load from Encrypted IndexedDB
         let localRecords = [];
         try {
-            const data = localStorage.getItem(STORAGE_KEY);
-            localRecords = data ? JSON.parse(data) : [];
+            const encryptedItems = await dbService.getAll();
+            localRecords = encryptedItems.map(item => {
+                try {
+                    // Decrypt the payload
+                    const data = securityService.decrypt(item.encryptedData);
+                    // Merge with the ID just in case, enabling ID-only lookups if needed later
+                    return { ...data, id: item.id };
+                } catch (err) {
+                    console.error('Failed to decrypt record', item.id, err);
+                    return null;
+                }
+            }).filter(r => r !== null); // Remove failed decryptions
         } catch (e) {
-            console.error('Error reading local storage', e);
+            console.error('Error reading indexedDB', e);
         }
 
         // 2. Try Supabase Sync
@@ -130,7 +178,12 @@ export const storageService = {
                             }
                         });
 
-                        localStorage.setItem(STORAGE_KEY, JSON.stringify(mergedRecords));
+                        const encryptedToSave = mergedRecords.map(r => ({
+                            id: r.id,
+                            encryptedData: securityService.encrypt(r)
+                        }));
+                        await dbService.bulkPut(encryptedToSave);
+
                         // Filter out deleted records for the UI
                         return mergedRecords.filter(r => !r.deletedAt);
                     }
@@ -229,15 +282,18 @@ export const storageService = {
             }
         }
 
-        // 3. Save to Local Storage (Now contains strings, not File objects)
-        const records = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-        const index = records.findIndex(r => r.id === finalRecord.id);
-        if (index !== -1) {
-            records[index] = { ...records[index], ...finalRecord };
-        } else {
-            records.unshift(finalRecord);
+        // 3. Save to Encrypted IndexedDB (Instead of Local Storage)
+        try {
+            const encryptedRecord = {
+                id: finalRecord.id,
+                encryptedData: securityService.encrypt(finalRecord)
+            };
+            await dbService.put(encryptedRecord);
+        } catch (e) {
+            console.error('Error saving to IndexedDB', e);
+            throw e; // Fail hard if local save fails
         }
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+        // Removed: localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
 
         // 4. Sync to Supabase
         if (supabase) {
@@ -360,11 +416,22 @@ export const storageService = {
             }
         }
 
-        // Update Local Storage
-        const records = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-        // We do NOT remove it. We mark it as deleted.
-        const updatedRecords = records.map(r => r.id === id ? { ...r, deletedAt } : r);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedRecords));
+        // Update Encrypted IndexedDB
+        try {
+            const encryptedItem = await dbService.get(id);
+            if (encryptedItem) {
+                const record = securityService.decrypt(encryptedItem.encryptedData);
+                if (record) {
+                    record.deletedAt = deletedAt;
+                    await dbService.put({
+                        id: record.id,
+                        encryptedData: securityService.encrypt(record)
+                    });
+                }
+            }
+        } catch (e) {
+            console.error('Error deleting from IndexedDB', e);
+        }
     },
 
     restore: async (id) => {
@@ -380,9 +447,21 @@ export const storageService = {
             }
         }
 
-        const records = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-        const updatedRecords = records.map(r => r.id === id ? { ...r, deletedAt: null } : r);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedRecords));
+        try {
+            const encryptedItem = await dbService.get(id);
+            if (encryptedItem) {
+                const record = securityService.decrypt(encryptedItem.encryptedData);
+                if (record) {
+                    record.deletedAt = null;
+                    await dbService.put({
+                        id: record.id,
+                        encryptedData: securityService.encrypt(record)
+                    });
+                }
+            }
+        } catch (e) {
+            console.error('Error restoring from IndexedDB', e);
+        }
     },
 
     getHistory: async (valveId) => {
@@ -408,7 +487,9 @@ export const storageService = {
 
     getDeletedRecords: async () => {
         // Return local records that are marked deleted
-        const records = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+        // Return local records that are marked deleted
+        const encryptedItems = await dbService.getAll();
+        const records = encryptedItems.map(item => securityService.decrypt(item.encryptedData)).filter(r => r);
         return records.filter(r => r.deletedAt);
     },
 
@@ -451,9 +532,10 @@ export const storageService = {
 
         let localRecords = [];
         try {
-            localRecords = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            const encryptedItems = await dbService.getAll();
+            localRecords = encryptedItems.map(item => securityService.decrypt(item.encryptedData)).filter(r => r);
         } catch (e) {
-            return { error: 'Failed to read local storage' };
+            return { error: 'Failed to read local database' };
         }
 
         if (localRecords.length === 0) return { success: true, count: 0 };
