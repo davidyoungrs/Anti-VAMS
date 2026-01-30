@@ -130,6 +130,26 @@ export const AdminPanel = () => {
         }
     };
 
+    const handleAllowedCustomersUpdate = async (userId, newAllowed) => {
+        // Debounce or just save on blur/enter? Ideally save on blur.
+        // For simplicity in this admin panel, let's use prompt or just distinct save? 
+        // Or inline input with onBlur.
+
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .update({ allowed_customers: newAllowed })
+                .eq('id', userId);
+
+            if (error) throw error;
+            // No alert needed for smooth editing, or maybe a toast?
+            // Let's reload to be safe or just update state locally
+            setUsers(users.map(u => u.id === userId ? { ...u, allowed_customers: newAllowed } : u));
+        } catch (e) {
+            alert('Failed to update allowed customers: ' + e.message);
+        }
+    };
+
     const getDaysRemaining = (deletedAt) => {
         if (!deletedAt) return 5;
         const deleteDate = new Date(deletedAt);
@@ -333,6 +353,7 @@ export const AdminPanel = () => {
                                         <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border-color)' }}>
                                             <th style={{ padding: '1rem' }}>Email</th>
                                             <th style={{ padding: '1rem' }}>Current Role</th>
+                                            <th style={{ padding: '1rem' }}>Allowed Customers <br /><span style={{ fontSize: '0.7rem', fontWeight: 'normal' }}>(CSV or 'all')</span></th>
                                             <th style={{ padding: '1rem' }}>Actions</th>
                                         </tr>
                                     </thead>
@@ -354,6 +375,22 @@ export const AdminPanel = () => {
                                                     }}>
                                                         {user.role.toUpperCase()}
                                                     </span>
+                                                </td>
+                                                <td style={{ padding: '1rem' }}>
+                                                    <input
+                                                        type="text"
+                                                        defaultValue={user.allowed_customers || ''}
+                                                        placeholder={user.role === 'client' ? "e.g. Shell, BP" : "Full Access"}
+                                                        onBlur={(e) => handleAllowedCustomersUpdate(user.id, e.target.value)}
+                                                        style={{
+                                                            width: '100%',
+                                                            padding: '0.5rem',
+                                                            borderRadius: '4px',
+                                                            border: '1px solid var(--border-color)',
+                                                            background: 'var(--bg-input)',
+                                                            color: 'var(--text-primary)'
+                                                        }}
+                                                    />
                                                 </td>
                                                 <td style={{ padding: '1rem' }}>
                                                     <select

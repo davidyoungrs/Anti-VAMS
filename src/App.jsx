@@ -28,7 +28,7 @@ import roadmapContent from '../ROADMAP.md?raw';
 import legalContent from '../LEGAL_TERMS.md?raw';
 
 function App() {
-  const { user, role, signOut } = useAuth();
+  const { user, role, allowedCustomers, signOut } = useAuth();
   const [currentView, setCurrentView] = useState('dashboard');
   const [stats, setStats] = useState({ total: 0, testPending: 0 });
   const [records, setRecords] = useState([]);
@@ -40,7 +40,27 @@ function App() {
   // Load data on mount and view change
   const loadData = async () => {
     // Basic permissions check needed here? for now just load all.
-    const allRecords = await storageService.getAll();
+    let allRecords = await storageService.getAll();
+
+    // Client-side filtering as a backup measure (primary security is RLS)
+    // This ensures local storage can't show unauthorized records
+    if (role === 'client') {
+      if (!allowedCustomers) {
+        // No permission set? Show nothing.
+        allRecords = [];
+      } else if (allowedCustomers.toLowerCase() === 'all') {
+        // Show all
+      } else {
+        // Filter by text match
+        const allowedList = allowedCustomers.split(',').map(s => s.trim().toLowerCase());
+        allRecords = allRecords.filter(r => {
+          if (!r.customer) return false;
+          const rCust = r.customer.toLowerCase();
+          return allowedList.some(allowed => rCust.includes(allowed));
+        });
+      }
+    }
+
     setStats({
       total: allRecords.length,
       testPending: allRecords.filter(r => !r.testDate).length
@@ -83,7 +103,7 @@ function App() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []); // Only load on mount
+  }, [allowedCustomers, role]); // Only load on mount or permission change
 
   const handleRecordClick = async (record) => {
     // Update last viewed timestamp without blocking

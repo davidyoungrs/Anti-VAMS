@@ -8,6 +8,7 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [role, setRole] = useState(null); // 'admin' | 'inspector' | 'client'
+    const [allowedCustomers, setAllowedCustomers] = useState('');
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -85,7 +86,7 @@ export const AuthProvider = ({ children }) => {
 
             const { data, error } = await supabase
                 .from('profiles')
-                .select('role')
+                .select('role, allowed_customers')
                 .eq('id', userId)
                 .single();
 
@@ -140,8 +141,10 @@ export const AuthProvider = ({ children }) => {
                 }
 
                 const finalRole = data?.role || 'client';
-                console.log(`[AuthDebug] Setting final role to: ${finalRole}`);
+                const allowedCustomers = data?.allowed_customers || ''; // New Field
+                console.log(`[AuthDebug] Setting final role to: ${finalRole}, Allowed: ${allowedCustomers}`);
                 setRole(finalRole);
+                setAllowedCustomers(allowedCustomers);
                 setLoading(false);
             }
         } catch (e) {
@@ -197,6 +200,7 @@ export const AuthProvider = ({ children }) => {
     const value = {
         user,
         role,
+        allowedCustomers,
         signIn,
         signOut,
         signUp,
