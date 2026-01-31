@@ -149,7 +149,9 @@ export const storageService = {
                     if (cloudRecords.length > 0) {
                         // MERGE STRATEGY: Prioritize the record with the most recent 'updatedAt' timestamp.
                         // This ensures that if we just saved locally, we don't get overwritten by stale cloud data.
-                        const mergedRecords = cloudRecords.map(cloudRecord => {
+
+                        // 1. Map Cloud Records (merging with local if exists)
+                        const mergedCloudRecords = cloudRecords.map(cloudRecord => {
                             const localMatch = localRecords.find(l => l.id === cloudRecord.id);
                             if (!localMatch) return cloudRecord;
 
@@ -178,14 +180,21 @@ export const storageService = {
                             }
                         });
 
-                        const encryptedToSave = mergedRecords.map(r => ({
+                        // 2. Identify Local-Only Records (Not in Cloud yet)
+                        const cloudIds = new Set(cloudRecords.map(r => r.id));
+                        const localOnlyRecords = localRecords.filter(l => !cloudIds.has(l.id));
+
+                        // 3. Combine
+                        const finalMergedRecords = [...mergedCloudRecords, ...localOnlyRecords];
+
+                        const encryptedToSave = finalMergedRecords.map(r => ({
                             id: r.id,
                             encryptedData: securityService.encrypt(r)
                         }));
                         await dbService.bulkPut(encryptedToSave);
 
                         // Filter out deleted records for the UI
-                        return mergedRecords.filter(r => !r.deletedAt);
+                        return finalMergedRecords.filter(r => !r.deletedAt);
                     }
                 }
             } catch (e) {
@@ -423,6 +432,7 @@ export const storageService = {
                 const record = securityService.decrypt(encryptedItem.encryptedData);
                 if (record) {
                     record.deletedAt = deletedAt;
+                    record.updatedAt = new Date().toISOString(); // Update timestamp so merge logic prefers this version
                     await dbService.put({
                         id: record.id,
                         encryptedData: securityService.encrypt(record)
@@ -554,20 +564,73 @@ export const storageService = {
         for (let i = 0; i < localRecords.length; i++) {
             let record = { ...localRecords[i] };
 
-            // SKIP ALL FILE PROCESSING logic for now.
-            // Just ensure timestamp
-            if (!record.updatedAt) {
-                record.updatedAt = new Date().toISOString();
+            // 2b. Handle Valve Photo
+            if (supabase && record.valvePhoto && typeof record.valvePhoto !== 'string') {
+                try {
+                    const file = record.valvePhoto;
+                    const fileExt = file.name.split('.').pop();
+                    const filePath = `${record.id}/valve-photo-${crypto.randomUUID()}.${fileExt}`;
+
+                    const { error: uploadError } = await supabase.storage
+                        .from('valve-attachment')
+                        .upload(filePath, file);
+
+                    if (!uploadError) {
+                        const { data: { publicUrl } } = supabase.storage
+                            .from('valve-attachment')
+                            .getPublicUrl(filePath);
+                        record.valvePhoto = publicUrl;
+                    }
+                } catch (e) {
+                    console.error('Error during valve photo upload:', e);
+                }
             }
 
-            // Sanitize
-            const sanitizeVal = (val) => (!val || val === '') ? null : val;
-            const sanitizeNum = (val) => {
-                if (val === '' || val === null || val === undefined) return null;
-                return isNaN(val) ? null : val;
-            };
+            // 2c. Handle Attachments
+            if (record.files && record.files.length > 0) {
+                try {
+                    const processedFiles = await Promise.all(record.files.map(async (file) => {
+                        if (typeof file === 'string') return file;
 
-            // STRICTLY NO FILES
+                        if (supabase) {
+                            try {
+                                const fileExt = file.name.split('.').pop();
+                                const fileNameWithoutExt = file.name.substring(0, file.name.lastIndexOf('.'));
+                                const filePath = `${record.id}/${fileNameWithoutExt}_${Date.now()}.${fileExt}`;
+
+                                const { error: uploadError } = await supabase.storage
+                                    .from('valve-attachment')
+                                    .upload(filePath, file);
+
+                                if (!uploadError) {
+                                    const { data: { publicUrl } } = supabase.storage
+                                        .from('valve-attachment')
+                                        .getPublicUrl(filePath);
+                                    return publicUrl;
+                                }
+                            } catch (err) {
+                                console.warn('Supabase upload exception:', err);
+                            }
+                        }
+
+                        // Fallback: Convert to Base64 if upload fails or offline?
+                        // Actually, for sync, we probably want to keep it as File object if upload fails so we can try next time?
+                        // BUT, we are upserting to DB which expects JSON compatible types (strings for URLs).
+                        // If we can't upload, we can't sync this file to cloud DB column array.
+                        return null;
+                    }));
+
+                    // Filter out failures
+                    record.files = processedFiles.filter(f => f !== null);
+                } catch (e) {
+                    console.error('Error handling files in sync:', e);
+                }
+            } else {
+                // Ensure array
+                record.files = record.files || [];
+            }
+
+
             recordsToUpsert.push({
                 id: record.id,
                 created_at: sanitizeVal(record.createdAt),
@@ -611,8 +674,8 @@ export const storageService = {
                 test_medium: record.testMedium,
                 latitude: sanitizeNum(record.latitude),
                 longitude: sanitizeNum(record.longitude),
-                valve_photo: null, // Force Null
-                file_urls: []      // Force Empty
+                valve_photo: record.valvePhoto,
+                file_urls: record.files || []
             });
         }
 

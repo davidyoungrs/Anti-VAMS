@@ -91,15 +91,11 @@ export const Jobs = ({ onNavigate }) => {
 
 
     return (
-        <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                <div>
-                    <h2 style={{ margin: 0, fontSize: '1.8rem', background: 'linear-gradient(to right, #fff, #aaa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                        Job Management
-                    </h2>
-                    <p style={{ color: 'var(--text-muted)', margin: '0.5rem 0 0 0' }}>
-                        Track jobs and their associated valve inspections
-                    </p>
+        <div className="glass-panel" style={{ padding: '2rem', borderRadius: 'var(--radius-lg)' }}>
+            <div className="flex-row" style={{ justifyContent: 'space-between', marginBottom: '2rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <button onClick={() => onNavigate('back')} className="btn-secondary">← Back</button>
+                    <h2 className="section-title" style={{ margin: 0 }}>Job Management</h2>
                 </div>
                 {/* Potentially Add "Create Job" button here if not handled elsewhere or via dropdown */}
             </div>

@@ -125,7 +125,10 @@ export function MapView({ records, onRecordClick, onLocationSelect, hasUnsavedCh
         <div className="glass-panel" style={{ padding: '1rem', borderRadius: 'var(--radius-lg)', height: '70vh', position: 'relative' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                 <div>
-                    <h2 className="section-title" style={{ margin: 0 }}>Site Map</h2>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <button onClick={() => onNavigate('back')} className="btn-secondary">← Back</button>
+                        <h2 className="section-title" style={{ margin: 0 }}>Site Map</h2>
+                    </div>
                     <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.9rem' }}>
                         {onLocationSelect ? "Click anywhere on the map to SET the location for this valve." : "Click a pin to view valve details."}
                     </p>
@@ -262,6 +265,6 @@ export function MapView({ records, onRecordClick, onLocationSelect, hasUnsavedCh
                     ))}
                 </MapContainer>
             </div>
-        </div>
+        </div >
     );
 }

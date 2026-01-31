@@ -111,10 +111,16 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
         setFiles(prev => [...prev, ...newFiles]);
     };
 
-    const handleDelete = () => {
+    const handleDelete = async () => {
         if (initialData?.id) {
-            storageService.delete(initialData.id);
-            if (onSave) onSave();
+            try {
+                await storageService.delete(initialData.id);
+                // Pass null to indicate deletion/no record to view
+                if (onSave) onSave(null);
+            } catch (error) {
+                console.error("Delete failed", error);
+                alert("Failed to delete record");
+            }
         }
     };
 
@@ -210,13 +216,14 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
                 setFiles(savedRecord.files);
             }
 
-            if (onSave) onSave();
+            if (onSave) onSave(savedRecord);
 
+            // If it was a new record, we want to switch to "Edit/View" mode for this record
+            // instead of clearing the form, so the user can immediately add inspections.
             if (!initialData) {
-                setFormData({
-                    serialNumber: '', jobNo: '', tagNo: '', orderNo: '', customer: '', oem: '', plantArea: '', siteLocation: '', dateIn: '', requiredDate: '', safetyCheck: '', decontaminationCert: 'N', lsaCheck: false, seizedMidStroke: false, modelNo: '', valveType: '', sizeClass: '', packingType: '', flangeType: '', mawp: '', bodyMaterial: '', seatMaterial: '', trimMaterial: '', obturatorMaterial: '', actuator: '', gearOperator: '', failMode: '', bodyTestSpec: '', seatTestSpec: '', bodyPressure: '', bodyPressureUnit: 'PSI', testedBy: '', testDate: '', testMedium: '', passFail: ''
-                });
-                setFiles([]);
+                // We need to inform the parent (App.jsx) to switch to detail view for this ID.
+                // sending savedRecord to onSave should handle this if App.jsx is updated.
+                // Check App.jsx handleSave implementation.
             }
         } catch (error) {
             console.error(error);
@@ -231,7 +238,7 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
                     {!initialData ? 'New Valve Record' : (role === 'client' ? 'View Valve Record' : 'View / Edit Valve Record')}
                 </h2>
                 <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                    <button type="button" onClick={() => onNavigate('dashboard')} className="btn-secondary">← Back</button>
+                    <button type="button" onClick={() => onNavigate('back')} className="btn-secondary">← Back</button>
 
                     {!isReadOnly && (
                         <button

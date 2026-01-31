@@ -20,6 +20,7 @@ import { AnalyticsDashboard } from './pages/AnalyticsDashboard';
 import { MaintenanceScheduler } from './pages/MaintenanceScheduler';
 import { MarkdownPage } from './components/MarkdownPage';
 import { storageService } from './services/storage';
+import { inspectionService } from './services/inspectionService';
 import { jobService } from './services/jobService';
 import { JobSelectionModal } from './components/JobSelectionModal';
 import { SearchableJobSelect } from './components/SearchableJobSelect';
@@ -48,6 +49,8 @@ function App() {
   const [showJobModal, setShowJobModal] = useState(false);
   const [jobFilter, setJobFilter] = useState(''); // NEW: Filter by specific job
 
+  const [viewHistory, setViewHistory] = useState([]); // Stack of previous states
+
   // Load data on mount and view change
   const loadData = async () => {
     // Basic permissions check needed here? for now just load all.
@@ -72,9 +75,17 @@ function App() {
       }
     }
 
+    // Calc Stats
+    let inspectedValveIds = new Set();
+    try {
+      inspectedValveIds = await inspectionService.getValveIdsWithInspections();
+    } catch (e) {
+      console.error("Failed to load inspected valve IDs", e);
+    }
+
     setStats({
       total: allRecords.length,
-      testPending: allRecords.filter(r => !r.testDate).length
+      testPending: allRecords.filter(r => !inspectedValveIds.has(r.id)).length
     });
     setRecords(allRecords);
 
@@ -137,6 +148,7 @@ function App() {
       // Only reset if no deep link
       if (!params.get('valveId')) {
         setCurrentView('dashboard');
+        setViewHistory([]); // Clear history on user switch
       }
     }
     // Update ref
@@ -153,14 +165,25 @@ function App() {
       ...updatedRecord,
       files: updatedRecord.files || updatedRecord.file_urls || []
     };
-    setSelectedRecord(normalizedRecord);
-    setCurrentView('record-detail');
+
+    // Push current context to history before navigating
+    // Note: We use the function form of setState inside handleNavigate usually, but for record click we call explicitly.
+    // Let's defer to handleNavigate if possible, BUT handleNavigate logic below is generic.
+    // We should call handleNavigate('record-detail', normalizedRecord) but handleNavigate implementation handles the history push.
+    // However, handleNavigate below needs to be updated first.
+
+    handleNavigate('record-detail', normalizedRecord);
 
     // Refresh records to show updated timestamp in list immediately
     loadData();
   };
 
   const handleNavigate = (view, data = null) => {
+    if (view === 'back') {
+      handleBack();
+      return;
+    }
+
     if (hasUnsavedChanges) {
       if (!window.confirm("You have unsaved location changes. Are you sure you want to leave?")) {
         return;
@@ -168,12 +191,54 @@ function App() {
       setHasUnsavedChanges(false);
     }
 
+    // Push CURRENT state to history
+    setViewHistory(prev => [
+      ...prev,
+      {
+        view: currentView,
+        selectedRecord,
+        inspectionData // Preserve inspection context if leaving inspection 
+      }
+    ]);
+
     if (data) {
       setSelectedRecord(data);
     } else if (view === 'create') {
       setSelectedRecord(null);
     }
     setCurrentView(view);
+  };
+
+  const handleBack = () => {
+    if (hasUnsavedChanges) {
+      if (!window.confirm("You have unsaved changes. Are you sure you want to go back?")) return;
+      setHasUnsavedChanges(false);
+    }
+
+    setViewHistory(prev => {
+      if (prev.length === 0) {
+        setCurrentView('dashboard');
+        return [];
+      }
+
+      const newHistory = [...prev];
+      const lastState = newHistory.pop();
+
+      // Restore State
+      setCurrentView(lastState.view);
+      // Only restore explicit state if it was stored (undefined check important if we ever store falsy values, though objects are safe)
+      // Actually, we stored the *entire* state variables from that snapshot.
+      // But wait, if I go Dashboard -> Record A -> Record B.
+      // History: [ { view: 'dashboard', selectedRecord: null } ]
+      // Now I am at Record B.
+      // Back -> Restore Record A? 
+      // Logic in handleNavigate pushes *active* selectedRecord.
+      // So yes, lastState.selectedRecord was the record active *at that time*.
+      if (lastState.selectedRecord !== undefined) setSelectedRecord(lastState.selectedRecord);
+      if (lastState.inspectionData !== undefined) setInspectionData(lastState.inspectionData);
+
+      return newHistory;
+    });
   };
 
   const handleMapSave = async () => {
@@ -409,9 +474,23 @@ function App() {
     e.target.value = null; // Reset input
   };
 
-  const handleSave = async () => {
+  const handleSave = async (savedRecord) => {
     await loadData();
-    setCurrentView('dashboard');
+    if (savedRecord && typeof savedRecord === 'object') {
+      setSelectedRecord(savedRecord);
+      setCurrentView('record-detail');
+      // Update history so if they click back, they go to dashboard?
+      // Actually, if they just created it, history might be [dashboard, create].
+      // If we switch to 'detail' (replace 'create'), that's fine.
+      // handleNavigate('record-detail', savedRecord) handles push...
+      // But here we are manually setting things.
+      // Let's rely on manual set for now or use handleNavigate if possible?
+      // handleNavigate('record-detail', savedRecord) would push 'create' to history?
+      // We probably want to Replace 'create' with 'detail' or just push.
+      // For simplicity, let's just set view.
+    } else {
+      setCurrentView('dashboard');
+    }
   };
 
   const renderContent = () => {
@@ -611,6 +690,7 @@ function App() {
         return (
           <MapView
             records={records}
+            onNavigate={handleNavigate}
             onRecordClick={(record) => {
               if (hasUnsavedChanges) {
                 if (!window.confirm("You have unsaved location changes. Are you sure you want to leave?")) return;
@@ -627,6 +707,7 @@ function App() {
             records={selectedRecord ? [selectedRecord] : []}
             hasUnsavedChanges={hasUnsavedChanges}
             onSave={handleMapSave}
+            onNavigate={handleNavigate}
             onRecordClick={(record) => {
               if (hasUnsavedChanges) {
                 if (!window.confirm("You have unsaved location changes. Are you sure you want to leave?")) return;
@@ -674,7 +755,10 @@ function App() {
           valveId: inspectionData?.valveId,
           inspectionId: inspectionData?.inspectionId,
           onBack: () => setCurrentView('inspection-list'),
-          onSave: () => setCurrentView('inspection-list')
+          onSave: () => {
+            loadData();
+            setCurrentView('inspection-list');
+          }
         };
 
         switch (typeToUse) {
@@ -702,6 +786,7 @@ function App() {
         return (
           <InspectionList
             valveId={inspectionData?.valveId || selectedRecord?.id}
+            onNavigate={handleNavigate}
             onEdit={(inspectionId) => {
               setInspectionData({ valveId: selectedRecord?.id, inspectionId });
               setCurrentView('inspection-form');
@@ -783,7 +868,7 @@ function App() {
                 <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary)' }}>{stats.total}</div>
               </div>
               <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)' }}>
-                <h3 style={{ margin: '0 0 0.5rem 0' }}>Pending Tests</h3>
+                <h3 style={{ margin: '0 0 0.5rem 0' }}>Pending Inspection</h3>
                 <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--accent)' }}>{stats.testPending}</div>
               </div>
             </div>

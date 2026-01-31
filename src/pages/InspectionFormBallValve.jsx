@@ -106,8 +106,7 @@ export default function InspectionFormBallValve({ valveId, inspectionId, onBack,
 
             const saved = await inspectionService.save(finalInspection);
             alert('Inspection saved successfully!');
-            if (onSave) onSave(saved);
-            if (onBack) onBack();
+            if (onSave) { onSave(saved); } else if (onBack) { onBack(); }
         } catch (error) {
             alert('Failed to save inspection: ' + error.message);
         } finally {

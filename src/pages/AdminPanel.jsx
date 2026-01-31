@@ -273,7 +273,10 @@ export const AdminPanel = ({ onNavigate }) => {
 
     return (
         <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
-            <h2 className="section-title">Admin Panel</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                <button onClick={() => onNavigate('back')} className="btn-secondary">← Back</button>
+                <h2 className="section-title" style={{ margin: 0 }}>Admin Panel</h2>
+            </div>
 
             <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
                 <button

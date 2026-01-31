@@ -344,12 +344,23 @@ export const inspectionService = {
                         inspectionPhotos: i.inspection_photos || []
                     }));
 
+                    // MERGE STRATEGY (Offline First)
+                    // 1. Start with Cloud Records
+                    // 2. Add Local Records that are NOT in Cloud (Preserve Unsynced/New items)
+                    const cloudIds = new Set(cloudInspections.map(c => c.id));
+                    const localOnly = localInspections.filter(l => !cloudIds.has(l.id));
+
+                    const mergedForValve = [...cloudInspections, ...localOnly];
+                    // Sort by date desc
+                    mergedForValve.sort((a, b) => new Date(b.inspectionDate) - new Date(a.inspectionDate));
+
                     // Update local storage
                     const allLocal = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+                    // Remove ALL items for this valveId from the global list, then add back the merged set
                     const otherValves = allLocal.filter(i => i.valveId !== valveId);
-                    localStorage.setItem(STORAGE_KEY, JSON.stringify([...otherValves, ...cloudInspections]));
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify([...otherValves, ...mergedForValve]));
 
-                    return cloudInspections;
+                    return mergedForValve;
                 }
             } catch (e) {
                 console.error('Database connection error', e);
@@ -477,5 +488,42 @@ export const inspectionService = {
         const allInspections = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
         const filtered = allInspections.filter(i => i.id !== id);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+    },
+
+    // Get IDs of all valves that have at least one inspection
+    getValveIdsWithInspections: async () => {
+        const inspectedValveIds = new Set();
+
+        // 1. Check Local Storage
+        try {
+            const data = localStorage.getItem(STORAGE_KEY);
+            if (data) {
+                const inspections = JSON.parse(data);
+                inspections.forEach(i => {
+                    if (i.valveId) inspectedValveIds.add(i.valveId);
+                });
+            }
+        } catch (e) {
+            console.error('Error reading local inspections for IDs', e);
+        }
+
+        // 2. Check Supabase
+        if (supabase) {
+            try {
+                const { data, error } = await supabase
+                    .from('valve_inspections')
+                    .select('valve_id');
+
+                if (!error && data) {
+                    data.forEach(row => {
+                        if (row.valve_id) inspectedValveIds.add(row.valve_id);
+                    });
+                }
+            } catch (e) {
+                console.error('Error fetching inspection IDs from DB', e);
+            }
+        }
+
+        return inspectedValveIds;
     }
 };

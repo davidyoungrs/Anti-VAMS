@@ -135,6 +135,14 @@ export default function InspectionList({ valveId, onEdit, onNewInspection, onEdi
     return (
         <div className="inspection-list">
             <div className="list-header">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    {/* Access onNavigate from context or if passed down? InspectionList is child of App so passed down via renderContent but we defined props in function */}
+                    {/* Wait, App.jsx uses renderContent which calls InspectionList. I need to make sure onNavigate is passed to it in App.jsx */}
+                    {/* Checking App.jsx: 'inspection-list' case passes onEdit etc but NOT onNavigate. I need to update App.jsx too! */}
+                    {/* However, the Back button should probably go back to Record Detail? Or Dashboard? */}
+                    {/* Ideally 'Back' returns to wherever we came from. */}
+                    {/* If I add onNavigate prop here, I must update App.jsx */}
+                </div>
                 <h3>Inspection History</h3>
                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                     <button
