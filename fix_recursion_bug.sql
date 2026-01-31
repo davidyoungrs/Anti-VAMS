@@ -17,9 +17,11 @@ AS $$
   );
 $$;
 
--- 2. Drop the recursive policies
+-- 2. Drop the recursive policies AND any previous versions of the new ones
 DROP POLICY IF EXISTS "Super User Can Update Profiles" ON public.profiles;
 DROP POLICY IF EXISTS "Super User Can View Profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Admin Update Profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Admin View All Profiles" ON public.profiles;
 
 -- 3. Re-create policies using the helper function (No recursion!)
 
@@ -61,8 +63,31 @@ USING (
 );
 
 -- 5. Restore View for normal users (if needed)
+DROP POLICY IF EXISTS "Users can view valve records" ON public.valve_records;
+
 CREATE POLICY "Users can view valve records"
 ON public.valve_records
+FOR SELECT
+TO authenticated
+USING (
+  true
+);
+
+-- 6. Fix Valve Inspections Policy
+-- Similar to records, inspections might be blocked or recursive
+DROP POLICY IF EXISTS "Admins can maintain valve inspections" ON public.valve_inspections;
+DROP POLICY IF EXISTS "Users can view valve inspections" ON public.valve_inspections;
+
+CREATE POLICY "Admins can maintain valve inspections"
+ON public.valve_inspections
+FOR ALL
+TO authenticated
+USING (
+  public.is_admin_or_super()
+);
+
+CREATE POLICY "Users can view valve inspections"
+ON public.valve_inspections
 FOR SELECT
 TO authenticated
 USING (

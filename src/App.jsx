@@ -256,7 +256,11 @@ function App() {
   const handleSync = async () => {
     const result = await storageService.syncLocalToCloud();
     if (result.error) {
-      alert(`Sync failed: ${result.error.message || result.error}`);
+      if (result.error.code === '42P17' || result.error.message?.includes('infinite recursion')) {
+        alert('CRITICAL DATABASE ERROR: Infinite Recursion Detected.\n\nPlease run the "fix_recursion_bug.sql" script in your Supabase SQL Editor immediately to fix this issue.');
+      } else {
+        alert(`Sync failed: ${result.error.message || result.error}`);
+      }
     } else {
       if (result.success) {
         const cloudMsg = result.cloudTotal !== undefined ? ` (Cloud Total: ${result.cloudTotal})` : '';

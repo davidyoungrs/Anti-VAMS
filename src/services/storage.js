@@ -155,8 +155,13 @@ export const storageService = {
                             const localMatch = localRecords.find(l => l.id === cloudRecord.id);
                             if (!localMatch) return cloudRecord;
 
-                            const cloudTime = new Date(cloudRecord.updatedAt || 0).getTime();
-                            const localTime = new Date(localMatch.updatedAt || 0).getTime();
+                            const cloudUpdated = new Date(cloudRecord.updatedAt || 0).getTime();
+                            const cloudDeleted = new Date(cloudRecord.deletedAt || 0).getTime();
+                            const cloudTime = Math.max(cloudUpdated, cloudDeleted);
+
+                            const localUpdated = new Date(localMatch.updatedAt || 0).getTime();
+                            const localDeleted = new Date(localMatch.deletedAt || 0).getTime();
+                            const localTime = Math.max(localUpdated, localDeleted);
 
                             // Use Local data if it is newer or equal (Equal = we likely just synced it)
                             if (localTime >= cloudTime) {
@@ -552,14 +557,17 @@ export const storageService = {
 
         let syncedCount = 0;
         const failedRecords = [];
-        let lastError = null;
-
-        // We need to process records one by one (or in chunks) to handle file uploads
-        // EMERGENCY DEBUG SYNC: Skipping ALL file uploads to isolate "AbortError"
-        // If this works, the issue is DEFINITELY file size/network blocking uploads.
+        let lastError = null; // Restore missing variables
 
         const BATCH_SIZE = 1;
         const recordsToUpsert = [];
+
+        // Helper functions defined at top of scope
+        const sanitizeVal = (val) => (!val || val === '') ? null : val;
+        const sanitizeNum = (val) => {
+            if (val === '' || val === null || val === undefined) return null;
+            return isNaN(val) ? null : val;
+        };
 
         for (let i = 0; i < localRecords.length; i++) {
             let record = { ...localRecords[i] };
@@ -710,8 +718,21 @@ export const storageService = {
 
         let cloudTotal = 'unknown';
         if (supabase) {
-            const { count } = await supabase.from('valve_records').select('*', { count: 'exact', head: true });
-            cloudTotal = count;
+            // Count only NON-DELETED records
+            try {
+                const { count, error } = await supabase.from('valve_records')
+                    .select('*', { count: 'exact', head: true })
+                    .is('deleted_at', null);
+
+                if (error) {
+                    console.warn('Failed to fetch cloud count:', error);
+                    // Don't fail the whole sync, just show unknown
+                } else {
+                    cloudTotal = count;
+                }
+            } catch (e) {
+                console.error('Exception fetching cloud count:', e);
+            }
         }
 
         return { success: true, count: syncedCount, cloudTotal };
