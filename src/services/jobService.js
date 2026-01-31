@@ -179,5 +179,84 @@ export const jobService = {
             const { error } = await supabase.from('jobs').delete().eq('id', jobId);
             if (error) console.error('Failed to delete job from cloud', error);
         }
+    },
+
+    /**
+     * Get all valves for a specific job
+     */
+    getValvesByJobId: async (jobId) => {
+        let valves = [];
+
+        // 1. Try Cloud First (easiest for relational queries)
+        if (supabase) {
+            try {
+                const { data, error } = await supabase
+                    .from('valve_records')
+                    .select('*')
+                    .eq('job_id', jobId);
+
+                if (!error && data) {
+                    return data;
+                }
+            } catch (e) {
+                console.warn('Failed to fetch job valves from cloud', e);
+            }
+        }
+
+        // 2. Fallback to Local (Scan all valves - expensive but necessary if offline)
+        try {
+            const allValvesEncrypted = await dbService.getAll('valve_records');
+            const allValves = allValvesEncrypted.map(item => {
+                try {
+                    return securityService.decrypt(item.encryptedData);
+                } catch (e) { return null; }
+            }).filter(v => v && v.jobId === jobId);
+
+            valves = allValves;
+        } catch (e) {
+            console.error('Failed to fetch job valves locally', e);
+        }
+
+        return valves;
+    },
+    /**
+     * Get IDs of jobs that have at least one valve assigned
+     */
+    getActiveJobIds: async () => {
+        const activeIds = new Set();
+
+        // 1. Try Cloud
+        if (supabase) {
+            try {
+                // Use a distinct select on the simple valve table
+                const { data, error } = await supabase
+                    .from('valve_records')
+                    .select('job_id')
+                    .neq('job_id', null);
+
+                if (!error && data) {
+                    data.forEach(row => {
+                        if (row.job_id) activeIds.add(row.job_id);
+                    });
+                }
+            } catch (e) {
+                console.warn('Failed to fetch active job IDs from cloud', e);
+            }
+        }
+
+        // 2. Try Local (Merge) - Essential for offline or potential sync delays
+        try {
+            const allValvesEncrypted = await dbService.getAll('valve_records');
+            allValvesEncrypted.forEach(item => {
+                try {
+                    const v = securityService.decrypt(item.encryptedData);
+                    if (v && v.jobId) activeIds.add(v.jobId);
+                } catch (e) { }
+            });
+        } catch (e) {
+            console.error('Failed to fetch active job IDs locally', e);
+        }
+
+        return Array.from(activeIds);
     }
 };

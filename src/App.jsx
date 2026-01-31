@@ -23,6 +23,7 @@ import { storageService } from './services/storage';
 import { jobService } from './services/jobService';
 import { JobSelectionModal } from './components/JobSelectionModal';
 import { SearchableJobSelect } from './components/SearchableJobSelect';
+import { Jobs } from './pages/Jobs';
 
 // Import Markdown Content
 import featuresContent from '../FEATURES.md?raw';
@@ -125,24 +126,21 @@ function App() {
     };
   }, [allowedCustomers, role]); // Only load on mount or permission change
 
-  // Force Dashboard View on Login/User Change
+  // Force Dashboard View only on NEW Login (User Identity Change)
+  // Use a ref to track the previous user ID so we don't reset on session refreshes
+  const prevUserIdRef = React.useRef(user?.id);
+
   React.useEffect(() => {
-    if (user) {
-      // If we have a deep link param, we might want to respect it, 
-      // but the user explicitly requested "show dashboard".
-      // However, the deep link logic (lines 78-89) runs on mount.
-      // If we just logged in, we probably want dashboard unless a link brought us here.
-      // Let's reset ONLY if we are not handling a deep link?
-      // Actually, simpler: just reset. Deep link logic runs AFTER this in 'init' usually?
-      // Wait, init runs on mount. This runs on user change.
-      // If user logs in, user changes.
-      // Let's reset to dashboard to satisfy the request. 
-      // If deep linking is needed later, we can add logic to skip this if URL has params.
+    // If user changed (and is logged in)
+    if (user && user.id !== prevUserIdRef.current) {
       const params = new URLSearchParams(window.location.search);
+      // Only reset if no deep link
       if (!params.get('valveId')) {
         setCurrentView('dashboard');
       }
     }
+    // Update ref
+    prevUserIdRef.current = user?.id;
   }, [user]);
 
   const handleRecordClick = async (record) => {
@@ -422,7 +420,7 @@ function App() {
         return <RecordForm key="create" onSave={handleSave} onNavigate={handleNavigate} />;
       case 'admin':
         if (!['admin', 'super_user'].includes(role)) return <div className="glass-panel" style={{ padding: '2rem' }}><h2>Access Denied</h2><p>You do not have permission to view this page.</p></div>;
-        return <AdminPanel />;
+        return <AdminPanel onNavigate={handleNavigate} />;
       case 'user-guide':
         return <MarkdownPage title="User Guide" content={userGuideContent} />;
       case 'features':
@@ -437,6 +435,8 @@ function App() {
         return <AnalyticsDashboard records={records} />;
       case 'scheduler':
         return <MaintenanceScheduler />;
+      case 'jobs':
+        return <Jobs onNavigate={handleNavigate} />;
       case 'record-detail':
         return <RecordForm key={selectedRecord?.id || 'detail'} initialData={selectedRecord} onSave={handleSave} onNavigate={handleNavigate} />;
       case 'search':

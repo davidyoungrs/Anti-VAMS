@@ -6,17 +6,19 @@ import { inspectionService } from '../services/inspectionService';
 import { testReportService } from '../services/testReportService';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
-import { jobService } from '../services/jobService';
 
-export const AdminPanel = () => {
+
+
+
+export const AdminPanel = ({ onNavigate }) => {
     const { role } = useAuth();
     const [activeTab, setActiveTab] = useState('trash'); // 'trash' | 'history' | 'users'
     const [deletedRecords, setDeletedRecords] = useState([]);
     const [history, setHistory] = useState([]);
     const [currentRecords, setCurrentRecords] = useState([]);
     const [users, setUsers] = useState([]);
-    const [jobs, setJobs] = useState([]);
     const [loading, setLoading] = useState(false);
+
 
     useEffect(() => {
         if (['admin', 'super_user'].includes(role)) {
@@ -52,6 +54,7 @@ export const AdminPanel = () => {
                     throw error;
                 }
                 setUsers(data || []);
+
             } else {
                 // Fetch both history and current records for comparison
                 const [historyData, allRecords] = await Promise.all([
@@ -264,65 +267,9 @@ export const AdminPanel = () => {
         }
     };
 
-    const handleDeleteJob = async (jobId, jobName) => {
-        if (!window.confirm(`Are you sure you want to delete job "${jobName}"? Use caution if valves are linked.`)) return;
-        try {
-            await jobService.deleteJob(jobId);
-            alert('Job deleted.');
-            loadData();
-        } catch (e) {
-            alert('Failed to delete job: ' + e.message);
-        }
-    };
 
-    const handleSmartLinkJobs = async () => {
-        if (!window.confirm("This will scan all valves for 'Job No' text, create new Jobs for them, and link the valves. Continue?")) return;
-        setLoading(true);
-        try {
-            const allRecords = await storageService.getAll();
-            const allJobs = await jobService.getAllJobs();
-            let createdJobsCount = 0;
-            let linkedValvesCount = 0;
 
-            // 1. Group valves by job_no text
-            const valvesByJobNo = {};
-            for (const r of allRecords) {
-                if (r.jobNo && !r.jobId) { // Only if has text but no ID link
-                    const jn = r.jobNo.trim();
-                    if (!valvesByJobNo[jn]) valvesByJobNo[jn] = [];
-                    valvesByJobNo[jn].push(r);
-                }
-            }
 
-            // 2. Process each group
-            for (const [jobName, valves] of Object.entries(valvesByJobNo)) {
-                // Find or create job
-                let job = allJobs.find(j => j.name.toLowerCase() === jobName.toLowerCase());
-                if (!job) {
-                    job = await jobService.saveJob({
-                        name: jobName,
-                        status: 'Active'
-                    });
-                    allJobs.push(job); // Add to local cache for next iteration
-                    createdJobsCount++;
-                }
-
-                // Link valves
-                const valveIds = valves.map(v => v.id);
-                // We use jobService to update them
-                await jobService.assignValvesToJob(job.id, valveIds);
-                linkedValvesCount += valves.length;
-            }
-
-            alert(`Success! Created ${createdJobsCount} new jobs and linked ${linkedValvesCount} valves.`);
-            loadData(); // Refresh if needed (though jobs tab handles its own data loading usually)
-        } catch (e) {
-            console.error(e);
-            alert("Smart Link failed: " + e.message);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     return (
         <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
@@ -357,20 +304,7 @@ export const AdminPanel = () => {
                 >
                     📜 Change History
                 </button>
-                <button
-                    onClick={() => setActiveTab('jobs')}
-                    style={{
-                        padding: '1rem 2rem',
-                        background: activeTab === 'jobs' ? 'var(--primary)' : 'var(--bg-card)',
-                        color: activeTab === 'jobs' ? 'white' : 'var(--text-muted)',
-                        border: 'none',
-                        borderRadius: 'var(--radius-md)',
-                        fontWeight: 'bold',
-                        cursor: 'pointer'
-                    }}
-                >
-                    💼 Jobs
-                </button>
+
                 {role === 'super_user' && (
                     <button
                         onClick={() => setActiveTab('users')}
@@ -538,76 +472,6 @@ export const AdminPanel = () => {
                                     })}
                                 </div>
                             )}
-                        </div>
-                    )}
-
-                    {activeTab === 'jobs' && (
-                        <div>
-                            <h3 style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span>Job Management</span>
-                                <button
-                                    onClick={handleSmartLinkJobs}
-                                    style={{
-                                        padding: '0.5rem 1rem',
-                                        background: 'linear-gradient(135deg, #8b5cf6, #6d28d9)',
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: 'var(--radius-md)',
-                                        cursor: 'pointer',
-                                        fontSize: '0.9rem'
-                                    }}
-                                >
-                                    ✨ Smart Link Legacy Jobs
-                                </button>
-                            </h3>
-                            <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>
-                                Here you can manage existing jobs. Use "Smart Link" to convert old text-based "Job No" fields into real Job entries.
-                            </p>
-
-                            {/* Simple Job List for now */}
-                            {/* We could fetch jobs here if we want to show them... for now just the action button */}
-                            {/* Job List */}
-                            <div style={{ display: 'grid', gap: '1rem' }}>
-                                {jobs && jobs.length > 0 ? (
-                                    jobs.map(job => (
-                                        <div key={job.id} className="glass-panel" style={{
-                                            padding: '1rem',
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            alignItems: 'center',
-                                            background: 'var(--bg-surface)'
-                                        }}>
-                                            <div>
-                                                <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{job.name}</div>
-                                                <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                                                    Client: {job.clientName || 'N/A'} | Status: {job.status}
-                                                    {job.updatedAt && ` | Updated: ${new Date(job.updatedAt).toLocaleDateString()}`}
-                                                </div>
-                                            </div>
-                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                                {/* Future: Archive Button */}
-                                                <button
-                                                    onClick={() => handleDeleteJob(job.id, job.name)}
-                                                    style={{
-                                                        padding: '0.5rem 1rem',
-                                                        background: 'rgba(239, 68, 68, 0.1)',
-                                                        border: '1px solid #ef4444',
-                                                        color: '#ef4444',
-                                                        borderRadius: '4px',
-                                                        cursor: 'pointer'
-                                                    }}
-                                                >
-                                                    Delete
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div style={{ padding: '2rem', textAlign: 'center', background: 'var(--bg-card)', borderRadius: 'var(--radius-md)' }}>
-                                        <p>No jobs found. Create jobs from the main dashboard or use the "Smart Link" button above.</p>
-                                    </div>
-                                )}
-                            </div>
                         </div>
                     )}
 

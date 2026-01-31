@@ -68,6 +68,11 @@ export const Layout = ({ children, activeView, onNavigate, userRole }) => {
                 Search Records
               </a>
             </li>
+            <li style={{ marginBottom: '0.5rem' }}>
+              <a onClick={() => onNavigate('jobs')} style={getItemStyle('jobs')}>
+                Jobs
+              </a>
+            </li>
             {userRole !== 'client' && (
               <li style={{ marginBottom: '0.5rem' }}>
                 <a onClick={() => onNavigate('map')} style={getItemStyle('map')}>
