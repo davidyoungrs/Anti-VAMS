@@ -20,6 +20,9 @@ import { AnalyticsDashboard } from './pages/AnalyticsDashboard';
 import { MaintenanceScheduler } from './pages/MaintenanceScheduler';
 import { MarkdownPage } from './components/MarkdownPage';
 import { storageService } from './services/storage';
+import { jobService } from './services/jobService';
+import { JobSelectionModal } from './components/JobSelectionModal';
+import { SearchableJobSelect } from './components/SearchableJobSelect';
 
 // Import Markdown Content
 import featuresContent from '../FEATURES.md?raw';
@@ -37,6 +40,12 @@ function App() {
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [inspectionData, setInspectionData] = useState(null); // { valveId, inspectionId }
+
+  // Job Management State
+  const [jobs, setJobs] = useState({}); // Map: id -> Job Object
+  const [selectedValveIds, setSelectedValveIds] = useState(new Set());
+  const [showJobModal, setShowJobModal] = useState(false);
+  const [jobFilter, setJobFilter] = useState(''); // NEW: Filter by specific job
 
   // Load data on mount and view change
   const loadData = async () => {
@@ -67,6 +76,16 @@ function App() {
       testPending: allRecords.filter(r => !r.testDate).length
     });
     setRecords(allRecords);
+
+    // Load Jobs
+    try {
+      const allJobs = await jobService.getAllJobs();
+      const jobMap = {};
+      allJobs.forEach(j => { jobMap[j.id] = j; });
+      setJobs(jobMap);
+    } catch (e) {
+      console.error('Failed to load jobs', e);
+    }
   };
 
   // Load data on mount
@@ -258,6 +277,37 @@ function App() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    document.body.removeChild(link);
+  };
+
+  const handleBulkJobAssign = async (jobId) => {
+    try {
+      await jobService.assignValvesToJob(jobId, Array.from(selectedValveIds));
+      alert('Valves assigned to job successfully!');
+      setShowJobModal(false);
+      setSelectedValveIds(new Set()); // Clear selection
+      await loadData(); // Refresh to see updated job names
+    } catch (e) {
+      alert('Failed to assign valves: ' + e.message);
+    }
+  };
+
+  const toggleValveSelection = (id) => {
+    const newSet = new Set(selectedValveIds);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    setSelectedValveIds(newSet);
+  };
+
+  const toggleAllSelection = (filteredRecords) => {
+    if (selectedValveIds.size === filteredRecords.length) {
+      setSelectedValveIds(new Set());
+    } else {
+      setSelectedValveIds(new Set(filteredRecords.map(r => r.id)));
+    }
   };
 
   const handleImport = (e) => {
@@ -391,29 +441,84 @@ function App() {
         return <RecordForm key={selectedRecord?.id || 'detail'} initialData={selectedRecord} onSave={handleSave} onNavigate={handleNavigate} />;
       case 'search':
         // Handle search filtering client side on the loaded records
-        const filteredRecords = records.filter(r =>
-          r.serialNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          r.customer?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          r.oem?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          r.valveType?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          r.sizeClass?.toString().toLowerCase().includes(searchQuery.toLowerCase()) ||
-          r.mawp?.toString().toLowerCase().includes(searchQuery.toLowerCase()) ||
-          r.tagNo?.toLowerCase().includes(searchQuery.toLowerCase())
-        );
+        const filteredRecords = records.filter(r => {
+          const matchesSearch = r.serialNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            r.customer?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            r.oem?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            r.valveType?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            r.sizeClass?.toString().toLowerCase().includes(searchQuery.toLowerCase()) ||
+            r.mawp?.toString().toLowerCase().includes(searchQuery.toLowerCase()) ||
+            r.tagNo?.toLowerCase().includes(searchQuery.toLowerCase());
+
+          const matchesJob = jobFilter ? r.jobId === jobFilter : true;
+
+          return matchesSearch && matchesJob;
+        });
         return (
           <div className="glass-panel" style={{ padding: '2rem', borderRadius: 'var(--radius-lg)' }}>
             <h2 className="section-title">Search Records</h2>
-            <div className="mb-4">
+            <div className="mb-4" style={{ display: 'flex', gap: '1rem' }}>
               <input
                 type="text"
                 placeholder="Search by Serial No, Customer, OEM, Type, Size, Class, or Tag..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                style={{ fontSize: '1.2rem', padding: '1rem' }}
+                style={{ fontSize: '1.2rem', padding: '1rem', flex: 2 }}
+              />
+              <SearchableJobSelect
+                jobs={jobs}
+                selectedJobId={jobFilter}
+                onChange={(val) => setJobFilter(val)}
               />
             </div>
 
+            {/* Bulk Actions Bar */}
+            {selectedValveIds.size > 0 && (
+              <div
+                className="glass-panel"
+                style={{
+                  marginBottom: '1rem', padding: '1rem', background: 'rgba(59, 130, 246, 0.1)',
+                  border: '1px solid #3b82f6', borderRadius: 'var(--radius-md)',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                }}
+              >
+                <div style={{ fontWeight: 'bold', color: '#60a5fa' }}>
+                  {selectedValveIds.size} valves selected
+                </div>
+                <div>
+                  <button
+                    onClick={() => setShowJobModal(true)}
+                    className="btn-primary"
+                    style={{ background: '#3b82f6', fontSize: '0.9rem' }}
+                  >
+                    📂 Assign to Job
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {showJobModal && (
+              <JobSelectionModal
+                selectedCount={selectedValveIds.size}
+                onCancel={() => setShowJobModal(false)}
+                onConfirm={handleBulkJobAssign}
+              />
+            )}
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {/* Select All Checkbox (Only if records exist) */}
+              {filteredRecords.length > 0 && (
+                <div style={{ marginBottom: '0.5rem', display: 'flex', gap: '0.5rem', alignItems: 'center', justifyContent: 'flex-end', marginRight: '1rem' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Select All</span>
+                  <input
+                    type="checkbox"
+                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                    checked={selectedValveIds.size === filteredRecords.length && filteredRecords.length > 0}
+                    onChange={() => toggleAllSelection(filteredRecords)}
+                  />
+                </div>
+              )}
+
               {filteredRecords.length === 0 ? (
                 <p style={{ color: 'var(--text-muted)' }}>No records found.</p>
               ) : (
@@ -424,43 +529,57 @@ function App() {
                     style={{
                       padding: '1.25rem',
                       borderRadius: 'var(--radius-md)',
-                      background: 'var(--bg-surface)',
+                      background: selectedValveIds.has(record.id) ? 'rgba(59, 130, 246, 0.05)' : 'var(--bg-surface)',
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
-                      border: '1px solid transparent'
+                      border: selectedValveIds.has(record.id) ? '1px solid #3b82f6' : '1px solid transparent'
                     }}
-                    onClick={() => handleRecordClick(record)}
+                    onClick={(e) => {
+                      // If clicking checkbox, don't nav. If clicking card, nav.
+                      if (e.target.type !== 'checkbox') handleRecordClick(record);
+                    }}
                   >
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-                        <h4 style={{ margin: 0, color: 'var(--primary)', fontSize: '1.2rem' }}>{record.serialNumber}</h4>
-                        {(record.files?.length > 0 || record.file_urls?.length > 0) && (
-                          <span
-                            title={`${(record.files?.length || record.file_urls?.length)} attachments`}
-                            style={{
-                              fontSize: '0.9rem',
-                              color: 'var(--accent)',
-                              background: 'rgba(245, 158, 11, 0.1)',
-                              padding: '2px 8px',
-                              borderRadius: '4px',
-                              fontWeight: '600'
-                            }}
-                          >
-                            📎 {(record.files?.length || record.file_urls?.length)}
-                          </span>
-                        )}
-                      </div>
-                      <div className="grid-2" style={{ fontSize: '0.85rem', color: 'var(--text-muted)', gap: '0.5rem 1.5rem' }}>
-                        <div><span style={{ color: 'var(--text-label)' }}>Customer:</span> {record.customer}</div>
-                        <div><span style={{ color: 'var(--text-label)' }}>OEM:</span> {record.oem}</div>
-                        <div><span style={{ color: 'var(--text-label)' }}>Type:</span> {record.valveType || 'N/A'}</div>
-                        <div><span style={{ color: 'var(--text-label)' }}>Size:</span> {record.sizeClass || 'N/A'}</div>
-                        <div><span style={{ color: 'var(--text-label)' }}>Class:</span> {record.mawp || 'N/A'}</div>
-                        <div><span style={{ color: 'var(--text-label)' }}>Tag:</span> {record.tagNo || 'N/A'}</div>
+                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flex: 1 }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                          <h4 style={{ margin: 0, color: 'var(--primary)', fontSize: '1.2rem' }}>{record.serialNumber}</h4>
+                          {(record.files?.length > 0 || record.file_urls?.length > 0) && (
+                            <span
+                              title={`${(record.files?.length || record.file_urls?.length)} attachments`}
+                              style={{
+                                fontSize: '0.9rem',
+                                color: 'var(--accent)',
+                                background: 'rgba(245, 158, 11, 0.1)',
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                                fontWeight: '600'
+                              }}
+                            >
+                              📎 {(record.files?.length || record.file_urls?.length)}
+                            </span>
+                          )}
+                          {/* Job Badge */}
+                          {record.jobId && jobs[record.jobId] && (
+                            <span style={{
+                              fontSize: '0.8rem', background: '#3b82f6', color: 'white',
+                              padding: '2px 8px', borderRadius: '12px'
+                            }}>
+                              🏢 {jobs[record.jobId].name}
+                            </span>
+                          )}
+                        </div>
+                        <div className="grid-2" style={{ fontSize: '0.85rem', color: 'var(--text-muted)', gap: '0.5rem 1.5rem' }}>
+                          <div><span style={{ color: 'var(--text-label)' }}>Customer:</span> {record.customer}</div>
+                          <div><span style={{ color: 'var(--text-label)' }}>OEM:</span> {record.oem}</div>
+                          <div><span style={{ color: 'var(--text-label)' }}>Type:</span> {record.valveType || 'N/A'}</div>
+                          <div><span style={{ color: 'var(--text-label)' }}>Size:</span> {record.sizeClass || 'N/A'}</div>
+                          <div><span style={{ color: 'var(--text-label)' }}>Class:</span> {record.mawp || 'N/A'}</div>
+                          <div><span style={{ color: 'var(--text-label)' }}>Tag:</span> {record.tagNo || 'N/A'}</div>
+                        </div>
                       </div>
                     </div>
-                    <div style={{ marginLeft: '1.5rem' }}>
+                    <div style={{ marginLeft: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
                       <span style={{
                         padding: '0.4rem 1rem',
                         borderRadius: '20px',
@@ -472,6 +591,15 @@ function App() {
                       }}>
                         {(record.pass_fail === 'Y' || record.passFail === 'Y') ? 'PASS' : (record.pass_fail === 'N' || record.passFail === 'N' ? 'FAIL' : 'PENDING')}
                       </span>
+                      {/* Checkbox Moved Here */}
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedValveIds.has(record.id)}
+                          onChange={() => toggleValveSelection(record.id)}
+                          style={{ width: '24px', height: '24px', cursor: 'pointer' }}
+                        />
+                      </div>
                     </div>
                   </div>
                 ))
