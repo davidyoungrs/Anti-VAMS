@@ -20,9 +20,12 @@ The main dashboard gives you quick access to all core functions:
 1. Click **"New Valve Record"** on the dashboard.
 2. **Valve Data**: Fill in the basic identification (Serial No, Job No, Tag No).
    - **Pro Tip (Mobile)**: Click the **Camera Icon** next to 'Serial Number' to use OCR to scan the text directly from the nameplate.
-3. **Construction**: Enter material details (Body, Seat, Trim, etc.).
-4. **Service & Testing**: Define the required test pressures and service conditions.
-5. Click **"Save Record"** at the bottom. The record is now saved locally.
+4. **Status & Dates**:
+   - **Workflow Status**: Select the current stage (e.g., "Teardown", "Assembly", "Final / Witness Test").
+   - Set "Date In" and "Required Date".
+5. **Construction**: Enter material details (Body, Seat, Trim, etc.).
+6. **Service & Testing**: Define the required test pressures and service conditions.
+7. Click **"Save Record"** at the bottom. The record is now saved locally.
 
 ### Viewing & Editing
 - From the dashboard, click on any row in the **Valve Records** table to open that valve's details.
@@ -97,6 +100,7 @@ Gain insights into your valve population using the visual dashboard.
    - Use the **OEM Filter** dropdown to select specific manufacturers (e.g., "Cameron", "ValvTechnologies").
    - Hold **Cmd/Ctrl** to select multiple OEMs at once. Select "All OEMs" to reset.
 3. **Charts**:
+   - **WIP Status**: Bar chart showing how many valves are at each stage (e.g., 5 in Teardown, 3 in Assembly).
    - **Pass/Fail Rates**: Bar chart showing testing outcomes by manufacturer.
    - **Top Failure Modes**: Pie chart highlighting the most common reasons for valve failure (e.g., "Seat Leak", "Stem Damage").
 

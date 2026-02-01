@@ -663,16 +663,24 @@ function App() {
                       </div>
                     </div>
                     <div style={{ marginLeft: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                      {/* Status Badge */}
                       <span style={{
                         padding: '0.4rem 1rem',
                         borderRadius: '20px',
-                        background: (record.pass_fail === 'Y' || record.passFail === 'Y') ? 'rgba(16, 185, 129, 0.2)' : (record.pass_fail === 'N' || record.passFail === 'N' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(148, 163, 184, 0.2)'),
-                        color: (record.pass_fail === 'Y' || record.passFail === 'Y') ? '#4ade80' : (record.pass_fail === 'N' || record.passFail === 'N' ? '#f87171' : '#94a3b8'),
+                        background: record.status === 'Shipped' ? 'rgba(16, 185, 129, 0.2)' :
+                          (record.status?.includes('Hold') || record.status?.includes('Waiting')) ? 'rgba(239, 68, 68, 0.2)' :
+                            'rgba(59, 130, 246, 0.2)', // Default Blue
+                        color: record.status === 'Shipped' ? '#4ade80' :
+                          (record.status?.includes('Hold') || record.status?.includes('Waiting')) ? '#f87171' :
+                            '#60a5fa',
                         fontSize: '0.85rem',
                         fontWeight: '700',
-                        border: `1px solid ${(record.pass_fail === 'Y' || record.passFail === 'Y') ? 'rgba(16, 185, 129, 0.3)' : (record.pass_fail === 'N' || record.passFail === 'N' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(148, 163, 184, 0.3)')}`
+                        border: `1px solid ${record.status === 'Shipped' ? 'rgba(16, 185, 129, 0.3)' :
+                          (record.status?.includes('Hold') || record.status?.includes('Waiting')) ? 'rgba(239, 68, 68, 0.3)' :
+                            'rgba(59, 130, 246, 0.3)'
+                          }`
                       }}>
-                        {(record.pass_fail === 'Y' || record.passFail === 'Y') ? 'PASS' : (record.pass_fail === 'N' || record.passFail === 'N' ? 'FAIL' : 'PENDING')}
+                        {record.status || 'No Status'}
                       </span>
                       {/* Checkbox Moved Here */}
                       <div onClick={(e) => e.stopPropagation()}>
@@ -936,11 +944,15 @@ function App() {
                         fontSize: '0.75rem',
                         padding: '0.2rem 0.6rem',
                         borderRadius: '4px',
-                        background: (record.pass_fail === 'Y' || record.passFail === 'Y') ? 'rgba(16, 185, 129, 0.2)' : (record.pass_fail === 'N' || record.passFail === 'N' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(148, 163, 184, 0.2)'),
-                        color: (record.pass_fail === 'Y' || record.passFail === 'Y') ? '#4ade80' : (record.pass_fail === 'N' || record.passFail === 'N' ? '#f87171' : '#94a3b8'),
+                        background: record.status === 'Shipped' ? 'rgba(16, 185, 129, 0.2)' :
+                          (record.status?.includes('Hold') || record.status?.includes('Waiting')) ? 'rgba(239, 68, 68, 0.2)' :
+                            'rgba(59, 130, 246, 0.2)',
+                        color: record.status === 'Shipped' ? '#4ade80' :
+                          (record.status?.includes('Hold') || record.status?.includes('Waiting')) ? '#f87171' :
+                            '#60a5fa',
                         fontWeight: '600'
                       }}>
-                        {(record.pass_fail === 'Y' || record.passFail === 'Y') ? 'PASS' : (record.pass_fail === 'N' || record.passFail === 'N' ? 'FAIL' : 'PENDING')}
+                        {record.status || 'No Status'}
                       </div>
                     </div>
                   ))}

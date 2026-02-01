@@ -43,14 +43,22 @@
   - **Real-Time Collaboration**: Updates from other devices appear instantly on your dashboard.
 - **Sequential Media Uploads**: Robust file handling optimized for field network conditions (prevents timeouts).
 
-## 6. Analytics & Intelligence
+## 6. Workflow & Job Tracking
+- **Detailed Status Tracking**: Move beyond simple "Pending/Complete". Track distinct stages:
+  - "Booked in", "Teardown", "Machine / Welding", "Assembly", "Test", "Paint/Pack", "Shipped".
+  - "Hold / Waiting for info" status flags items needing attention.
+  - "Waiting customer approval" for hold points.
+- **Job Assignment**: Link valves to specific client Jobs or Projects.
+
+## 7. Analytics & Intelligence
 - **Visual Dashboard**:
+  - **WIP Status**: Bar chart showing real-time volume of valves at each workflow stage.
   - **Pass/Fail Rates**: Bar charts comparing performance across OEMs.
   - **Failure Modes**: Pie charts visualizing common failure reasons (e.g., Seat Leaks).
 - **OEM Filtering**: Multi-select dropdown to filter analytics by specific manufacturers.
 - **Maintenance Scheduler**: (Coming Soon) Tools for scheduling and tracking recurring maintenance.
 
-## 7. Advanced Tools
+## 8. Advanced Tools
 - **Deep Linking**: 
   - Use QR codes to bypass the dashboard and open specific valve records immediately.
   - Physical-to-Digital bridge for workshop efficiency.

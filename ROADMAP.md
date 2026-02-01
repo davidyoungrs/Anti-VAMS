@@ -21,8 +21,9 @@ This document outlines the proposed development path for the GVR-VAMS.
 ## Phase 3: Advanced Intelligence & Reporting
 *Features that provide deep value and analytics.*
 
-3. **Analytics & Predictive Maintenance** (Priority: Low - depends on data volume)
-   - **Task**: "Due Soon" scheduler, Failure Mode analysis (already started).
+3. **Analytics & Predictive Maintenance** (Status: **In Progress**)
+   - **Task**: "Due Soon" scheduler, Failure Mode analysis.
+   - **New**: Added **WIP Status Tracking** (Real-time dashboard of valve workflow stages).
    - **Note**: Needs OREDA standardized fields (Failure Mode, Cause) to be effective.
 
 4. **Inventory & Repair Costing** (Priority: Low - depends on business logic)

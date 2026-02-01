@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { WORKFLOW_STATUS_OPTIONS } from '../constants/statusOptions';
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -103,6 +104,41 @@ export const AnalyticsDashboard = ({ records = [] }) => {
 
     }, [filteredRecords]);
 
+    // --- Chart 3: WIP Status (Active Jobs) ---
+    const statusData = useMemo(() => {
+        const counts = {};
+        // Initialize counts for all expected statuses (except Shipped)
+        WORKFLOW_STATUS_OPTIONS.forEach(s => {
+            if (s !== 'Shipped') counts[s] = 0;
+        });
+
+        // Add 'Other' bucket for unknown statuses if needed, or just let them be
+
+        filteredRecords.forEach(r => {
+            if (r.status && r.status !== 'Shipped') {
+                // Determine if status is in our list, exact match
+                if (counts[r.status] !== undefined) {
+                    counts[r.status]++;
+                } else if (r.status) {
+                    // Try to match somewhat vaguely or put in 'Other'? 
+                    // For now, if it's not in the official list, ignore or map?
+                    // Let's assume strict adherence for now
+                }
+            }
+        });
+
+        const labels = Object.keys(counts);
+        return {
+            labels,
+            datasets: [{
+                label: 'Valve Count',
+                data: labels.map(l => counts[l]),
+                backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                borderRadius: 4
+            }]
+        };
+    }, [filteredRecords]);
+
     // Handlers
     const handleSelectionChange = (e) => {
         const selected = Array.from(e.target.selectedOptions, option => option.value);
@@ -188,6 +224,38 @@ export const AnalyticsDashboard = ({ records = [] }) => {
                         </div>
                     </div>
 
+                </div>
+
+                {/* WIP Status Chart */}
+                <div className="glass-panel mt-4" style={{ padding: '1.5rem', background: 'var(--bg-surface)', borderRadius: 'var(--radius-md)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '1rem', position: 'relative' }}>
+                        <h3 style={{ margin: 0 }}>Work In Progress (WIP) Status</h3>
+                        <div style={{
+                            position: 'absolute',
+                            right: 0,
+                            top: 0,
+                            background: 'rgba(59, 130, 246, 0.1)',
+                            color: '#60a5fa',
+                            padding: '0.25rem 0.75rem',
+                            borderRadius: '12px',
+                            fontSize: '0.9rem',
+                            fontWeight: 'bold'
+                        }}>
+                            Total: {statusData.datasets[0].data.reduce((a, b) => a + b, 0)}
+                        </div>
+                    </div>
+                    <div style={{ height: '300px' }}>
+                        <Bar
+                            data={statusData}
+                            options={{
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                scales: {
+                                    y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                                }
+                            }}
+                        />
+                    </div>
                 </div>
             </div>
         </div>

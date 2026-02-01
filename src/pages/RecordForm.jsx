@@ -12,6 +12,7 @@ import { inspectionService } from '../services/inspectionService';
 import { testReportService } from '../services/testReportService';
 import { SignaturePad } from '../components/SignaturePad';
 import { ImageAnnotator } from '../components/ImageAnnotator';
+import { WORKFLOW_STATUS_OPTIONS } from '../constants/statusOptions';
 
 export const RecordForm = ({ initialData, onSave, onNavigate }) => {
     const { role } = useAuth();
@@ -520,6 +521,13 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
                     <h3 className="section-title">Status & Dates</h3>
                     <fieldset disabled={isReadOnly} style={{ border: 'none', padding: 0, margin: 0, display: 'contents' }}>
                         <div className="grid-2">
+                            <Select
+                                label="Workflow Status"
+                                name="status"
+                                value={formData.status}
+                                onChange={handleChange}
+                                options={['', ...WORKFLOW_STATUS_OPTIONS]}
+                            />
                             <Input type="date" label="Date In" name="dateIn" value={formData.dateIn} onChange={handleChange} />
                             <Input type="date" label="Required Date" name="requiredDate" value={formData.requiredDate} onChange={handleChange} />
                             <Input label="Safety Check" name="safetyCheck" value={formData.safetyCheck} onChange={handleChange} />
