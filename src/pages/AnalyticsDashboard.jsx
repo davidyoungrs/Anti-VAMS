@@ -133,7 +133,20 @@ export const AnalyticsDashboard = ({ records = [] }) => {
             datasets: [{
                 label: 'Valve Count',
                 data: labels.map(l => counts[l]),
-                backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.7)',   // Red
+                    'rgba(54, 162, 235, 0.7)',   // Blue
+                    'rgba(255, 206, 86, 0.7)',   // Yellow
+                    'rgba(75, 192, 192, 0.7)',   // Teal
+                    'rgba(153, 102, 255, 0.7)',  // Purple
+                    'rgba(255, 159, 64, 0.7)',   // Orange
+                    'rgba(199, 199, 199, 0.7)',  // Grey
+                    'rgba(83, 102, 255, 0.7)',   // Indigo
+                    'rgba(40, 159, 64, 0.7)',    // Green
+                    'rgba(210, 80, 200, 0.7)',   // Pink
+                    'rgba(100, 200, 255, 0.7)',  // Light Blue
+                    'rgba(200, 200, 50, 0.7)'    // Olive
+                ],
                 borderRadius: 4
             }]
         };
