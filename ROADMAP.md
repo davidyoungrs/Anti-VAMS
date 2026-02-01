@@ -5,7 +5,7 @@ This document outlines the proposed development path for the GVR-VAMS.
 ## Phase 1: Core Architecture (The Foundation)
 *These changes affect the data structure and should be done first to avoid massive refactoring later.*
 
-1. **Project / Job Management Layer** (Priority: High)
+1. **Project / Job Management Layer** (Status: **Complete**)
    - **Why**: Currently, valves are a flat list. Real work happens in "Jobs" (e.g., "Shutdown 2026").
    - **Task**: Create `jobs` table. Link `valves` to `jobs`.
    - **Benefit**: Batch reporting, progress tracking (e.g., "Job #101 is 80% complete").
