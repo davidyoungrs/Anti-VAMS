@@ -197,6 +197,9 @@ export const Layout = ({ children, activeView, onNavigate, userRole }) => {
           </button>
           <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', opacity: 0.8 }}>
             Copyright © 2026 TheValve.pro. All rights reserved.
+            <div style={{ marginTop: '0.2rem', fontFamily: 'monospace' }}>
+              Rev: {typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'Dev'}
+            </div>
           </div>
         </div>
       </aside >
