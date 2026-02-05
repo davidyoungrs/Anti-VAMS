@@ -18,6 +18,11 @@ The following open-source software libraries are used under their respective lic
 | **QR Code** | [node-qrcode](https://github.com/soldair/node-qrcode) | MIT |
 | **Digital Signatures** | [react-signature-canvas](https://github.com/agilgur5/react-signature-canvas) | MIT |
 | **Image Annotation** | [react-sketch-canvas](https://github.com/vinothpandian/react-sketch-canvas) | MIT |
+| **Cryptography** | [CryptoJS](https://github.com/brix/crypto-js) | MIT |
+| **Local Storage** | [idb](https://github.com/jakearchibald/idb) | ISC |
+| **Markdown Rendering** | [React Markdown](https://github.com/remarkjs/react-markdown) | MIT |
+| **File Export** | [FileSaver.js](https://github.com/eligrey/FileSaver.js) | MIT |
+| **Offline PWA** | [Vite Plugin PWA](https://vite-pwa-org.netlify.app/) | MIT |
 
 ## Data Sources & Content
 
