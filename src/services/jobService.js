@@ -195,8 +195,25 @@ export const jobService = {
                     .select('*')
                     .eq('job_id', jobId);
 
+                console.log('[JobDebug] getValvesByJobId requested for:', jobId);
+                console.log('[JobDebug] Supabase response:', { dataPreview: data?.length, error });
+
                 if (!error && data) {
-                    return data;
+                    // Normalize to camelCase to match local structure and UI expectations
+                    return data.map(v => ({
+                        ...v,
+                        id: v.id,
+                        serialNumber: v.serial_number,
+                        description: v.description, // description is usually same
+                        location: v.location,        // location is usually same
+                        jobId: v.job_id,
+                        customerId: v.customer_id,
+                        status: v.status,
+                        // Add other fields as needed based on schema
+                        createdAt: v.created_at,
+                        updatedAt: v.updated_at,
+                        // Spread mostly keeps custom fields, but we ensure core ones are mapped
+                    }));
                 }
             } catch (e) {
                 console.warn('Failed to fetch job valves from cloud', e);

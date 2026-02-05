@@ -32,6 +32,7 @@ import userGuideContent from '../USER_GUIDE.md?raw';
 import roadmapContent from '../ROADMAP.md?raw';
 import legalContent from '../LEGAL_TERMS.md?raw';
 import licensesContent from '../LICENSES.md?raw';
+import securityContent from '../SECURITY_FEATURES.md?raw';
 
 function App() {
   const { user, role, allowedCustomers, signOut } = useAuth();
@@ -504,6 +505,8 @@ function App() {
       case 'admin':
         if (!['admin', 'super_user'].includes(role)) return <div className="glass-panel" style={{ padding: '2rem' }}><h2>Access Denied</h2><p>You do not have permission to view this page.</p></div>;
         return <AdminPanel onNavigate={handleNavigate} />;
+      case 'security':
+        return <MarkdownPage title="Security Features" content={securityContent} />;
       case 'user-guide':
         return <MarkdownPage title="User Guide" content={userGuideContent} />;
       case 'features':
