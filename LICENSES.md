@@ -1,37 +1,83 @@
-# Licenses & Attribution
+# Open Source Licenses & Attribution
 
-The **Global Valve Record** system creates value by integrating best-in-class open source technologies and data sources. We are committed to full legal compliance and moral attribution.
+The Global Valve Record (GVR-VAMS) application is built using the following open source software. We are grateful to the authors and contributors of these projects.
 
-## Software Libraries
+## Core Frameworks
 
-The following open-source software libraries are used under their respective licenses:
+### React & React DOM
+*   **License**: MIT License
+*   **Copyright**: (c) Facebook, Inc. and its affiliates.
+*   **Source**: [https://reactjs.org/](https://reactjs.org/)
 
-| Component | Library | License |
-| :--- | :--- | :--- |
-| **User Interface** | [React](https://react.dev/) | MIT |
-| **Build Tooling** | [Vite](https://vitejs.dev/) | MIT |
-| **Cloud Database** | [Supabase](https://supabase.com/) | MIT (Client) |
-| **PDF Generation** | [jsPDF](https://github.com/parallax/jsPDF) | MIT |
-| **Charts & Analytics** | [Chart.js](https://www.chartjs.org/) | MIT |
-| **Mapping Engine** | [Leaflet](https://leafletjs.com/) | BSD-2-Clause |
-| **OCR Scanner** | [Tesseract.js](https://tesseract.projectnaptha.com/) | Apache 2.0 |
-| **QR Code** | [node-qrcode](https://github.com/soldair/node-qrcode) | MIT |
-| **Digital Signatures** | [react-signature-canvas](https://github.com/agilgur5/react-signature-canvas) | MIT |
-| **Image Annotation** | [react-sketch-canvas](https://github.com/vinothpandian/react-sketch-canvas) | MIT |
-| **Cryptography** | [CryptoJS](https://github.com/brix/crypto-js) | MIT |
-| **Local Storage** | [idb](https://github.com/jakearchibald/idb) | ISC |
-| **Markdown Rendering** | [React Markdown](https://github.com/remarkjs/react-markdown) | MIT |
-| **File Export** | [FileSaver.js](https://github.com/eligrey/FileSaver.js) | MIT |
-| **Offline PWA** | [Vite Plugin PWA](https://vite-pwa-org.netlify.app/) | MIT |
+### Vite
+*   **License**: MIT License
+*   **Copyright**: (c) 2019-present Evan You & Vite Contributors
+*   **Source**: [https://vitejs.dev/](https://vitejs.dev/)
 
-## Data Sources & Content
+---
 
-We utilize external data services for mapping features. These require specific attribution:
+## Data & Backend
 
-*   **OpenStreetMap**: Map data © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright). Used under the **ODbL** (Open Data Commons Open Database License).
-*   **Esri World Imagery**: Satellite imagery courtesy of [Esri](https://www.esri.com/), i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EBP, and the GIS User Community.
-*   **Fonts**: This application uses system fonts ('Inter' fallback) which are subject to the OS vendor's license (Apple/Microsoft/Google) but require no additional distribution license.
+### Supabase JS
+*   **License**: MIT License
+*   **Copyright**: (c) 2020 Supabase
+*   **Source**: [https://supabase.com/](https://supabase.com/)
 
-## Moral Rights
+### Crypto-JS
+*   **License**: MIT License
+*   **Copyright**: (c) 2009-2013 Jeff Mott, (c) 2013-2016 Evan Vosberg
+*   **Purpose**: Used for client-side encryption of sensitive data.
 
-We assert the moral right to be identified as the authors of the "Anti-VAMS / GVR" proprietary code layer, while fully acknowledging the giants upon whose shoulders we stand.
+### IDB (IndexedDB)
+*   **License**: ISC License
+*   **Copyright**: (c) 2016 Jake Archibald
+*   **Purpose**: Local storage wrapper for offline capability.
+
+---
+
+## UI Components & Visualization
+
+### Leaflet
+*   **License**: BSD 2-Clause "Simplified" License
+*   **Copyright**: (c) 2010-2023 Vladimir Agafonkin, (c) 2010-2011 CloudMade
+*   **Source**: [https://leafletjs.com/](https://leafletjs.com/)
+
+### React Leaflet
+*   **License**: MIT License
+*   **Copyright**: (c) 2016-present Paul Le Corguillé
+
+### Chart.js & React-Chartjs-2
+*   **License**: MIT License
+*   **Copyright**: (c) 2014-2023 Chart.js Contributors
+*   **Source**: [https://www.chartjs.org/](https://www.chartjs.org/)
+
+### React Markdown
+*   **License**: MIT License
+*   **Copyright**: (c) 2015 Titus Wormer
+
+---
+
+## Utilities
+
+### jsPDF & jsPDF-AutoTable
+*   **License**: MIT License
+*   **Copyright**: (c) 2010-2021 James Hall, (c) 2014 Simon Bengtsson
+*   **Purpose**: Generating PDF reports.
+
+### Tesseract.js
+*   **License**: Apache License 2.0
+*   **Copyright**: (c) 2015-present Tesseract.js Contributors
+*   **Purpose**: Optical Character Recognition (OCR) for data sheets.
+
+### File Saver
+*   **License**: MIT License
+*   **Copyright**: (c) 2016 Eli Grey
+
+### JSZip
+*   **License**: MIT License
+*   **Copyright**: (c) 2009-2016 Stuart Knightley
+
+---
+
+## Disclaimer
+This software is provided "as is", without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose and noninfringement. In no event shall the authors or copyright holders be liable for any claim, damages or other liability, whether in an action of contract, tort or otherwise, arising from, out of or in connection with the software or the use or other dealings in the software.

@@ -33,9 +33,10 @@ export const Layout = ({ children, activeView, onNavigate, userRole }) => {
         borderRight: '1px solid var(--border-color)',
         display: 'flex',
         flexDirection: 'column',
-        zIndex: 10
+        zIndex: 10,
+        overflow: 'hidden' // Ensure sidebar doesn't scroll, only nav does
       }}>
-        <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
           <img src="/logo.png" alt="Logo" style={{ height: '48px', width: 'auto' }} />
           <h1 style={{
             margin: 0,
@@ -49,7 +50,7 @@ export const Layout = ({ children, activeView, onNavigate, userRole }) => {
           </h1>
         </div>
 
-        <nav style={{ flex: 1, padding: '1rem' }}>
+        <nav style={{ flex: 1, padding: '1rem', overflowY: 'auto', overflowX: 'hidden' }}>
           <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
             <li style={{ marginBottom: '0.5rem' }}>
               <a onClick={() => onNavigate('dashboard')} style={getItemStyle('dashboard')}>
@@ -171,7 +172,7 @@ export const Layout = ({ children, activeView, onNavigate, userRole }) => {
           </ul>
         </nav>
 
-        <div style={{ padding: '1rem', borderTop: '1px solid var(--border-color)' }}>
+        <div style={{ padding: '1rem', borderTop: '1px solid var(--border-color)', flexShrink: 0 }}>
           <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
             User: {userRole ? userRole.toUpperCase() : 'UNKNOWN'}
           </div>

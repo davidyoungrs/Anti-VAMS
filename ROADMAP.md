@@ -62,16 +62,6 @@ This document outlines the proposed development path for the GVR-VAMS.
 8. **Multi-Factor Authentication (MFA)** (Priority: Critical for Admins)
    - **Why**: ISO 27002 9.4.3 (Password Management) & 24.1 (MFA). Brute force protection.
    - **Task**: Enable and enforce MFA (TOTP) for all 'Admin' and 'Inspector' roles.
-
-9.  **Comprehensive Audit Logs (SIEM Ready)** (Status: **Completed**)
-    - **Why**: ISO 27002 8.15 (Logging).
-    - **Task**: Expanded logging to include *failed login attempts*, *privileged view access*, and *configuration changes* with CSV export capability.
-    - **Note**: Exportable to external SIEM systems via CSV.
-
-10. **Session Management (Inactivity Timeout)** (Status: **Completed**)
-    - **Why**: ISO 27002 8.17 (Clock Synchronization) & Session control.
-    - **Task**: Implemented client-side inactivity timer to auto-logout users after 10 minutes of idle time.
-
 ## ISO/IEC 27032 Cybersecurity Guidelines
 *Focus on Cyberspace Security, supply chain, and external attack surface.*
 
@@ -83,9 +73,6 @@ This document outlines the proposed development path for the GVR-VAMS.
     - **Why**: Standardizes how ethical hackers communicate security findings.
     - **Task**: Publish a `security.txt` file at `/.well-known/security.txt` detailing contacts and disclosure guidelines.
 
-13. **Incident Response Playbook Integration** (Status: **Completed**)
-    - **Why**: ISO 27032 13.3 (Incident Management).
-    - **Task**: Created "Emergency Mode" feature (global "ReadOnly" switch) to contain active threats.
 
 ## US Federal & Defense Compliance (NIST 800-53 / CMMC)
 *Strict controls for systems handling CUI (Controlled Unclassified Information).*
@@ -124,9 +111,6 @@ This document outlines the proposed development path for the GVR-VAMS.
     - **Why**: NCA ECC & QCB often require audit logs to be retained for 12 months minimum.
     - **Task**: Implement automated "Cold Storage" offloading of logs to low-cost archival (S3 Glacier) to meet retention mandates without database bloat.
 
-21. **NTP Time Synchronization Assurance** (Status: **Completed**)
-    - **Why**: QCB/NCA mandate accurate timestamping for forensic validity.
-    **Task**: Verified cloud server clock sources and exposed "Last Sync Status" & Drift in the Admin Panel security tab.
 
 ## China Cybersecurity Law & MLPS 2.0 Compliance
 *Strict national controls for operations within mainland China (GB/T Standards).*
