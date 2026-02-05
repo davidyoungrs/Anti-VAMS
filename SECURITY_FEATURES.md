@@ -51,6 +51,20 @@ The GVS-VAMS (Valve Asset Management System) is engineered with a **Defense-in-D
 *   **Offline-First Design:** The security model is designed to work without constant server connection.
 *   **Encrypted Sync:** When connectivity is restored, the `syncLocalToCloud` process safely transmits data over separate channels, handling conflict resolution (server-wins or latest-wins logic) while maintaining the integrity of the encrypted local store.
 
+
+## 6. Incident Response & Forensic Assurance (ISO 27032)
+**Justification:** In the event of a security breach or active threat, rapid containment and forensic integrity are critical.
+
+*   **Emergency Mode (Kill Switch):**
+    *   **Global Read-Only Lock:** A super-user controlled "Emergency Mode" instantly freezes all write operations across the entire system.
+    *   **Real-Time Enforcement:** The state is pushed instantly to all connected clients via WebSockets, blocking `INSERT`, `UPDATE`, and `DELETE` actions at both the UI and Service layers.
+    *   **Purpose:** Prevents data exfiltration or tampering while an attack is being investigated.
+
+*   **Forensic Time Assurance (NTP):**
+    *   **Server-Side Timestamping:** All critical actions rely on the authoritative database server time, not the potentially manipulated client device clock.
+    *   **Clock Drift Detection:** The Admin Panel continuously monitors the drift between the client's local clock and the secure server timestamp.
+    *   **Validity Status:** Visual indicators alert administrators if client clocks drift beyond acceptable forensic limits (< 2 seconds), ensuring audit logs remain admissible.
+
 ---
 
 ## Conclusion

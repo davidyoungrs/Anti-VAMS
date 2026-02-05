@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient';
 import { dbService } from './db';
 import { securityService } from './security';
+import { systemSettingsService } from './systemSettingsService';
 
 const STORAGE_KEY = 'global_valve_records'; // Legacy key for migration
 
@@ -212,6 +213,9 @@ export const storageService = {
     },
 
     save: async (record) => {
+        if (systemSettingsService.isEmergencyMode()) {
+            throw new Error("System is in Emergency Mode. Write operations are disabled.");
+        }
         let finalRecord = { ...record };
 
         // 1. Prepare ID and Metadata
@@ -409,6 +413,9 @@ export const storageService = {
     },
 
     delete: async (id) => {
+        if (systemSettingsService.isEmergencyMode()) {
+            throw new Error("System is in Emergency Mode. Write operations are disabled.");
+        }
         // Soft Delete: Set deleted_at timestamp
         const deletedAt = new Date().toISOString();
 
@@ -450,6 +457,9 @@ export const storageService = {
     },
 
     restore: async (id) => {
+        if (systemSettingsService.isEmergencyMode()) {
+            throw new Error("System is in Emergency Mode. Write operations are disabled.");
+        }
         if (supabase) {
             try {
                 const { error } = await supabase
@@ -543,6 +553,9 @@ export const storageService = {
     },
 
     syncLocalToCloud: async () => {
+        if (systemSettingsService.isEmergencyMode()) {
+            return { error: 'System is in Emergency Mode. Sync is disabled.' };
+        }
         if (!supabase) return { error: 'Supabase not configured' };
 
         let localRecords = [];

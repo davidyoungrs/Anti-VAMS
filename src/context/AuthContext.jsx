@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../services/supabaseClient';
+import { useInactivityTimer } from '../hooks/useInactivityTimer';
 
 const AuthContext = createContext({});
 
@@ -82,6 +83,9 @@ export const AuthProvider = ({ children }) => {
             clearTimeout(timeoutId);
         };
     }, []);
+
+    // Session Management: Auto-logout after 10 minutes (600,000 ms) of inactivity
+
 
     const fetchRole = async (userId, retries = 2) => {
         // Log the URL we are trying to connect to (helpful for debugging)
@@ -230,6 +234,9 @@ export const AuthProvider = ({ children }) => {
         if (!supabase) return { error: { message: "Supabase not configured" } };
         return supabase.auth.signUp({ email, password });
     };
+
+    // Session Management: Auto-logout after 10 minutes (600,000 ms) of inactivity
+    useInactivityTimer(600000, signOut, !!user);
 
     const value = {
         user,

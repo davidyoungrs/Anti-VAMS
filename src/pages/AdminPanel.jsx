@@ -4,6 +4,7 @@ import { storageService } from '../services/storage';
 import { supabase } from '../services/supabaseClient';
 import { inspectionService } from '../services/inspectionService';
 import { testReportService } from '../services/testReportService';
+import { systemSettingsService } from '../services/systemSettingsService';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 
@@ -12,11 +13,13 @@ import { saveAs } from 'file-saver';
 
 export const AdminPanel = ({ onNavigate }) => {
     const { role } = useAuth();
-    const [activeTab, setActiveTab] = useState('trash'); // 'trash' | 'history' | 'users'
+    const [activeTab, setActiveTab] = useState('trash'); // 'trash' | 'history' | 'users' | 'security'
     const [deletedRecords, setDeletedRecords] = useState([]);
     const [history, setHistory] = useState([]);
     const [currentRecords, setCurrentRecords] = useState([]);
     const [users, setUsers] = useState([]);
+    const [emergencyMode, setEmergencyMode] = useState(false);
+    const [timeData, setTimeData] = useState(null);
     const [loading, setLoading] = useState(false);
 
 
@@ -55,6 +58,15 @@ export const AdminPanel = ({ onNavigate }) => {
                 }
                 setUsers(data || []);
 
+                setUsers(data || []);
+            } else if (activeTab === 'security') {
+                // Initialize settings service if needed
+                await systemSettingsService.init();
+                setEmergencyMode(systemSettingsService.isEmergencyMode());
+
+                // Fetch Time Sync Status
+                const tData = await systemSettingsService.getServerTime();
+                setTimeData(tData);
             } else {
                 // Fetch both history and current records for comparison
                 const [historyData, allRecords] = await Promise.all([
@@ -326,6 +338,22 @@ export const AdminPanel = ({ onNavigate }) => {
                 )}
                 {role === 'super_user' && (
                     <button
+                        onClick={() => setActiveTab('security')}
+                        style={{
+                            padding: '1rem 2rem',
+                            background: activeTab === 'security' ? 'var(--primary)' : 'var(--bg-card)',
+                            color: activeTab === 'security' ? 'white' : 'var(--text-muted)',
+                            border: 'none',
+                            borderRadius: 'var(--radius-md)',
+                            fontWeight: 'bold',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        🛡️ Security Controls
+                    </button>
+                )}
+                {role === 'super_user' && (
+                    <button
                         onClick={handleBulkDownload}
                         style={{
                             padding: '1rem 2rem',
@@ -550,6 +578,123 @@ export const AdminPanel = ({ onNavigate }) => {
                                         ))}
                                     </tbody>
                                 </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'security' && (
+                        <div>
+                            <h3 style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem', marginBottom: '1rem', color: '#fca5a5' }}>
+                                🚨 Incident Response Controls
+                            </h3>
+
+                            <div className="glass-panel" style={{
+                                padding: '1.5rem',
+                                border: '1px solid #ef4444',
+                                background: 'rgba(239, 68, 68, 0.05)',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center'
+                            }}>
+                                <div>
+                                    <h4 style={{ margin: '0 0 0.5rem 0', color: '#f87171', fontSize: '1.2rem' }}>⚠️ Emergency Mode (Read-Only)</h4>
+                                    <p style={{ margin: 0, color: 'var(--text-muted)', maxWidth: '600px' }}>
+                                        Enabling this mode will <strong>IMMEDIATELY FREEZE</strong> all database write operations for ALL users.
+                                        Use this only to contain an active security breach or threat.
+                                    </p>
+                                </div>
+                                <div style={{ textAlign: 'right' }}>
+                                    <label className="switch" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={emergencyMode}
+                                            onChange={async (e) => {
+                                                const newValue = e.target.checked;
+                                                const promptMsg = newValue
+                                                    ? "🔴 ACTIVATE EMERGENCY MODE? This will block all writes immediately. Are you absolutely sure?"
+                                                    : "🟢 Deactivate Emergency Mode? Normal operations will resume.";
+
+                                                if (window.confirm(promptMsg)) {
+                                                    try {
+                                                        await systemSettingsService.setEmergencyMode(newValue);
+                                                        setEmergencyMode(newValue);
+                                                        alert(newValue ? "Emergency Mode ACTIVATED." : "Emergency Mode DEACTIVATED.");
+                                                    } catch (err) {
+                                                        alert("Failed to update status: " + err.message);
+                                                    }
+                                                }
+                                            }}
+                                            style={{ width: '2rem', height: '2rem' }} // basic styling fallback
+                                        />
+                                        <span style={{
+                                            fontWeight: 'bold',
+                                            color: emergencyMode ? '#ef4444' : '#10b981',
+                                            fontSize: '1.2rem'
+                                        }}>
+                                            {emergencyMode ? 'ACTIVATED' : 'INACTIVE'}
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            {/* Time Assurance Panel */}
+                            <h3 style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem', marginBottom: '1rem', marginTop: '2rem' }}>
+                                ⏰ Forensic Time Assurance (NTP/Server Sync)
+                            </h3>
+                            <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
+                                <div style={{ flex: 1, minWidth: '300px' }}>
+                                    <h4 style={{ margin: '0 0 1rem 0' }}>Clock Status</h4>
+                                    {timeData ? (
+                                        (() => {
+                                            if (timeData.error) return <div style={{ color: '#ef4444' }}>Error: {timeData.error.message || 'Check connection'}</div>;
+
+                                            const clientNow = new Date();
+                                            // serverTime is the time AT THE SERVER when request was processed.
+                                            // We add latency to estimate what server time is NOW.
+                                            // drift = (ClientNow) - (ServerTime + Latency)
+                                            const estimatedServerNow = new Date(timeData.serverTime.getTime() + timeData.latency);
+                                            const driftMs = Math.abs(clientNow.getTime() - estimatedServerNow.getTime());
+                                            const isSync = driftMs < 2000; // 2 seconds tolerance
+
+                                            return (
+                                                <div>
+                                                    <div style={{
+                                                        display: 'inline-block',
+                                                        padding: '0.5rem 1rem',
+                                                        borderRadius: '4px',
+                                                        background: isSync ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                                                        color: isSync ? '#10b981' : '#ef4444',
+                                                        fontWeight: 'bold',
+                                                        marginBottom: '1rem'
+                                                    }}>
+                                                        {isSync ? '✅ SYNCHRONIZED' : '⚠️ DRIFT DETECTED'}
+                                                    </div>
+                                                    <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '0.5rem 1rem', fontSize: '0.9rem' }}>
+                                                        <div style={{ color: 'var(--text-muted)' }}>Server Time (UTC):</div>
+                                                        <div style={{ fontFamily: 'monospace' }}>{timeData.serverTime.toISOString()}</div>
+
+                                                        <div style={{ color: 'var(--text-muted)' }}>Client Time (ISO):</div>
+                                                        <div style={{ fontFamily: 'monospace' }}>{clientNow.toISOString()}</div>
+
+                                                        <div style={{ color: 'var(--text-muted)' }}>Network Latency:</div>
+                                                        <div>{Math.round(timeData.latency)} ms</div>
+
+                                                        <div style={{ color: 'var(--text-muted)' }}>Clock Drift:</div>
+                                                        <div style={{ color: isSync ? 'inherit' : '#ef4444', fontWeight: 'bold' }}>
+                                                            {driftMs} ms
+                                                        </div>
+                                                    </div>
+                                                    <p style={{ marginTop: '1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                                                        * Accurate timestamping is required for forensic auditing (ISO 27032).
+                                                        If drift is high, check system clock settings.
+                                                    </p>
+                                                </div>
+                                            );
+                                        })()
+                                    ) : (
+                                        <div>Loading Time Data...</div>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     )}

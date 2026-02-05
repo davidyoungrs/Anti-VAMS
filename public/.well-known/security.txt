@@ -1,4 +1,4 @@
-Contact: mailto:security@thevalve.pro
+Contact: mailto:david.young@reallysimpelapps.compro
 Expires: 2027-01-01T00:00:00.000Z
 Preferred-Languages: en
 Policy: https://thevalve.pro/security-policy
