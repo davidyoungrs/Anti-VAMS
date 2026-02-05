@@ -5,6 +5,8 @@ import { supabase } from '../services/supabaseClient';
 import { inspectionService } from '../services/inspectionService';
 import { testReportService } from '../services/testReportService';
 import { systemSettingsService } from '../services/systemSettingsService';
+
+import { auditService } from '../services/auditService';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 
@@ -13,13 +15,14 @@ import { saveAs } from 'file-saver';
 
 export const AdminPanel = ({ onNavigate }) => {
     const { role } = useAuth();
-    const [activeTab, setActiveTab] = useState('trash'); // 'trash' | 'history' | 'users' | 'security'
+    const [activeTab, setActiveTab] = useState('trash'); // 'trash' | 'history' | 'users' | 'security' | 'logs'
     const [deletedRecords, setDeletedRecords] = useState([]);
     const [history, setHistory] = useState([]);
     const [currentRecords, setCurrentRecords] = useState([]);
     const [users, setUsers] = useState([]);
     const [emergencyMode, setEmergencyMode] = useState(false);
     const [timeData, setTimeData] = useState(null);
+    const [auditLogs, setAuditLogs] = useState([]);
     const [loading, setLoading] = useState(false);
 
 
@@ -67,6 +70,12 @@ export const AdminPanel = ({ onNavigate }) => {
                 // Fetch Time Sync Status
                 const tData = await systemSettingsService.getServerTime();
                 setTimeData(tData);
+
+                // Log Admin Access to Security Panel
+                await auditService.logEvent('ADMIN_ACCESS', { view: 'Security Controls' }, 'WARNING');
+            } else if (activeTab === 'logs') {
+                const { data } = await auditService.getLogs(200);
+                setAuditLogs(data || []);
             } else {
                 // Fetch both history and current records for comparison
                 const [historyData, allRecords] = await Promise.all([
@@ -252,7 +261,9 @@ export const AdminPanel = ({ onNavigate }) => {
                                             const blob = await res.blob();
                                             photoFolder.file(pName, blob);
                                         }
-                                    } catch (perr) { }
+                                    } catch (perr) {
+                                        console.warn("Failed to fetch inspection photo", perr);
+                                    }
                                 }
                             }
                         }
@@ -350,6 +361,22 @@ export const AdminPanel = ({ onNavigate }) => {
                         }}
                     >
                         🛡️ Security Controls
+                    </button>
+                )}
+                {role === 'super_user' && (
+                    <button
+                        onClick={() => setActiveTab('logs')}
+                        style={{
+                            padding: '1rem 2rem',
+                            background: activeTab === 'logs' ? 'var(--primary)' : 'var(--bg-card)',
+                            color: activeTab === 'logs' ? 'white' : 'var(--text-muted)',
+                            border: 'none',
+                            borderRadius: 'var(--radius-md)',
+                            fontWeight: 'bold',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        📋 Audit Logs
                     </button>
                 )}
                 {role === 'super_user' && (
@@ -618,6 +645,16 @@ export const AdminPanel = ({ onNavigate }) => {
                                                     try {
                                                         await systemSettingsService.setEmergencyMode(newValue);
                                                         setEmergencyMode(newValue);
+                                                        await systemSettingsService.setEmergencyMode(newValue);
+                                                        setEmergencyMode(newValue);
+
+                                                        // Log Config Change
+                                                        await auditService.logEvent(
+                                                            'CONFIG_CHANGE',
+                                                            { setting: 'emergency_mode', value: newValue, reason: 'Admin Manual Toggle' },
+                                                            'CRITICAL'
+                                                        );
+
                                                         alert(newValue ? "Emergency Mode ACTIVATED." : "Emergency Mode DEACTIVATED.");
                                                     } catch (err) {
                                                         alert("Failed to update status: " + err.message);
@@ -695,6 +732,89 @@ export const AdminPanel = ({ onNavigate }) => {
                                         <div>Loading Time Data...</div>
                                     )}
                                 </div>
+                            </div>
+                        </div>
+                    )}
+
+
+                    {activeTab === 'logs' && (
+                        <div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem' }}>
+                                <h3 style={{ margin: 0 }}>
+                                    Security Audit Logs (SIEM Ready)
+                                </h3>
+                                <button
+                                    onClick={() => auditService.exportLogs()}
+                                    className="btn-secondary"
+                                    style={{
+                                        background: 'var(--bg-surface)',
+                                        border: '1px solid var(--primary)',
+                                        color: 'var(--primary)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.5rem'
+                                    }}
+                                >
+                                    📥 Export CSV
+                                </button>
+                            </div>
+
+                            <div style={{ overflowX: 'auto', maxHeight: '600px', overflowY: 'auto' }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                                    <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-card)', zIndex: 1 }}>
+                                        <tr style={{ textAlign: 'left', borderBottom: '2px solid var(--border-color)' }}>
+                                            <th style={{ padding: '1rem' }}>Timestamp</th>
+                                            <th style={{ padding: '1rem' }}>Severity</th>
+                                            <th style={{ padding: '1rem' }}>Action</th>
+                                            <th style={{ padding: '1rem' }}>User / Email</th>
+                                            <th style={{ padding: '1rem' }}>Details</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {auditLogs.length === 0 ? (
+                                            <tr><td colSpan="5" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>No logs found.</td></tr>
+                                        ) : (
+                                            auditLogs.map(log => (
+                                                <tr key={log.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                                    <td style={{ padding: '0.75rem', fontFamily: 'monospace', color: 'var(--text-muted)' }}>
+                                                        {new Date(log.timestamp).toLocaleString()}
+                                                    </td>
+                                                    <td style={{ padding: '0.75rem' }}>
+                                                        <span style={{
+                                                            padding: '0.25rem 0.5rem',
+                                                            borderRadius: '4px',
+                                                            fontWeight: 'bold',
+                                                            fontSize: '0.75rem',
+                                                            background: log.severity === 'CRITICAL' ? 'rgba(239, 68, 68, 0.2)' :
+                                                                log.severity === 'WARNING' ? 'rgba(245, 158, 11, 0.2)' :
+                                                                    'rgba(59, 130, 246, 0.1)',
+                                                            color: log.severity === 'CRITICAL' ? '#ef4444' :
+                                                                log.severity === 'WARNING' ? '#f59e0b' :
+                                                                    '#60a5fa'
+                                                        }}>
+                                                            {log.severity}
+                                                        </span>
+                                                    </td>
+                                                    <td style={{ padding: '0.75rem', fontWeight: 'bold' }}>{log.action}</td>
+                                                    <td style={{ padding: '0.75rem' }}>{log.email || log.user_id || 'System'}</td>
+                                                    <td style={{ padding: '0.75rem' }}>
+                                                        <pre style={{
+                                                            margin: 0,
+                                                            fontSize: '0.75rem',
+                                                            background: 'rgba(0,0,0,0.3)',
+                                                            padding: '0.5rem',
+                                                            borderRadius: '4px',
+                                                            maxWidth: '300px',
+                                                            overflowX: 'auto'
+                                                        }}>
+                                                            {JSON.stringify(log.details, null, 2)}
+                                                        </pre>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     )}

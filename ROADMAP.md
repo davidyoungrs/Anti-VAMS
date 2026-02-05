@@ -62,14 +62,11 @@ This document outlines the proposed development path for the GVR-VAMS.
 8. **Multi-Factor Authentication (MFA)** (Priority: Critical for Admins)
    - **Why**: ISO 27002 9.4.3 (Password Management) & 24.1 (MFA). Brute force protection.
    - **Task**: Enable and enforce MFA (TOTP) for all 'Admin' and 'Inspector' roles.
-8.  **Multi-Factor Authentication (MFA)** (Priority: Critical for Admins)
-    - **Why**: ISO 27002 9.4.3 (Password Management) & 24.1 (MFA). Brute force protection.
-    - **Task**: Enable and enforce MFA (TOTP) for all 'Admin' and 'Inspector' roles.
 
-9.  **Comprehensive Audit Logs (SIEM Ready)** (Priority: High)
+9.  **Comprehensive Audit Logs (SIEM Ready)** (Status: **Completed**)
     - **Why**: ISO 27002 8.15 (Logging).
-    - **Task**: Expand logging to include *failed login attempts*, *privileged view access*, and *configuration changes*.
-    - **Note**: Must be exportable to external SIEM systems.
+    - **Task**: Expanded logging to include *failed login attempts*, *privileged view access*, and *configuration changes* with CSV export capability.
+    - **Note**: Exportable to external SIEM systems via CSV.
 
 10. **Session Management (Inactivity Timeout)** (Status: **Completed**)
     - **Why**: ISO 27002 8.17 (Clock Synchronization) & Session control.

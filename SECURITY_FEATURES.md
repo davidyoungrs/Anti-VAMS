@@ -65,6 +65,26 @@ The GVS-VAMS (Valve Asset Management System) is engineered with a **Defense-in-D
     *   **Clock Drift Detection:** The Admin Panel continuously monitors the drift between the client's local clock and the secure server timestamp.
     *   **Validity Status:** Visual indicators alert administrators if client clocks drift beyond acceptable forensic limits (< 2 seconds), ensuring audit logs remain admissible.
 
+
+## 7. Comprehensive Audit Logging (SIEM Ready)
+**Justification:** ISO 27002 8.15 mandates the logging of events, exceptions, and other security-relevant information.
+
+*   **Centralized Logging:**
+    *   **Audit Trail:** The `audit_logs` table captures all critica security events including failed authentication attempts, privileged access (Admin Panel viewing), and system configuration changes (Emergency Mode toggles).
+    *   **Granular Details:** Logs capture strict metadata: Severity (INFO/WARNING/CRITICAL), Actor (User ID/Email), Action Type, and Timestamp.
+*   **SIEM Integration:**
+    *   **Export Capability:** Administrators can export logs in standard CSV format for ingest into external Security Information and Event Management (SIEM) systems (e.g., Splunk, ELK).
+    *   **Zero-Trust Logging:** Even unauthenticated failures are logged via secure RPC channels, ensuring no attack vector goes unnoticed.
+
+
+## 8. Session Security (ISO 27002 8.17)
+**Justification:** Limiting session duration reduces the window of opportunity for session hijacking.
+
+*   **Inactivity Timeout:**
+    *   **Client-Side Timer:** Determines user idleness based on mouse/keyboard activity.
+    *   **Auto-Logout:** Automatically signs out users after 10 minutes of inactivity, clearing local session storage and redirecting to the login portal.
+    *   **State Clean:** Ensures no sensitive data remnants persist in browser memory or storage after timeout.
+
 ---
 
 ## Conclusion

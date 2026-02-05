@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
+import { auditService } from '../services/auditService';
+
 export const Login = () => {
     const { signIn } = useAuth();
     const [email, setEmail] = useState('');
@@ -14,10 +16,16 @@ export const Login = () => {
         setError(null);
 
         try {
-            const { error } = await signIn(email, password);
-            if (error) throw error;
+            const { error: err } = await signIn(email, password);
+            if (err) throw err;
+
+            // Log Success
+            await auditService.logEvent('LOGIN_SUCCESS', { method: 'password' }, 'INFO', email);
         } catch (err) {
+            console.error(err);
             setError(err.message);
+            // Log Failure
+            await auditService.logEvent('LOGIN_FAILED', { error: err.message }, 'WARNING', email);
         } finally {
             setLoading(false);
         }
