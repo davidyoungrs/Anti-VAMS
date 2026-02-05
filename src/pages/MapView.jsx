@@ -115,7 +115,7 @@ function SearchControl({ onLocationFound }) {
     );
 }
 
-export function MapView({ records, onRecordClick, onLocationSelect, hasUnsavedChanges, onSave }) {
+export function MapView({ records, onRecordClick, onLocationSelect, hasUnsavedChanges, onSave, onNavigate }) {
     const [mapType, setMapType] = React.useState('standard');
     const [userLocation, setUserLocation] = React.useState(null);
     const [isFollowing, setIsFollowing] = React.useState(false);
@@ -222,6 +222,15 @@ export function MapView({ records, onRecordClick, onLocationSelect, hasUnsavedCh
                             key={record.id}
                             position={[record.latitude, record.longitude]}
                             icon={getMarkerIcon(record.passFail || record.pass_fail)}
+                            draggable={!!onLocationSelect}
+                            eventHandlers={{
+                                dragend: (e) => {
+                                    if (onLocationSelect) {
+                                        const { lat, lng } = e.target.getLatLng();
+                                        onLocationSelect({ lat, lng });
+                                    }
+                                }
+                            }}
                         >
                             <Popup maxWidth={250}>
                                 <div style={{ padding: '5px', minWidth: '200px' }}>
