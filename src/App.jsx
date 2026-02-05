@@ -36,13 +36,30 @@ import securityContent from '../SECURITY_FEATURES.md?raw';
 
 function App() {
   const { user, role, allowedCustomers, signOut } = useAuth();
-  const [currentView, setCurrentView] = useState('dashboard');
+  // Persist Navigation State
+  const [currentView, setCurrentView] = useState(() => {
+    return localStorage.getItem('app_currentView') || 'dashboard';
+  });
+  // Stats are derived, no need to persist
   const [stats, setStats] = useState({ total: 0, testPending: 0 });
   const [records, setRecords] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedRecord, setSelectedRecord] = useState(null);
+
+  const [selectedRecord, setSelectedRecord] = useState(() => {
+    try {
+      const saved = localStorage.getItem('app_selectedRecord');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) { return null; }
+  });
+
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [inspectionData, setInspectionData] = useState(null); // { valveId, inspectionId }
+
+  const [inspectionData, setInspectionData] = useState(() => {
+    try {
+      const saved = localStorage.getItem('app_inspectionData');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) { return null; }
+  }); // { valveId, inspectionId }
 
   // Job Management State
   const [jobs, setJobs] = useState({}); // Map: id -> Job Object
@@ -149,12 +166,40 @@ function App() {
       // Only reset if no deep link
       if (!params.get('valveId')) {
         setCurrentView('dashboard');
+        setSelectedRecord(null);
+        setInspectionData(null);
         setViewHistory([]); // Clear history on user switch
+
+        // Clear persisted state for new user
+        localStorage.removeItem('app_currentView');
+        localStorage.removeItem('app_selectedRecord');
+        localStorage.removeItem('app_inspectionData');
       }
     }
     // Update ref
     prevUserIdRef.current = user?.id;
   }, [user]);
+
+  // Sync State to LocalStorage
+  React.useEffect(() => {
+    localStorage.setItem('app_currentView', currentView);
+  }, [currentView]);
+
+  React.useEffect(() => {
+    if (selectedRecord) {
+      localStorage.setItem('app_selectedRecord', JSON.stringify(selectedRecord));
+    } else {
+      localStorage.removeItem('app_selectedRecord');
+    }
+  }, [selectedRecord]);
+
+  React.useEffect(() => {
+    if (inspectionData) {
+      localStorage.setItem('app_inspectionData', JSON.stringify(inspectionData));
+    } else {
+      localStorage.removeItem('app_inspectionData');
+    }
+  }, [inspectionData]);
 
   const handleRecordClick = async (record) => {
     // Update last viewed timestamp without blocking

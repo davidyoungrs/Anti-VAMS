@@ -82,5 +82,13 @@ export const auditService = {
         a.download = `security_audit_logs_${new Date().toISOString().split('T')[0]}.csv`;
         a.click();
         window.URL.revokeObjectURL(url);
+    },
+
+    /**
+     * Run Data Retention Policy (Purge logs > 1 year, Downgrade inactive users > 6 months)
+     */
+    runRetentionPolicy: async () => {
+        if (!supabase) return { error: 'Offline' };
+        return await supabase.rpc('enforce_data_retention');
     }
 };

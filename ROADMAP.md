@@ -48,9 +48,7 @@ This document outlines the proposed development path for the GVR-VAMS.
    - **Task**: Implement "Right to Erasure" (Hard Delete) and "Right to Access" (Data Portability) tools for PII.
    - **Note**: Current "Soft Delete" is insufficient for "Right to be Forgotten" requests.
 
-6. **Data Retention & Disposal Policy** (Priority: High)
-   - **Why**: Prevent indefinite storage of stale personal data.
-   - **Task**: Automated jobs to anonymize or purge inactive user logs/history after set retention period (e.g., 7 years).
+
 
 7. **Privacy Impact Assessment (PIA) Workflow** (Priority: Medium)
    - **Why**: Security by Design.

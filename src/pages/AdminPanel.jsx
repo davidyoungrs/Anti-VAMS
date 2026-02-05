@@ -733,6 +733,38 @@ export const AdminPanel = ({ onNavigate }) => {
                                     )}
                                 </div>
                             </div>
+
+                            {/* Data Retention Panel */}
+                            <h3 style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem', marginBottom: '1rem', marginTop: '2rem' }}>
+                                🗑️ Data Retention & Disposal Policy
+                            </h3>
+                            <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '2rem' }}>
+                                <div style={{ color: 'var(--text-muted)', flex: 1 }}>
+                                    <p style={{ margin: '0 0 0.5rem 0' }}>
+                                        <strong>Policy:</strong> Audit logs are retained for 1 year. Inactive user accounts (&gt;6 months) are automatically downgraded to 'Client' access.
+                                    </p>
+                                    <p style={{ margin: 0, fontSize: '0.9rem', opacity: 0.8 }}>
+                                        Run this task manually to enforce the policy now.
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={async () => {
+                                        if (window.confirm("Run Data Retention Policy? This will permanently delete logs older than 1 year and downgrade inactive users.")) {
+                                            try {
+                                                const { data, error } = await auditService.runRetentionPolicy();
+                                                if (error) throw error;
+                                                alert(`Policy Enforced Successfully.\nLogs Purged: ${data.logs_purged}\nUsers Downgraded: ${data.users_downgraded}`);
+                                            } catch (err) {
+                                                alert("Failed to run policy: " + (err.message || JSON.stringify(err)));
+                                            }
+                                        }
+                                    }}
+                                    className="btn-primary"
+                                    style={{ background: 'var(--accent)', border: 'none', whiteSpace: 'nowrap' }}
+                                >
+                                    ⚡ Run Retention Controls
+                                </button>
+                            </div>
                         </div>
                     )}
 
