@@ -63,29 +63,26 @@ function App() {
     } catch (e) { return null; }
   }); // { valveId, inspectionId }
 
-  // Job Management State
   const [jobs, setJobs] = useState({}); // Map: id -> Job Object
   const [selectedValveIds, setSelectedValveIds] = useState(new Set());
   const [showJobModal, setShowJobModal] = useState(false);
   const [jobFilter, setJobFilter] = useState(''); // NEW: Filter by specific job
-
   const [viewHistory, setViewHistory] = useState([]); // Stack of previous states
 
+
   // Load data on mount and view change
-  const loadData = async () => {
+  // Move loadData to useCallback to avoid infinite loops and fix dependency issues
+  const loadData = React.useCallback(async () => {
     // Basic permissions check needed here? for now just load all.
     let allRecords = await storageService.getAll();
 
     // Client-side filtering as a backup measure (primary security is RLS)
-    // This ensures local storage can't show unauthorized records
     if (role === 'client') {
       if (!allowedCustomers) {
-        // No permission set? Show nothing.
         allRecords = [];
       } else if (allowedCustomers.toLowerCase() === 'all') {
         // Show all
       } else {
-        // Filter by text match
         const allowedList = allowedCustomers.split(',').map(s => s.trim().toLowerCase());
         allRecords = allRecords.filter(r => {
           if (!r.customer) return false;
@@ -118,10 +115,73 @@ function App() {
     } catch (e) {
       console.error('Failed to load jobs', e);
     }
-  };
+  }, [role, allowedCustomers]);
 
-  // Load data on mount
-  // Load data on mount
+  function handleBack() {
+    if (hasUnsavedChanges) {
+      if (!window.confirm("You have unsaved changes. Are you sure you want to go back?")) return;
+    }
+
+    setViewHistory(prev => {
+      if (prev.length === 0) {
+        setCurrentView('dashboard');
+        return [];
+      }
+
+      const newHistory = [...prev];
+      const lastState = newHistory.pop();
+
+      setCurrentView(lastState.view);
+      if (lastState.selectedRecord !== undefined) setSelectedRecord(lastState.selectedRecord);
+      if (lastState.inspectionData !== undefined) setInspectionData(lastState.inspectionData);
+
+      return newHistory;
+    });
+  }
+
+  const handleNavigate = React.useCallback((view, data = null) => {
+    if (view === 'back') {
+      handleBack();
+      return;
+    }
+
+    if (hasUnsavedChanges) {
+      if (!window.confirm("You have unsaved location changes. Are you sure you want to leave?")) {
+        return;
+      }
+    }
+
+    // Push CURRENT state to history
+    setViewHistory(prev => [
+      ...prev,
+      {
+        view: currentView,
+        selectedRecord,
+        inspectionData
+      }
+    ]);
+
+    if (data) {
+      setSelectedRecord(data);
+    } else if (view === 'create') {
+      setSelectedRecord(null);
+    }
+    setCurrentView(view);
+  }, [currentView, selectedRecord, inspectionData, hasUnsavedChanges]);
+
+  const handleRecordClick = React.useCallback(async (record) => {
+    const updatedRecord = { ...record, lastViewedAt: new Date().toISOString() };
+    await storageService.save(updatedRecord);
+
+    const normalizedRecord = {
+      ...updatedRecord,
+      files: updatedRecord.files || updatedRecord.file_urls || []
+    };
+
+    handleNavigate('record-detail', normalizedRecord);
+    loadData();
+  }, [handleNavigate, loadData]);
+
   // Load data on mount and set up Real-Time subscription
   React.useEffect(() => {
     const init = async () => {
@@ -131,7 +191,6 @@ function App() {
       const params = new URLSearchParams(window.location.search);
       const valveId = params.get('valveId');
       if (valveId) {
-        // We need to fetch fresh records to ensure we find it
         const allRecords = await storageService.getAll();
         const target = allRecords.find(r => r.id === valveId);
         if (target) {
@@ -142,12 +201,9 @@ function App() {
     };
     init();
 
-    // Set up Real-Time Subscription
     const channel = supabase
       .channel('public:valve_records')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'valve_records' }, (payload) => {
-        console.log('Real-Time Change detected:', payload);
-        // Refresh data to reflect changes from other devices
         loadData();
       })
       .subscribe();
@@ -155,7 +211,7 @@ function App() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [allowedCustomers, role]); // Only load on mount or permission change
+  }, [loadData, handleRecordClick]);
 
   // Force Dashboard View only on NEW Login (User Identity Change)
   // Use a ref to track the previous user ID so we don't reset on session refreshes
@@ -203,92 +259,6 @@ function App() {
     }
   }, [inspectionData]);
 
-  const handleRecordClick = async (record) => {
-    // Update last viewed timestamp without blocking
-    const updatedRecord = { ...record, lastViewedAt: new Date().toISOString() };
-    await storageService.save(updatedRecord);
-
-    // Ensure files array is populated from file_urls if necessary
-    const normalizedRecord = {
-      ...updatedRecord,
-      files: updatedRecord.files || updatedRecord.file_urls || []
-    };
-
-    // Push current context to history before navigating
-    // Note: We use the function form of setState inside handleNavigate usually, but for record click we call explicitly.
-    // Let's defer to handleNavigate if possible, BUT handleNavigate logic below is generic.
-    // We should call handleNavigate('record-detail', normalizedRecord) but handleNavigate implementation handles the history push.
-    // However, handleNavigate below needs to be updated first.
-
-    handleNavigate('record-detail', normalizedRecord);
-
-    // Refresh records to show updated timestamp in list immediately
-    loadData();
-  };
-
-  const handleNavigate = (view, data = null) => {
-    if (view === 'back') {
-      handleBack();
-      return;
-    }
-
-    if (hasUnsavedChanges) {
-      if (!window.confirm("You have unsaved location changes. Are you sure you want to leave?")) {
-        return;
-      }
-      setHasUnsavedChanges(false);
-    }
-
-    // Push CURRENT state to history
-    setViewHistory(prev => [
-      ...prev,
-      {
-        view: currentView,
-        selectedRecord,
-        inspectionData // Preserve inspection context if leaving inspection 
-      }
-    ]);
-
-    if (data) {
-      setSelectedRecord(data);
-    } else if (view === 'create') {
-      setSelectedRecord(null);
-    }
-    setCurrentView(view);
-  };
-
-  const handleBack = () => {
-    if (hasUnsavedChanges) {
-      if (!window.confirm("You have unsaved changes. Are you sure you want to go back?")) return;
-      setHasUnsavedChanges(false);
-    }
-
-    setViewHistory(prev => {
-      if (prev.length === 0) {
-        setCurrentView('dashboard');
-        return [];
-      }
-
-      const newHistory = [...prev];
-      const lastState = newHistory.pop();
-
-      // Restore State
-      setCurrentView(lastState.view);
-      // Only restore explicit state if it was stored (undefined check important if we ever store falsy values, though objects are safe)
-      // Actually, we stored the *entire* state variables from that snapshot.
-      // But wait, if I go Dashboard -> Record A -> Record B.
-      // History: [ { view: 'dashboard', selectedRecord: null } ]
-      // Now I am at Record B.
-      // Back -> Restore Record A? 
-      // Logic in handleNavigate pushes *active* selectedRecord.
-      // So yes, lastState.selectedRecord was the record active *at that time*.
-      if (lastState.selectedRecord !== undefined) setSelectedRecord(lastState.selectedRecord);
-      if (lastState.inspectionData !== undefined) setInspectionData(lastState.inspectionData);
-
-      return newHistory;
-    });
-  };
-
   const handleMapSave = async () => {
     if (!selectedRecord) return;
     try {
@@ -331,7 +301,6 @@ function App() {
     "Model No", "Valve Type", "Size Class", "Packing Type", "Flange Type", "MAWP",
     "Body Material", "Seat Material", "Trim Material", "Obturator Material",
     "Actuator", "Gear Operator", "Fail Mode",
-    // Globe Control Valve Specifics
     "Actuator Serial", "Actuator Make", "Actuator Model", "Actuator Type", "Actuator Other",
     "Actuator Size", "Actuator Range", "Actuator Travel",
     "Positioner Model", "Positioner Serial", "Positioner Mode", "Positioner Signal",
@@ -348,7 +317,6 @@ function App() {
     "modelNo", "valveType", "sizeClass", "packingType", "flangeType", "mawp",
     "bodyMaterial", "seatMaterial", "trimMaterial", "obturatorMaterial",
     "actuator", "gearOperator", "failMode",
-    // Globe Control Valve Specifics
     "actuatorSerial", "actuatorMake", "actuatorModel", "actuatorType", "actuatorOther",
     "actuatorSize", "actuatorRange", "actuatorTravel",
     "positionerModel", "positionerSerial", "positionerMode", "positionerSignal",
@@ -376,9 +344,7 @@ function App() {
       return CSV_KEYS.map(key => {
         let val = r[key];
         if (val === null || val === undefined) val = "";
-        // Handle boolean fields for CSV readability
         if (key === 'lsaCheck' || key === 'seizedMidStroke') val = val ? "TRUE" : "FALSE";
-        // Escape quotes
         const stringVal = String(val).replace(/"/g, '""');
         return `"${stringVal}"`;
       }).join(",");
@@ -392,7 +358,6 @@ function App() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    document.body.removeChild(link);
   };
 
   const handleBulkJobAssign = async (jobId) => {
@@ -400,8 +365,8 @@ function App() {
       await jobService.assignValvesToJob(jobId, Array.from(selectedValveIds));
       alert('Valves assigned to job successfully!');
       setShowJobModal(false);
-      setSelectedValveIds(new Set()); // Clear selection
-      await loadData(); // Refresh to see updated job names
+      setSelectedValveIds(new Set());
+      await loadData();
     } catch (e) {
       alert('Failed to assign valves: ' + e.message);
     }
@@ -425,6 +390,42 @@ function App() {
     }
   };
 
+  const parseCSVLine = (rowText) => {
+    const matches = [];
+    let inQuote = false;
+    let currentToken = '';
+    for (let charIndex = 0; charIndex < rowText.length; charIndex++) {
+      const char = rowText[charIndex];
+      if (char === '"') {
+        inQuote = !inQuote;
+      } else if (char === ',' && !inQuote) {
+        matches.push(currentToken);
+        currentToken = '';
+      } else {
+        currentToken += char;
+      }
+    }
+    matches.push(currentToken);
+    return matches.map(val => val.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+  };
+
+  const transformCSVRecord = (cleanRow, csvKeys) => {
+    const record = {};
+    let hasData = false;
+    csvKeys.forEach((key, index) => {
+      let val = cleanRow[index] || '';
+      if (csvKeys.includes(key)) {
+        if (key === 'lsaCheck' || key === 'seizedMidStroke') {
+          record[key] = (val.toUpperCase() === 'TRUE' || val.toUpperCase() === 'YES' || val === '1');
+        } else {
+          record[key] = val;
+        }
+      }
+      if (val) hasData = true;
+    });
+    return { record, hasData };
+  };
+
   const handleImport = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -432,69 +433,24 @@ function App() {
     const reader = new FileReader();
     reader.onload = async (evt) => {
       const text = evt.target.result;
-      const rows = text.split(/\r?\n/); // Handle different newline formats
+      const rows = text.split(/\r?\n/);
       let importedCount = 0;
       let errors = [];
 
-      // Skip header row (i=1)
       for (let i = 1; i < rows.length; i++) {
         const rowText = rows[i];
-        if (!rowText.trim()) continue; // Skip empty lines
+        if (!rowText.trim()) continue;
 
-        // regex to split by comma but ignore commas inside quotes
-        const row = rowText.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
-        // The above simple regex might be flaky for complex CSVs. 
-        // Let's use a slightly more robust manual split or just split(',') if we assume simple structure,
-        // BUT user asked for "standard" CSV.
-        // Let's assume standard "val1","val2" format from our export or template.
-        // A simpler split approach for now that handles basic quoted strings:
+        const cleanRow = parseCSVLine(rowText);
+        if (cleanRow.length < 2) continue;
 
-        // Manual CSV parse for the line to handle commas in quotes
-        const matches = [];
-        let inQuote = false;
-        let currentToken = '';
-        for (let charIndex = 0; charIndex < rowText.length; charIndex++) {
-          const char = rowText[charIndex];
-          if (char === '"') {
-            inQuote = !inQuote;
-          } else if (char === ',' && !inQuote) {
-            matches.push(currentToken);
-            currentToken = '';
-          } else {
-            currentToken += char;
-          }
-        }
-        matches.push(currentToken); // push last token
+        const { record, hasData } = transformCSVRecord(cleanRow, CSV_KEYS);
 
-        // Clean up quotes
-        const cleanRow = matches.map(val => val.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
-
-        if (cleanRow.length < 2) continue; // Not enough data
-
-        const record = {};
-        let hasData = false;
-
-        CSV_KEYS.forEach((key, index) => {
-          let val = cleanRow[index] || '';
-
-          // Transform booleans
-          if (key === 'lsaCheck' || key === 'seizedMidStroke') {
-            record[key] = (val.toUpperCase() === 'TRUE' || val.toUpperCase() === 'YES' || val === '1');
-          } else {
-            record[key] = val;
-          }
-
-          if (val) hasData = true;
-        });
-
-        // Basic validation: Serial Number is required
         if (!record.serialNumber) {
-          // Try to generate one or skip? Let's skip and log error if completely empty
           if (hasData) errors.push(`Row ${i + 1}: Missing Serial Number`);
           continue;
         }
 
-        // Set default status
         record.status = 'Pending';
         if (!record.passFail) record.passFail = 'Pending';
 
@@ -513,17 +469,10 @@ function App() {
       }
       alert(msg);
 
-      if (importedCount > 0) {
-        const allRecords = await storageService.getAll();
-        setRecords(allRecords);
-        setStats({
-          total: allRecords.length,
-          testPending: allRecords.filter(r => !r.testDate).length
-        });
-      }
+      if (importedCount > 0) await loadData();
     };
     reader.readAsText(file);
-    e.target.value = null; // Reset input
+    e.target.value = null;
   };
 
   const handleSave = async (savedRecord) => {
@@ -531,15 +480,6 @@ function App() {
     if (savedRecord && typeof savedRecord === 'object') {
       setSelectedRecord(savedRecord);
       setCurrentView('record-detail');
-      // Update history so if they click back, they go to dashboard?
-      // Actually, if they just created it, history might be [dashboard, create].
-      // If we switch to 'detail' (replace 'create'), that's fine.
-      // handleNavigate('record-detail', savedRecord) handles push...
-      // But here we are manually setting things.
-      // Let's rely on manual set for now or use handleNavigate if possible?
-      // handleNavigate('record-detail', savedRecord) would push 'create' to history?
-      // We probably want to Replace 'create' with 'detail' or just push.
-      // For simplicity, let's just set view.
     } else {
       setCurrentView('dashboard');
     }
@@ -550,7 +490,14 @@ function App() {
       case 'create':
         return <RecordForm key="create" onSave={handleSave} onNavigate={handleNavigate} />;
       case 'admin':
-        if (!['admin', 'super_user'].includes(role)) return <div className="glass-panel" style={{ padding: '2rem' }}><h2>Access Denied</h2><p>You do not have permission to view this page.</p></div>;
+        if (!['admin', 'super_user'].includes(role)) {
+          return (
+            <div className="glass-panel" style={{ padding: '2rem' }}>
+              <h2>Access Denied</h2>
+              <p>You do not have permission to view this page.</p>
+            </div>
+          );
+        }
         return <AdminPanel onNavigate={handleNavigate} />;
       case 'security':
         return <MarkdownPage title="Security Features" content={securityContent} />;
@@ -575,8 +522,8 @@ function App() {
 
       case 'record-detail':
         return <RecordForm key={selectedRecord?.id || 'detail'} initialData={selectedRecord} onSave={handleSave} onNavigate={handleNavigate} />;
-      case 'search':
-        // Handle search filtering client side on the loaded records
+
+      case 'search': {
         const filteredRecords = records.filter(r => {
           const matchesSearch = r.serialNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             r.customer?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -587,9 +534,9 @@ function App() {
             r.tagNo?.toLowerCase().includes(searchQuery.toLowerCase());
 
           const matchesJob = jobFilter ? r.jobId === jobFilter : true;
-
           return matchesSearch && matchesJob;
         });
+
         return (
           <div className="glass-panel" style={{ padding: '2rem', borderRadius: 'var(--radius-lg)' }}>
             <h2 className="section-title">Search Records</h2>
@@ -608,7 +555,6 @@ function App() {
               />
             </div>
 
-            {/* Bulk Actions Bar */}
             {selectedValveIds.size > 0 && (
               <div
                 className="glass-panel"
@@ -642,7 +588,6 @@ function App() {
             )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {/* Select All Checkbox (Only if records exist) */}
               {filteredRecords.length > 0 && (
                 <div style={{ marginBottom: '0.5rem', display: 'flex', gap: '0.5rem', alignItems: 'center', justifyContent: 'flex-end', marginRight: '1rem' }}>
                   <span style={{ color: 'var(--text-muted)' }}>Select All</span>
@@ -672,8 +617,7 @@ function App() {
                       border: selectedValveIds.has(record.id) ? '1px solid #3b82f6' : '1px solid transparent'
                     }}
                     onClick={(e) => {
-                      // If clicking checkbox, don't nav. If clicking card, nav.
-                      if (e.target.type !== 'checkbox') handleRecordClick(record);
+                      if (e.target.tagName !== 'INPUT') handleRecordClick(record);
                     }}
                   >
                     <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flex: 1 }}>
@@ -695,7 +639,6 @@ function App() {
                               📎 {(record.files?.length || record.file_urls?.length)}
                             </span>
                           )}
-                          {/* Job Badge */}
                           {record.jobId && jobs[record.jobId] && (
                             <span style={{
                               fontSize: '0.8rem', background: '#3b82f6', color: 'white',
@@ -716,26 +659,22 @@ function App() {
                       </div>
                     </div>
                     <div style={{ marginLeft: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                      {/* Status Badge */}
-                      <span style={{
-                        padding: '0.4rem 1rem',
-                        borderRadius: '20px',
-                        background: record.status === 'Shipped' ? 'rgba(16, 185, 129, 0.2)' :
-                          (record.status?.includes('Hold') || record.status?.includes('Waiting')) ? 'rgba(239, 68, 68, 0.2)' :
-                            'rgba(59, 130, 246, 0.2)', // Default Blue
-                        color: record.status === 'Shipped' ? '#4ade80' :
-                          (record.status?.includes('Hold') || record.status?.includes('Waiting')) ? '#f87171' :
-                            '#60a5fa',
-                        fontSize: '0.85rem',
-                        fontWeight: '700',
-                        border: `1px solid ${record.status === 'Shipped' ? 'rgba(16, 185, 129, 0.3)' :
-                          (record.status?.includes('Hold') || record.status?.includes('Waiting')) ? 'rgba(239, 68, 68, 0.3)' :
-                            'rgba(59, 130, 246, 0.3)'
-                          }`
-                      }}>
+                      <span style={(() => {
+                        const status = record.status;
+                        const isShipped = status === 'Shipped';
+                        const isWaiting = status?.includes('Hold') || status?.includes('Waiting');
+                        return {
+                          padding: '0.4rem 1rem',
+                          borderRadius: '20px',
+                          background: isShipped ? 'rgba(16, 185, 129, 0.2)' : isWaiting ? 'rgba(239, 68, 68, 0.2)' : 'rgba(59, 130, 246, 0.2)',
+                          color: isShipped ? '#4ade80' : isWaiting ? '#f87171' : '#60a5fa',
+                          fontSize: '0.85rem',
+                          fontWeight: '700',
+                          border: `1px solid ${isShipped ? 'rgba(16, 185, 129, 0.3)' : isWaiting ? 'rgba(239, 68, 68, 0.3)' : 'rgba(59, 130, 246, 0.3)'}`
+                        };
+                      })()}>
                         {record.status || 'No Status'}
                       </span>
-                      {/* Checkbox Moved Here */}
                       <div onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
@@ -751,7 +690,9 @@ function App() {
             </div>
           </div>
         );
-      case 'map':
+      }
+
+      case 'map': {
         return (
           <MapView
             records={records}
@@ -766,7 +707,9 @@ function App() {
             }}
           />
         );
-      case 'single-map':
+      }
+
+      case 'single-map': {
         return (
           <MapView
             records={selectedRecord ? [selectedRecord] : []}
@@ -786,29 +729,26 @@ function App() {
                 const updated = { ...selectedRecord, latitude: latlng.lat, longitude: latlng.lng };
                 setSelectedRecord(updated);
                 setHasUnsavedChanges(true);
-                // Also update in the main records list so the pin moves immediately
                 setRecords(prev => prev.map(r => r.id === updated.id ? updated : r));
               }
             }}
           />
         );
-      case 'inspection-form':
+      }
+
+      case 'inspection-form': {
         const targetValve = records.find(r => r.id === inspectionData?.valveId);
-        // Use override type if user just selected it, otherwise from record
         const typeToUse = inspectionData?.overrideType || targetValve?.valveType;
 
         if (!typeToUse || typeToUse === 'Other' || typeToUse === 'N/A') {
           return (
             <ValveTypeSelector
               onSelect={async (type) => {
-                // Update local state to render immediately
                 setInspectionData(prev => ({ ...prev, overrideType: type }));
-
-                // Update the valve record persistently
                 if (targetValve) {
                   const updated = { ...targetValve, valveType: type };
                   await storageService.save(updated);
-                  await loadData(); // Refresh records
+                  await loadData();
                 }
               }}
               onCancel={() => setCurrentView('inspection-list')}
@@ -837,7 +777,9 @@ function App() {
           default:
             return <InspectionFormGateValve {...formProps} />;
         }
-      case 'test-report-form':
+      }
+
+      case 'test-report-form': {
         return (
           <TestReportForm
             valveId={inspectionData?.valveId}
@@ -847,7 +789,9 @@ function App() {
             onSave={() => setCurrentView('inspection-list')}
           />
         );
-      case 'inspection-list':
+      }
+
+      case 'inspection-list': {
         return (
           <InspectionList
             valveId={inspectionData?.valveId || selectedRecord?.id}
@@ -870,6 +814,8 @@ function App() {
             }}
           />
         );
+      }
+
       case 'dashboard':
       default:
         return (
@@ -947,11 +893,7 @@ function App() {
                       const t1 = new Date(r.updatedAt || 0).getTime();
                       const t2 = new Date(r.createdAt || 0).getTime();
                       const t3 = new Date(r.lastViewedAt || 0).getTime();
-                      return Math.max(
-                        isNaN(t1) ? 0 : t1,
-                        isNaN(t2) ? 0 : t2,
-                        isNaN(t3) ? 0 : t3
-                      );
+                      return Math.max(isNaN(t1) ? 0 : t1, isNaN(t2) ? 0 : t2, isNaN(t3) ? 0 : t3);
                     };
                     return getTime(b) - getTime(a);
                   })
@@ -1013,8 +955,6 @@ function App() {
             </div>
 
             <div className="mt-4" style={{ marginTop: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-
-
               <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                 <button
                   className="btn-secondary"

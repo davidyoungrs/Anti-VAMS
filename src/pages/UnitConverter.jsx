@@ -181,116 +181,90 @@ export const UnitConverter = () => {
     }, [activeTab]);
 
     const calculateSizingResult = () => {
-        // Common validations
         if (!sizingQ || !sizingDP) return { cv: '-', kv: '-' };
         const dp = parseFloat(sizingDP);
         if (isNaN(dp) || dp <= 0) return { cv: '-', kv: '-' };
 
-        // Convert dP to PSI
         const dp_psi = (dp * CONVERTERS.pressure.factors[sizingDPUnit]) / 6894.76;
-
         let cv = 0;
 
-        if (sizingType === 'liquid') {
-            const q = parseFloat(sizingQ);
-            const sg = parseFloat(sizingSG);
-            if (isNaN(q) || isNaN(sg) || sg <= 0) return { cv: '-', kv: '-' };
-
-            // Cv = Q(gpm) * sqrt(SG / dP(psi))
-            // Convert Q to GPM
-            const q_m3s = q * CONVERTERS.volumetricFlow.factors[sizingQUnit];
-            const q_gpm = q_m3s / (0.00378541 / 60);
-
-            cv = q_gpm * Math.sqrt(sg / dp_psi);
-        }
-        else if (sizingType === 'gas') {
-            const q = parseFloat(sizingQ); // SCFM usually
-            const p1 = parseFloat(sizingP1);
-            const t = parseFloat(sizingTemp);
-            const sg = parseFloat(sizingSG);
-            if (isNaN(q) || isNaN(p1) || isNaN(t) || isNaN(sg)) return { cv: '-', kv: '-' };
-
-            // P1 to PSI Abs
-            // Assume input is Gauge? Usually Sizing requires Absolute.
-            // Let's assume input is Gauge and add 14.7? Or assume Abs?
-            // Safer to ask user. But for simplicity, let's assumes Gauge and add 14.7 if unit is not 'atm'?
-            // Start simple: Convert to PSI. If unit is Bar/PSI, assume Gauge.
-            const p1_psi_g = (p1 * CONVERTERS.pressure.factors[sizingP1Unit]) / 6894.76;
-            const p1_abs = p1_psi_g + 14.7;
-
-            // Temp to Rankine
-            const t_k = CONVERTERS.temperature.convert(t, sizingTempUnit, 'Kelvin');
-            const t_r = t_k * 1.8;
-
-            // Convert Q to SCFM (Standard Cubic Feet per Minute)
-            // 1 SCFM approx 0.0004719 m3/s
-            // If unit is GPM ?? Gas usually measured in SCFM or m3/h.
-            // We'll use vol flow factor.
-            const q_m3s = q * CONVERTERS.volumetricFlow.factors[sizingQUnit];
-            const q_scfm = q_m3s / 0.000471947;
-
-            // Simplified Gas Formula (Subcritical)
-            // Cv = Q_scfm * sqrt(SG * T_r) / (1360 * sqrt(dP * P1_abs))
-            // Note: This is valid for dP < P1/2.
-            // Check Critical Flow
-            const x = dp_psi / p1_abs;
-            if (x >= 0.5) {
-                // Critical Flow
-                // Cv = Q_scfm * sqrt(SG * T_r) / (963 * P1_abs)
-                cv = (q_scfm * Math.sqrt(sg * t_r)) / (963 * p1_abs);
-            } else {
-                cv = (q_scfm * Math.sqrt(sg * t_r)) / (1360 * Math.sqrt(dp_psi * p1_abs));
+        try {
+            switch (sizingType) {
+                case 'liquid':
+                    cv = calculateLiquidSizing(dp_psi);
+                    break;
+                case 'gas':
+                    cv = calculateGasSizing(dp_psi);
+                    break;
+                case 'steam':
+                    cv = calculateSteamSizing(dp_psi);
+                    break;
+                case 'multiphase':
+                    cv = calculateMultiphaseSizing(dp_psi);
+                    break;
+                default:
+                    return { cv: '-', kv: '-' };
             }
-        }
-        else if (sizingType === 'steam') {
-            const w = parseFloat(sizingQ); // Mass Flow lb/hr
-            const p1 = parseFloat(sizingP1);
-            if (isNaN(w) || isNaN(p1)) return { cv: '-', kv: '-' };
-
-            // Convert W to lb/hr
-            const w_kgs = w * CONVERTERS.massFlow.factors[sizingQUnit];
-            const w_lbhr = w_kgs * 3600 * 2.20462;
-
-            const p1_psi_g = (p1 * CONVERTERS.pressure.factors[sizingP1Unit]) / 6894.76;
-            const p1_abs = p1_psi_g + 14.7;
-            const p2_abs = p1_abs - dp_psi;
-
-            // Sat Steam Formula (FCI 77-1)
-            // Cv = W / (2.1 * sqrt(dP * (P1 + P2)))
-            // Assuming no superheat correction K=1
-
-            // Check critical
-            if (dp_psi > p1_abs / 2) {
-                // Critical
-                // Cv = W / (1.83 * P1)
-                cv = w_lbhr / (1.83 * p1_abs);
-            } else {
-                cv = w_lbhr / (2.1 * Math.sqrt(dp_psi * (p1_abs + p2_abs)));
-            }
-        }
-        else if (sizingType === 'multiphase') {
-            const w = parseFloat(sizingQ); // Mass Flow lb/hr
-            const rho = parseFloat(sizingDensity); // Mixture Density
-            if (isNaN(w) || isNaN(rho)) return { cv: '-', kv: '-' };
-
-            // Convert W to lb/hr
-            const w_kgs = w * CONVERTERS.massFlow.factors[sizingQUnit];
-            const w_lbhr = w_kgs * 3600 * 2.20462;
-
-            // Convert Density to lb/ft3
-            const rho_kgm3 = rho * DENSITY_FACTORS[sizingDensityUnit];
-            const rho_lbft3 = rho_kgm3 * 0.062428;
-
-            // Cv = W / (63.3 * sqrt(dP * rho))
-            cv = w_lbhr / (63.3 * Math.sqrt(dp_psi * rho_lbft3));
+        } catch (e) {
+            return { cv: '-', kv: '-' };
         }
 
         if (isNaN(cv) || !isFinite(cv) || cv < 0) return { cv: '-', kv: '-' };
-        const kv = cv * 0.865;
         return {
             cv: cv.toFixed(2),
-            kv: kv.toFixed(2)
+            kv: (cv * 0.865).toFixed(2)
         };
+    };
+
+    const calculateLiquidSizing = (dp_psi) => {
+        const q = parseFloat(sizingQ);
+        const sg = parseFloat(sizingSG);
+        if (isNaN(q) || isNaN(sg) || sg <= 0) throw new Error('Invalid input');
+        const q_m3s = q * CONVERTERS.volumetricFlow.factors[sizingQUnit];
+        const q_gpm = q_m3s / (0.00378541 / 60);
+        return q_gpm * Math.sqrt(sg / dp_psi);
+    };
+
+    const calculateGasSizing = (dp_psi) => {
+        const q = parseFloat(sizingQ);
+        const p1 = parseFloat(sizingP1);
+        const t = parseFloat(sizingTemp);
+        const sg = parseFloat(sizingSG);
+        if (isNaN(q) || isNaN(p1) || isNaN(t) || isNaN(sg)) throw new Error('Invalid input');
+
+        const p1_abs = ((p1 * CONVERTERS.pressure.factors[sizingP1Unit]) / 6894.76) + 14.7;
+        const t_r = CONVERTERS.temperature.convert(t, sizingTempUnit, 'Kelvin') * 1.8;
+        const q_m3s = q * CONVERTERS.volumetricFlow.factors[sizingQUnit];
+        const q_scfm = q_m3s / 0.000471947;
+
+        const x = dp_psi / p1_abs;
+        return x >= 0.5
+            ? (q_scfm * Math.sqrt(sg * t_r)) / (963 * p1_abs)
+            : (q_scfm * Math.sqrt(sg * t_r)) / (1360 * Math.sqrt(dp_psi * p1_abs));
+    };
+
+    const calculateSteamSizing = (dp_psi) => {
+        const w = parseFloat(sizingQ);
+        const p1 = parseFloat(sizingP1);
+        if (isNaN(w) || isNaN(p1)) throw new Error('Invalid input');
+
+        const w_lbhr = w * CONVERTERS.massFlow.factors[sizingQUnit] * 3600 * 2.20462;
+        const p1_abs = ((p1 * CONVERTERS.pressure.factors[sizingP1Unit]) / 6894.76) + 14.7;
+        const p2_abs = p1_abs - dp_psi;
+
+        return dp_psi > p1_abs / 2
+            ? w_lbhr / (1.83 * p1_abs)
+            : w_lbhr / (2.1 * Math.sqrt(dp_psi * (p1_abs + p2_abs)));
+    };
+
+    const calculateMultiphaseSizing = (dp_psi) => {
+        const w = parseFloat(sizingQ);
+        const rho = parseFloat(sizingDensity);
+        if (isNaN(w) || isNaN(rho)) throw new Error('Invalid input');
+
+        const w_lbhr = w * CONVERTERS.massFlow.factors[sizingQUnit] * 3600 * 2.20462;
+        const rho_lbft3 = rho * DENSITY_FACTORS[sizingDensityUnit] * 0.062428;
+        return w_lbhr / (63.3 * Math.sqrt(dp_psi * rho_lbft3));
     };
 
     const calculateResult = () => { // ... (restore original calc logic)
@@ -307,7 +281,7 @@ export const UnitConverter = () => {
             // Format check: if very small or large, use exp?
             if (res === 0) return '0';
             if (Math.abs(res) < 0.001 || Math.abs(res) > 100000) return res.toExponential(4);
-            return res.toFixed(4).replace(/\.?0+$/, "");
+            return Number(res.toFixed(4)).toString(); // Fixes slow regex
         }
     };
 
@@ -337,12 +311,353 @@ export const UnitConverter = () => {
 
         if (res === 0) return '0';
         if (Math.abs(res) < 0.001 || Math.abs(res) > 100000) return res.toExponential(4);
-        return res.toFixed(4).replace(/\.?0+$/, "");
+        return Number(res.toFixed(4)).toString(); // Fixes slow regex
     };
 
 
 
     const sizingRes = calculateSizingResult();
+
+    const renderTabContent = () => {
+        switch (activeTab) {
+            case 'flangeTables':
+                return renderFlangeTables();
+            case 'sizing':
+                return renderSizing();
+            case 'massVol':
+                return renderMassVol();
+            default:
+                return renderGeneralConverter();
+        }
+    };
+
+    const renderFlangeTables = () => (
+        <div className="grid-2" style={{ display: 'block' }}>
+            <div className="grid-responsive" style={{ gridTemplateColumns: '1fr 1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                <div className="field-group">
+                    <label>Standard</label>
+                    <select value={flangeStandard} onChange={e => { setFlangeStandard(e.target.value); setFlangeClass(FLANGE_DATA[e.target.value].classes[0]); }}>
+                        {Object.keys(FLANGE_DATA).map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                </div>
+
+                <div className="field-group">
+                    <label>Pressure Class</label>
+                    <select value={flangeClass} onChange={e => setFlangeClass(e.target.value)}>
+                        {FLANGE_DATA[flangeStandard]?.classes.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                </div>
+
+                <div className="field-group">
+                    <label>Search Size</label>
+                    <input
+                        type="text"
+                        value={flangeSearch}
+                        onChange={e => setFlangeSearch(e.target.value)}
+                        placeholder="Filter (e.g. 2)..."
+                    />
+                </div>
+            </div>
+
+            <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                    <thead style={{ background: 'rgba(255,255,255,0.05)', borderBottom: '1px solid var(--border-color)' }}>
+                        <tr>
+                            <th style={{ padding: '0.8rem', textAlign: 'left' }}>Size</th>
+                            <th style={{ padding: '0.8rem', textAlign: 'center' }}>OD</th>
+                            <th style={{ padding: '0.8rem', textAlign: 'center' }}>PCD</th>
+                            <th style={{ padding: '0.8rem', textAlign: 'center' }}>Thk</th>
+                            <th style={{ padding: '0.8rem', textAlign: 'center' }}>Bolts</th>
+                            <th style={{ padding: '0.8rem', textAlign: 'center' }}>Stud Ø</th>
+                            {flangeStandard.includes('ASME') ? (
+                                <>
+                                    <th style={{ padding: '0.8rem', textAlign: 'center' }}>Len (RF)</th>
+                                    <th style={{ padding: '0.8rem', textAlign: 'center' }}>Len (RTJ)</th>
+                                    <th style={{ padding: '0.8rem', textAlign: 'center' }}>Ring</th>
+                                </>
+                            ) : (
+                                <th style={{ padding: '0.8rem', textAlign: 'center' }}>Length</th>
+                            )}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {FLANGE_DATA[flangeStandard]?.data[flangeClass] && Object.keys(FLANGE_DATA[flangeStandard].data[flangeClass])
+                            .filter(size => size.includes(flangeSearch))
+                            .map(size => {
+                                const row = FLANGE_DATA[flangeStandard].data[flangeClass][size];
+                                return (
+                                    <tr key={size} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                                        <td style={{ padding: '0.8rem', fontWeight: 'bold' }}>{size}</td>
+                                        <td style={{ padding: '0.8rem', textAlign: 'center', color: 'var(--text-muted)' }}>{row.od}</td>
+                                        <td style={{ padding: '0.8rem', textAlign: 'center', color: 'var(--text-muted)' }}>{row.pcd}</td>
+                                        <td style={{ padding: '0.8rem', textAlign: 'center', color: 'var(--text-muted)' }}>{row.thk}</td>
+                                        <td style={{ padding: '0.8rem', textAlign: 'center', color: 'var(--accent)' }}>{row.bolts}</td>
+                                        <td style={{ padding: '0.8rem', textAlign: 'center' }}>{row.diam}</td>
+                                        {flangeStandard.includes('ASME') ? (
+                                            <>
+                                                <td style={{ padding: '0.8rem', textAlign: 'center' }}>{row.lenRF || '-'}</td>
+                                                <td style={{ padding: '0.8rem', textAlign: 'center' }}>{row.lenRTJ || '-'}</td>
+                                                <td style={{ padding: '0.8rem', textAlign: 'center', color: '#f59e0b' }}>{row.ring || '-'}</td>
+                                            </>
+                                        ) : (
+                                            <td style={{ padding: '0.8rem', textAlign: 'center' }}>{row.len || '-'}</td>
+                                        )}
+                                    </tr>
+                                );
+                            })}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+
+    const renderSizing = () => (
+        <div className="grid-2">
+            <div style={{ gridColumn: '1 / -1', marginBottom: '1rem' }}>
+                <label style={{ marginBottom: '0.8rem', display: 'block' }}>Fluid Type</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}>
+                    {['liquid', 'gas', 'steam', 'multiphase'].map(type => {
+                        const isSelected = sizingType === type;
+                        return (
+                            <button
+                                key={type}
+                                onClick={() => setSizingType(type)}
+                                style={{
+                                    padding: '0.8rem',
+                                    background: isSelected ? 'var(--primary)' : 'rgba(255,255,255,0.05)',
+                                    border: '1px solid var(--border-color)',
+                                    color: isSelected ? 'white' : 'var(--text-muted)',
+                                    borderRadius: 'var(--radius-sm)',
+                                    textTransform: 'capitalize',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                {type}
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+
+            <div style={{ gridColumn: '1 / -1', marginBottom: '1rem', padding: '1rem', background: 'rgba(245, 158, 11, 0.1)', borderRadius: 'var(--radius-md)', borderLeft: '4px solid #f59e0b' }}>
+                <h4 style={{ margin: '0 0 0.5rem 0', color: '#f59e0b' }}>{sizingType.charAt(0).toUpperCase() + sizingType.slice(1)} Cv Calculation</h4>
+                <p style={{ margin: 0, fontSize: '0.9rem', opacity: 0.8 }}>
+                    {sizingType === 'liquid' && "Standard incompressible flow calculation."}
+                    {sizingType === 'gas' && "Compressible flow (Subcritical/Critical check included)."}
+                    {sizingType === 'steam' && "Saturated Steam calculation based on Mass Flow."}
+                    {sizingType === 'multiphase' && "Homogeneous model using Mixture Density."}
+                </p>
+            </div>
+
+            <div className="field-group">
+                <label>
+                    {sizingType === 'steam' || sizingType === 'multiphase' ? 'Mass Flow Rate (W)' : 'Flow Rate (Q)'}
+                </label>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <input type="number" value={sizingQ} onChange={e => setSizingQ(e.target.value)} placeholder="Flow" />
+                    <select value={sizingQUnit} onChange={e => setSizingQUnit(e.target.value)}>
+                        {(sizingType === 'steam' || sizingType === 'multiphase' ? CONVERTERS.massFlow.units : CONVERTERS.volumetricFlow.units).map(u => <option key={u} value={u}>{u}</option>)}
+                    </select>
+                </div>
+            </div>
+
+            <div className="field-group">
+                <label>Pressure Drop (ΔP)</label>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <input type="number" value={sizingDP} onChange={e => setSizingDP(e.target.value)} placeholder="Differential Pressure" />
+                    <select value={sizingDPUnit} onChange={e => setSizingDPUnit(e.target.value)}>
+                        {CONVERTERS.pressure.units.map(u => <option key={u} value={u}>{u}</option>)}
+                    </select>
+                </div>
+            </div>
+
+            {(sizingType === 'gas' || sizingType === 'steam') && (
+                <div className="field-group">
+                    <label>Inlet Pressure (P1)</label>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <input type="number" value={sizingP1} onChange={e => setSizingP1(e.target.value)} placeholder="Inlet Pressure" />
+                        <select value={sizingP1Unit} onChange={e => setSizingP1Unit(e.target.value)}>
+                            {CONVERTERS.pressure.units.map(u => <option key={u} value={u}>{u}</option>)}
+                        </select>
+                    </div>
+                    <small style={{ opacity: 0.6 }}>Assumes Gauge Pressure</small>
+                </div>
+            )}
+
+            {sizingType === 'gas' && (
+                <div className="field-group">
+                    <label>Inlet Temperature</label>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <input type="number" value={sizingTemp} onChange={e => setSizingTemp(e.target.value)} placeholder="Temp" />
+                        <select value={sizingTempUnit} onChange={e => setSizingTempUnit(e.target.value)}>
+                            {CONVERTERS.temperature.units.map(u => <option key={u} value={u}>{u}</option>)}
+                        </select>
+                    </div>
+                </div>
+            )}
+
+            {(sizingType === 'liquid' || sizingType === 'gas') && (
+                <div className="field-group">
+                    <label>Specific Gravity (SG)</label>
+                    <input type="number" value={sizingSG} onChange={e => setSizingSG(e.target.value)} placeholder={sizingType === 'gas' ? '1.0 (Air)' : '1.0 (Water)'} />
+                </div>
+            )}
+
+            {sizingType === 'multiphase' && (
+                <div className="field-group">
+                    <label>Mixture Density</label>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <input type="number" value={sizingDensity} onChange={e => setSizingDensity(e.target.value)} placeholder="Density of Mix" />
+                        <select value={sizingDensityUnit} onChange={e => setSizingDensityUnit(e.target.value)}>
+                            {DENSITY_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                        </select>
+                    </div>
+                </div>
+            )}
+
+            <div className="field-group" style={{ gridColumn: '1 / -1', marginTop: '1rem', display: 'flex', gap: '2rem', padding: '1.5rem', background: 'rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Required Cv</div>
+                    <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#f59e0b' }}>{sizingRes.cv}</div>
+                </div>
+                <div style={{ width: '1px', height: '50px', background: 'var(--border-color)' }}></div>
+                <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Equivalent Kv</div>
+                    <div style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>{sizingRes.kv}</div>
+                </div>
+            </div>
+        </div>
+    );
+
+    const renderMassVol = () => (
+        <div className="grid-2">
+            <div className="field-group" style={{ gridColumn: '1 / -1', marginBottom: '1rem' }}>
+                <label style={{ marginBottom: '0.8rem', display: 'block' }}>Conversion Mode</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                    <div
+                        onClick={() => { setMvMode('massToVol'); setMvInputUnit('kg/h'); setMvOutputUnit('m3/h'); }}
+                        style={{
+                            padding: '1rem',
+                            border: mvMode === 'massToVol' ? '2px solid #0ea5e9' : '1px solid #4b5563',
+                            borderRadius: '0.5rem',
+                            cursor: 'pointer',
+                            textAlign: 'center',
+                            background: mvMode === 'massToVol' ? 'rgba(14, 165, 233, 0.1)' : 'transparent',
+                            transition: 'all 0.2s',
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem'
+                        }}
+                    >
+                        <div style={{ fontWeight: 'bold', color: (mvMode === 'massToVol' ? '#0ea5e9' : 'inherit'), fontSize: '1.1rem' }}>Mass ➔ Volume</div>
+                        <div style={{ fontSize: '0.85rem', opacity: 0.7 }}>Requires Fluid Density</div>
+                    </div>
+
+                    <div
+                        onClick={() => { setMvMode('volToMass'); setMvInputUnit('m3/h'); setMvOutputUnit('kg/h'); }}
+                        style={{
+                            padding: '1rem',
+                            border: mvMode === 'volToMass' ? '2px solid #0ea5e9' : '1px solid #4b5563',
+                            borderRadius: '0.5rem',
+                            cursor: 'pointer',
+                            textAlign: 'center',
+                            background: mvMode === 'volToMass' ? 'rgba(14, 165, 233, 0.1)' : 'transparent',
+                            transition: 'all 0.2s',
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem'
+                        }}
+                    >
+                        <div style={{ fontWeight: 'bold', color: mvMode === 'volToMass' ? '#0ea5e9' : 'inherit', fontSize: '1.1rem' }}>Volume ➔ Mass</div>
+                        <div style={{ fontSize: '0.85rem', opacity: 0.7 }}>Requires Fluid Density</div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="field-group">
+                <label>Input Flow Rate</label>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <input type="number" value={mvInput} onChange={e => setMvInput(e.target.value)} placeholder="Value" />
+                    <select value={mvInputUnit} onChange={e => setMvInputUnit(e.target.value)}>
+                        {(mvMode === 'massToVol' ? CONVERTERS.massFlow.units : CONVERTERS.volumetricFlow.units).map(u => (
+                            <option key={u} value={u}>{u}</option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
+            <div className="field-group">
+                <label>Fluid Density</label>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <input type="number" value={mvDensity} onChange={e => setMvDensity(e.target.value)} placeholder="Density" />
+                    <select value={mvDensityUnit} onChange={e => setMvDensityUnit(e.target.value)}>
+                        {DENSITY_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                    </select>
+                </div>
+            </div>
+
+            <div className="field-group" style={{ gridColumn: '1 / -1', marginTop: '1rem', padding: '1.5rem', background: 'rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)' }}>
+                <label style={{ color: 'var(--accent)', marginBottom: '0.5rem', display: 'block' }}>Result</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <span style={{ fontSize: '2rem', fontWeight: 'bold' }}>{calculateMassVolResult()}</span>
+                    <select
+                        value={mvOutputUnit}
+                        onChange={e => setMvOutputUnit(e.target.value)}
+                        style={{ width: 'auto', fontSize: '1.1rem' }}
+                    >
+                        {(mvMode === 'massToVol' ? CONVERTERS.volumetricFlow.units : CONVERTERS.massFlow.units).map(u => (
+                            <option key={u} value={u}>{u}</option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+        </div>
+    );
+
+    const renderGeneralConverter = () => (
+        <div className="grid-responsive" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', alignItems: 'center' }}>
+            <div className="field-group">
+                <label>From</label>
+                <input
+                    type="number"
+                    value={inputVal}
+                    onChange={e => setInputVal(e.target.value)}
+                    placeholder="Enter value..."
+                    style={{ fontSize: '1.2rem', padding: '1rem' }}
+                />
+                <select
+                    value={fromUnit}
+                    onChange={e => setFromUnit(e.target.value)}
+                    style={{ marginTop: '0.5rem' }}
+                >
+                    {CONVERTERS[activeTab]?.units.map(u => <option key={u} value={u}>{u}</option>)}
+                </select>
+            </div>
+
+            <div style={{ textAlign: 'center', fontSize: '2rem', color: 'var(--text-muted)' }}>
+                ➔
+            </div>
+
+            <div className="field-group">
+                <label>To</label>
+                <div style={{
+                    padding: '1rem',
+                    background: 'rgba(255,255,255,0.05)',
+                    borderRadius: 'var(--radius-sm)',
+                    minHeight: '52px',
+                    fontSize: '1.5rem',
+                    fontWeight: 'bold',
+                    display: 'flex',
+                    alignItems: 'center'
+                }}>
+                    {calculateResult()}
+                </div>
+                <select
+                    value={toUnit}
+                    onChange={e => setToUnit(e.target.value)}
+                    style={{ marginTop: '0.5rem' }}
+                >
+                    {CONVERTERS[activeTab]?.units.map(u => <option key={u} value={u}>{u}</option>)}
+                </select>
+            </div>
+        </div>
+    );
 
     return (
         <div style={{ padding: '2rem', maxWidth: '1000px', margin: '0 auto' }}>
@@ -403,325 +718,7 @@ export const UnitConverter = () => {
                 </div>
 
                 <div style={{ marginTop: '2rem' }}>
-                    {activeTab === 'flangeTables' ? (
-                        <div className="grid-2" style={{ display: 'block' }}>
-                            <div className="grid-responsive" style={{ gridTemplateColumns: '1fr 1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
-                                <div className="field-group">
-                                    <label>Standard</label>
-                                    <select value={flangeStandard} onChange={e => { setFlangeStandard(e.target.value); setFlangeClass(FLANGE_DATA[e.target.value].classes[0]); }}>
-                                        {Object.keys(FLANGE_DATA).map(s => <option key={s} value={s}>{s}</option>)}
-                                    </select>
-                                </div>
-
-                                <div className="field-group">
-                                    <label>Pressure Class</label>
-                                    <select value={flangeClass} onChange={e => setFlangeClass(e.target.value)}>
-                                        {FLANGE_DATA[flangeStandard]?.classes.map(c => <option key={c} value={c}>{c}</option>)}
-                                    </select>
-                                </div>
-
-                                <div className="field-group">
-                                    <label>Search Size</label>
-                                    <input
-                                        type="text"
-                                        value={flangeSearch}
-                                        onChange={e => setFlangeSearch(e.target.value)}
-                                        placeholder="Filter (e.g. 2)..."
-                                    />
-                                </div>
-                            </div>
-
-                            <div style={{ overflowX: 'auto' }}>
-                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-                                    <thead style={{ background: 'rgba(255,255,255,0.05)', borderBottom: '1px solid var(--border-color)' }}>
-                                        <tr>
-                                            <th style={{ padding: '0.8rem', textAlign: 'left' }}>Size</th>
-                                            <th style={{ padding: '0.8rem', textAlign: 'center' }}>OD</th>
-                                            <th style={{ padding: '0.8rem', textAlign: 'center' }}>PCD</th>
-                                            <th style={{ padding: '0.8rem', textAlign: 'center' }}>Thk</th>
-                                            <th style={{ padding: '0.8rem', textAlign: 'center' }}>Bolts</th>
-                                            <th style={{ padding: '0.8rem', textAlign: 'center' }}>Stud Ø</th>
-                                            {flangeStandard.includes('ASME') ? (
-                                                <>
-                                                    <th style={{ padding: '0.8rem', textAlign: 'center' }}>Len (RF)</th>
-                                                    <th style={{ padding: '0.8rem', textAlign: 'center' }}>Len (RTJ)</th>
-                                                    <th style={{ padding: '0.8rem', textAlign: 'center' }}>Ring</th>
-                                                </>
-                                            ) : (
-                                                <th style={{ padding: '0.8rem', textAlign: 'center' }}>Length</th>
-                                            )}
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {FLANGE_DATA[flangeStandard]?.data[flangeClass] && Object.keys(FLANGE_DATA[flangeStandard].data[flangeClass])
-                                            .filter(size => size.includes(flangeSearch))
-                                            .map(size => {
-                                                const row = FLANGE_DATA[flangeStandard].data[flangeClass][size];
-                                                return (
-                                                    <tr key={size} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                                                        <td style={{ padding: '0.8rem', fontWeight: 'bold' }}>{size}</td>
-                                                        <td style={{ padding: '0.8rem', textAlign: 'center', color: 'var(--text-muted)' }}>{row.od}</td>
-                                                        <td style={{ padding: '0.8rem', textAlign: 'center', color: 'var(--text-muted)' }}>{row.pcd}</td>
-                                                        <td style={{ padding: '0.8rem', textAlign: 'center', color: 'var(--text-muted)' }}>{row.thk}</td>
-                                                        <td style={{ padding: '0.8rem', textAlign: 'center', color: 'var(--accent)' }}>{row.bolts}</td>
-                                                        <td style={{ padding: '0.8rem', textAlign: 'center' }}>{row.diam}</td>
-                                                        {flangeStandard.includes('ASME') ? (
-                                                            <>
-                                                                <td style={{ padding: '0.8rem', textAlign: 'center' }}>{row.lenRF || '-'}</td>
-                                                                <td style={{ padding: '0.8rem', textAlign: 'center' }}>{row.lenRTJ || '-'}</td>
-                                                                <td style={{ padding: '0.8rem', textAlign: 'center', color: '#f59e0b' }}>{row.ring || '-'}</td>
-                                                            </>
-                                                        ) : (
-                                                            <td style={{ padding: '0.8rem', textAlign: 'center' }}>{row.len || '-'}</td>
-                                                        )}
-                                                    </tr>
-                                                );
-                                            })}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    ) : activeTab === 'sizing' ? (
-                        <div className="grid-2">
-                            <div style={{ gridColumn: '1 / -1', marginBottom: '1rem' }}>
-                                <label style={{ marginBottom: '0.8rem', display: 'block' }}>Fluid Type</label>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}>
-                                    {['liquid', 'gas', 'steam', 'multiphase'].map(type => (
-                                        <button
-                                            key={type}
-                                            onClick={() => setSizingType(type)}
-                                            style={{
-                                                padding: '0.8rem',
-                                                background: sizingType === type ? 'var(--primary)' : 'rgba(255,255,255,0.05)',
-                                                border: '1px solid var(--border-color)',
-                                                color: sizingType === type ? 'white' : 'var(--text-muted)',
-                                                borderRadius: 'var(--radius-sm)',
-                                                textTransform: 'capitalize',
-                                                cursor: 'pointer'
-                                            }}
-                                        >
-                                            {type}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div style={{ gridColumn: '1 / -1', marginBottom: '1rem', padding: '1rem', background: 'rgba(245, 158, 11, 0.1)', borderRadius: 'var(--radius-md)', borderLeft: '4px solid #f59e0b' }}>
-                                <h4 style={{ margin: '0 0 0.5rem 0', color: '#f59e0b' }}>{sizingType.charAt(0).toUpperCase() + sizingType.slice(1)} Cv Calculation</h4>
-                                <p style={{ margin: 0, fontSize: '0.9rem', opacity: 0.8 }}>
-                                    {sizingType === 'liquid' && "Standard incompressible flow calculation."}
-                                    {sizingType === 'gas' && "Compressible flow (Subcritical/Critical check included)."}
-                                    {sizingType === 'steam' && "Saturated Steam calculation based on Mass Flow."}
-                                    {sizingType === 'multiphase' && "Homogeneous model using Mixture Density."}
-                                </p>
-                            </div>
-
-                            <div className="field-group">
-                                <label>
-                                    {sizingType === 'steam' || sizingType === 'multiphase' ? 'Mass Flow Rate (W)' : 'Flow Rate (Q)'}
-                                </label>
-                                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                    <input type="number" value={sizingQ} onChange={e => setSizingQ(e.target.value)} placeholder="Flow" />
-                                    <select value={sizingQUnit} onChange={e => setSizingQUnit(e.target.value)}>
-                                        {(sizingType === 'steam' || sizingType === 'multiphase' ? CONVERTERS.massFlow.units : CONVERTERS.volumetricFlow.units).map(u => <option key={u} value={u}>{u}</option>)}
-                                        {/* Note: Logic uses CONVERTERS units list */}
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div className="field-group">
-                                <label>Pressure Drop (ΔP)</label>
-                                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                    <input type="number" value={sizingDP} onChange={e => setSizingDP(e.target.value)} placeholder="Differential Pressure" />
-                                    <select value={sizingDPUnit} onChange={e => setSizingDPUnit(e.target.value)}>
-                                        {CONVERTERS.pressure.units.map(u => <option key={u} value={u}>{u}</option>)}
-                                    </select>
-                                </div>
-                            </div>
-
-                            {(sizingType === 'gas' || sizingType === 'steam') && (
-                                <div className="field-group">
-                                    <label>Inlet Pressure (P1)</label>
-                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                        <input type="number" value={sizingP1} onChange={e => setSizingP1(e.target.value)} placeholder="Inlet Pressure" />
-                                        <select value={sizingP1Unit} onChange={e => setSizingP1Unit(e.target.value)}>
-                                            {CONVERTERS.pressure.units.map(u => <option key={u} value={u}>{u}</option>)}
-                                        </select>
-                                    </div>
-                                    <small style={{ opacity: 0.6 }}>Assumes Gauge Pressure</small>
-                                </div>
-                            )}
-
-                            {sizingType === 'gas' && (
-                                <div className="field-group">
-                                    <label>Inlet Temperature</label>
-                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                        <input type="number" value={sizingTemp} onChange={e => setSizingTemp(e.target.value)} placeholder="Temp" />
-                                        <select value={sizingTempUnit} onChange={e => setSizingTempUnit(e.target.value)}>
-                                            {CONVERTERS.temperature.units.map(u => <option key={u} value={u}>{u}</option>)}
-                                        </select>
-                                    </div>
-                                </div>
-                            )}
-
-                            {(sizingType === 'liquid' || sizingType === 'gas') && (
-                                <div className="field-group">
-                                    <label>Specific Gravity (SG)</label>
-                                    <input type="number" value={sizingSG} onChange={e => setSizingSG(e.target.value)} placeholder={sizingType === 'gas' ? '1.0 (Air)' : '1.0 (Water)'} />
-                                </div>
-                            )}
-
-                            {sizingType === 'multiphase' && (
-                                <div className="field-group">
-                                    <label>Mixture Density</label>
-                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                        <input type="number" value={sizingDensity} onChange={e => setSizingDensity(e.target.value)} placeholder="Density of Mix" />
-                                        <select value={sizingDensityUnit} onChange={e => setSizingDensityUnit(e.target.value)}>
-                                            {DENSITY_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
-                                        </select>
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="field-group" style={{ gridColumn: '1 / -1', marginTop: '1rem', display: 'flex', gap: '2rem', padding: '1.5rem', background: 'rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)', alignItems: 'center', justifyContent: 'center' }}>
-                                <div style={{ textAlign: 'center' }}>
-                                    <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Required Cv</div>
-                                    <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#f59e0b' }}>{sizingRes.cv}</div>
-                                </div>
-                                <div style={{ width: '1px', height: '50px', background: 'var(--border-color)' }}></div>
-                                <div style={{ textAlign: 'center' }}>
-                                    <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Equivalent Kv</div>
-                                    <div style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>{sizingRes.kv}</div>
-                                </div>
-                            </div>
-                        </div>
-                    ) : activeTab === 'massVol' ? (
-                        <div className="grid-2">
-                            <div className="field-group" style={{ gridColumn: '1 / -1', marginBottom: '1rem' }}>
-                                <label style={{ marginBottom: '0.8rem', display: 'block' }}>Conversion Mode</label>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-                                    <div
-                                        onClick={() => { setMvMode('massToVol'); setMvInputUnit('kg/h'); setMvOutputUnit('m3/h'); }}
-                                        style={{
-                                            padding: '1rem',
-                                            border: mvMode === 'massToVol' ? '2px solid #0ea5e9' : '1px solid #4b5563',
-                                            borderRadius: '0.5rem',
-                                            cursor: 'pointer',
-                                            textAlign: 'center',
-                                            background: mvMode === 'massToVol' ? 'rgba(14, 165, 233, 0.1)' : 'transparent',
-                                            transition: 'all 0.2s',
-                                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem'
-                                        }}
-                                    >
-                                        <div style={{ fontWeight: 'bold', color: mvMode === 'massToVol' ? '#0ea5e9' : 'inherit', fontSize: '1.1rem' }}>Mass ➔ Volume</div>
-                                        <div style={{ fontSize: '0.85rem', opacity: 0.7 }}>Requires Fluid Density</div>
-                                    </div>
-
-                                    <div
-                                        onClick={() => { setMvMode('volToMass'); setMvInputUnit('m3/h'); setMvOutputUnit('kg/h'); }}
-                                        style={{
-                                            padding: '1rem',
-                                            border: mvMode === 'volToMass' ? '2px solid #0ea5e9' : '1px solid #4b5563',
-                                            borderRadius: '0.5rem',
-                                            cursor: 'pointer',
-                                            textAlign: 'center',
-                                            background: mvMode === 'volToMass' ? 'rgba(14, 165, 233, 0.1)' : 'transparent',
-                                            transition: 'all 0.2s',
-                                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem'
-                                        }}
-                                    >
-                                        <div style={{ fontWeight: 'bold', color: mvMode === 'volToMass' ? '#0ea5e9' : 'inherit', fontSize: '1.1rem' }}>Volume ➔ Mass</div>
-                                        <div style={{ fontSize: '0.85rem', opacity: 0.7 }}>Requires Fluid Density</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="field-group">
-                                <label>Input Flow Rate</label>
-                                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                    <input type="number" value={mvInput} onChange={e => setMvInput(e.target.value)} placeholder="Value" />
-                                    <select value={mvInputUnit} onChange={e => setMvInputUnit(e.target.value)}>
-                                        {(mvMode === 'massToVol' ? CONVERTERS.massFlow.units : CONVERTERS.volumetricFlow.units).map(u => (
-                                            <option key={u} value={u}>{u}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div className="field-group">
-                                <label>Fluid Density</label>
-                                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                    <input type="number" value={mvDensity} onChange={e => setMvDensity(e.target.value)} placeholder="Density" />
-                                    <select value={mvDensityUnit} onChange={e => setMvDensityUnit(e.target.value)}>
-                                        {DENSITY_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div className="field-group" style={{ gridColumn: '1 / -1', marginTop: '1rem', padding: '1.5rem', background: 'rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)' }}>
-                                <label style={{ color: 'var(--accent)', marginBottom: '0.5rem', display: 'block' }}>Result</label>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                    <span style={{ fontSize: '2rem', fontWeight: 'bold' }}>{calculateMassVolResult()}</span>
-                                    <select
-                                        value={mvOutputUnit}
-                                        onChange={e => setMvOutputUnit(e.target.value)}
-                                        style={{ width: 'auto', fontSize: '1.1rem' }}
-                                    >
-                                        {(mvMode === 'massToVol' ? CONVERTERS.volumetricFlow.units : CONVERTERS.massFlow.units).map(u => (
-                                            <option key={u} value={u}>{u}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="grid-responsive" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', alignItems: 'center' }}>
-                            <div className="field-group">
-                                <label>From</label>
-                                <input
-                                    type="number"
-                                    value={inputVal}
-                                    onChange={e => setInputVal(e.target.value)}
-                                    placeholder="Enter value..."
-                                    style={{ fontSize: '1.2rem', padding: '1rem' }}
-                                />
-                                <select
-                                    value={fromUnit}
-                                    onChange={e => setFromUnit(e.target.value)}
-                                    style={{ marginTop: '0.5rem' }}
-                                >
-                                    {CONVERTERS[activeTab].units.map(u => <option key={u} value={u}>{u}</option>)}
-                                </select>
-                            </div>
-
-                            <div style={{ textAlign: 'center', fontSize: '2rem', color: 'var(--text-muted)' }}>
-                                ➔
-                            </div>
-
-                            <div className="field-group">
-                                <label>To</label>
-                                <div style={{
-                                    padding: '1rem',
-                                    background: 'rgba(255,255,255,0.05)',
-                                    borderRadius: 'var(--radius-sm)',
-                                    minHeight: '52px',
-                                    fontSize: '1.5rem',
-                                    fontWeight: 'bold',
-                                    display: 'flex',
-                                    alignItems: 'center'
-                                }}>
-                                    {calculateResult()}
-                                </div>
-                                <select
-                                    value={toUnit}
-                                    onChange={e => setToUnit(e.target.value)}
-                                    style={{ marginTop: '0.5rem' }}
-                                >
-                                    {CONVERTERS[activeTab].units.map(u => <option key={u} value={u}>{u}</option>)}
-                                </select>
-                            </div>
-                        </div>
-                    )}
+                    {renderTabContent()}
                 </div>
             </div>
         </div>

@@ -16,17 +16,7 @@ export const storageService = {
 
                 // Encrypt and store each record
                 const encryptedRecords = records.map(r => ({
-                    id: r.id, // Keep ID cleartext for indexing? dbService uses it as key. 
-                    // Yes, ObjectStore keyPath 'id' needs to exist.
-                    // So we store { id, data: <encrypted_blob> } OR we encrypt fields?
-                    // Plan said "Encrypts JSON objects to AES strings". 
-                    // If we store the whole object as a string, IDB can't index 'id'.
-                    // Better pattern: Store { id: ..., _encrypted: <ciphertext> } 
-                    // OR keep 'id' and 'updatedAt' cleartext, encrypt the rest.
-                    // Let's stick to simple: { id: r.id, ...r } but we encrypt the WHOLE content into a blob?
-                    // No, IDB needs the key. 
-                    // Let's store: { id: r.id, encryptedData: securityService.encrypt(r) }
-                    id: r.id,
+                    id: r.id, // Keep ID cleartext for indexing. dbService uses it as key path.
                     encryptedData: securityService.encrypt(r)
                 }));
 

@@ -8,7 +8,7 @@ import { useEffect, useRef, useCallback } from 'react';
  */
 export const useInactivityTimer = (timeoutMs, onTimeout, isActive = true) => {
     const timerRef = useRef(null);
-    const lastActivityRef = useRef(Date.now());
+    const lastActivityRef = useRef(null); // Initialize as null to keep render pure
 
     const resetTimer = useCallback(() => {
         if (!isActive) return;
@@ -48,6 +48,9 @@ export const useInactivityTimer = (timeoutMs, onTimeout, isActive = true) => {
         };
 
         // Initial start
+        if (lastActivityRef.current === null) {
+            lastActivityRef.current = Date.now();
+        }
         resetTimer();
 
         events.forEach(event => window.addEventListener(event, handleActivity));

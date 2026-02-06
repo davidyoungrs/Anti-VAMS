@@ -19,86 +19,29 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
     const isReadOnly = role === 'client';
     const canDelete = ['admin', 'super_user'].includes(role);
 
-    const [formData, setFormData] = useState({
-        serialNumber: '',
-        jobNo: '',
-        tagNo: '',
-        orderNo: '',
-        customer: '',
-        oem: '',
-        plantArea: '',
-        siteLocation: '',
-        dateIn: '',
-        requiredDate: '',
-        safetyCheck: '',
-        decontaminationCert: 'N',
-        lsaCheck: false,
-        seizedMidStroke: false,
-        modelNo: '',
-        valveType: '',
-        sizeClass: '',
-        packingType: '',
-        flangeType: '',
-        mawp: '',
-        bodyMaterial: '',
-        seatMaterial: '',
-        trimMaterial: '',
-        obturatorMaterial: '',
-        actuator: '',
-        gearOperator: '',
-        failMode: '',
-        bodyTestSpec: '',
-        seatTestSpec: '',
-        bodyPressure: '',
-        bodyPressureUnit: 'PSI',
-        testedBy: '',
-        testDate: '',
-        testMedium: '',
-        passFail: '',
-        latitude: '',
-        longitude: '',
-        // Globe Control Valve Specifics
-        actuatorSerial: '',
-        actuatorMake: '',
-        actuatorModel: '',
-        actuatorType: '',
-        actuatorOther: '',
-        actuatorSize: '',
-        actuatorRange: '',
-        actuatorTravel: '',
-        positionerModel: '',
-        positionerSerial: '',
-        positionerMode: '',
-        positionerSignal: '',
-        positionerCharacteristic: '',
-        positionerSupply: '',
-        positionerOther: '',
-        regulatorModel: '',
-        regulatorSetPoint: ''
+    const [formData, setFormData] = useState(() => {
+        if (initialData) {
+            const { files: initialFiles, ...rest } = initialData;
+            return {
+                serialNumber: '', jobNo: '', tagNo: '', orderNo: '', customer: '', oem: '', plantArea: '', siteLocation: '', dateIn: '', requiredDate: '', safetyCheck: '', decontaminationCert: 'N', lsaCheck: false, seizedMidStroke: false, modelNo: '', valveType: '', sizeClass: '', packingType: '', flangeType: '', mawp: '', bodyMaterial: '', seatMaterial: '', trimMaterial: '', obturatorMaterial: '', actuator: '', gearOperator: '', failMode: '', bodyTestSpec: '', seatTestSpec: '', bodyPressure: '', bodyPressureUnit: 'PSI', testedBy: '', testDate: '', testMedium: '', passFail: '',
+                actuatorSerial: '', actuatorMake: '', actuatorModel: '', actuatorType: '', actuatorOther: '', actuatorSize: '', actuatorRange: '', actuatorTravel: '',
+                positionerModel: '', positionerSerial: '', positionerMode: '', positionerSignal: '', positionerCharacteristic: '', positionerSupply: '', positionerOther: '', regulatorModel: '', regulatorSetPoint: '',
+                ...rest
+            };
+        }
+        return {
+            serialNumber: '', jobNo: '', tagNo: '', orderNo: '', customer: '', oem: '', plantArea: '', siteLocation: '', dateIn: '', requiredDate: '', safetyCheck: '', decontaminationCert: 'N', lsaCheck: false, seizedMidStroke: false, modelNo: '', valveType: '', sizeClass: '', packingType: '', flangeType: '', mawp: '', bodyMaterial: '', seatMaterial: '', trimMaterial: '', obturatorMaterial: '', actuator: '', gearOperator: '', failMode: '', bodyTestSpec: '', seatTestSpec: '', bodyPressure: '', bodyPressureUnit: 'PSI', testedBy: '', testDate: '', testMedium: '', passFail: '', latitude: '', longitude: '',
+            actuatorSerial: '', actuatorMake: '', actuatorModel: '', actuatorType: '', actuatorOther: '', actuatorSize: '', actuatorRange: '', actuatorTravel: '',
+            positionerModel: '', positionerSerial: '', positionerMode: '', positionerSignal: '', positionerCharacteristic: '', positionerSupply: '', positionerOther: '', regulatorModel: '', regulatorSetPoint: ''
+        };
     });
 
-    const [files, setFiles] = useState([]);
+    const [files, setFiles] = useState(() => initialData?.files || []);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showSignaturePad, setShowSignaturePad] = useState(false);
     const [annotatingFile, setAnnotatingFile] = useState(null); // { file: File|string, index: number }
 
-    useEffect(() => {
-        if (initialData) {
-            const { files: initialFiles, ...rest } = initialData;
-            setFormData(prev => ({ ...prev, ...rest }));
-            if (initialFiles) {
-                setFiles(initialFiles);
-            }
-        } else {
-            // Reset to defaults if initialData is null (essential for "New Record" switch if component is reused)
-            setFormData({
-                serialNumber: '', jobNo: '', tagNo: '', orderNo: '', customer: '', oem: '', plantArea: '', siteLocation: '', dateIn: '', requiredDate: '', safetyCheck: '', decontaminationCert: 'N', lsaCheck: false, seizedMidStroke: false, modelNo: '', valveType: '', sizeClass: '', packingType: '', flangeType: '', mawp: '', bodyMaterial: '', seatMaterial: '', trimMaterial: '', obturatorMaterial: '', actuator: '', gearOperator: '', failMode: '', bodyTestSpec: '', seatTestSpec: '', bodyPressure: '', bodyPressureUnit: 'PSI', testedBy: '', testDate: '', testMedium: '', passFail: '',
-                actuatorSerial: '', actuatorMake: '', actuatorModel: '', actuatorType: '', actuatorOther: '', actuatorSize: '', actuatorRange: '', actuatorTravel: '',
-                positionerModel: '', positionerSerial: '', positionerMode: '', positionerSignal: '', positionerCharacteristic: '', positionerSupply: '', positionerOther: '', regulatorModel: '', regulatorSetPoint: ''
-            });
-            setFiles([]);
-        }
-    }, [initialData]);
+    // Removed useEffect that was syncing props to state because App.jsx uses a key to remount the component.
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -236,7 +179,11 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
         <form onSubmit={handleSubmit} className="glass-panel" style={{ padding: '2rem', borderRadius: 'var(--radius-lg)' }}>
             <div className="flex-row" style={{ justifyContent: 'space-between', marginBottom: '2rem' }}>
                 <h2 className="section-title" style={{ margin: 0, border: 'none' }}>
-                    {!initialData ? 'New Valve Record' : (role === 'client' ? 'View Valve Record' : 'View / Edit Valve Record')}
+                    {(() => {
+                        if (!initialData) return 'New Valve Record';
+                        if (role === 'client') return 'View Valve Record';
+                        return 'View / Edit Valve Record';
+                    })()}
                 </h2>
                 <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                     <button type="button" onClick={() => onNavigate('back')} className="btn-secondary">← Back</button>
@@ -562,22 +509,11 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
                                     {files.map((f, i) => {
                                         const isUrl = typeof f === 'string';
-                                        let name = isUrl ? f.split('/').pop() : (f.name || `File ${i + 1}`);
-
-                                        // Remove auto-generated timestamp (Prefix OR Suffix) for cleaner display
-                                        // 1. Prefix: 12345_Name.pdf
-                                        if (name.match(/^\d+_.+/)) {
-                                            name = name.replace(/^\d+_/, '');
-                                        }
-                                        // 2. Suffix: Name_12345.pdf (New Format)
-                                        // Regex: Look for _\d+\.ext$
-                                        // We need to be careful not to remove valid numbers in names (e.g. Valve_101.pdf)
-                                        // But our timestamp is Date.now() (13 digits). We can be specific.
-                                        // Match underscore + 10-15 digits + dot + extension at end of string
-                                        const suffixMatch = name.match(/_(\d{10,15})\./);
-                                        if (suffixMatch) {
-                                            // Remove the _TIMESTAMP part, keep extension
-                                            name = name.replace(`_${suffixMatch[1]}`, '');
+                                        let name = '';
+                                        if (isUrl) {
+                                            name = f.split('/').pop();
+                                        } else {
+                                            name = f.name || `File ${i + 1}`;
                                         }
 
                                         const size = isUrl ? '' : (f.size ? `(${Math.round(f.size / 1024)} KB)` : '');
