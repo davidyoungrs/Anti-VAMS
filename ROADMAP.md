@@ -44,17 +44,17 @@ This document outlines the proposed development path for the GVR-VAMS.
 ## ISO/IEC 27001/27002 ISMS Controls
 *Core information security controls for enterprise certification.*
 
-8. **Multi-Factor Authentication (MFA)** (Priority: Critical for Admins)
+5. **Multi-Factor Authentication (MFA)** (Priority: Critical for Admins)
    - **Why**: ISO 27002 9.4.3 (Password Management) & 24.1 (MFA). Brute force protection.
    - **Task**: Enable and enforce MFA (TOTP) for all 'Admin' and 'Inspector' roles.
 ## ISO/IEC 27032 Cybersecurity Guidelines
 *Focus on Cyberspace Security, supply chain, and external attack surface.*
 
-11. **Software Supply Chain Security (SCA)** (Priority: High)
+6. **Software Supply Chain Security (SCA)** (Priority: High)
     - **Why**: ISO 27032 demand for secure application controls & supply chain trust.
     - **Task**: Integrate automated dependency auditing (e.g., `npm audit`, Snyk, or Dependabot) into the CI/CD pipeline. Requires a visible "Bill of Materials" (SBOM).
 
-12. **Vulnerability Disclosure Policy (RFC 9116)** (Priority: Low/Medium)
+7. **Vulnerability Disclosure Policy (RFC 9116)** (Priority: Low/Medium)
     - **Why**: Standardizes how ethical hackers communicate security findings.
     - **Task**: Publish a `security.txt` file at `/.well-known/security.txt` detailing contacts and disclosure guidelines.
 
@@ -62,37 +62,37 @@ This document outlines the proposed development path for the GVR-VAMS.
 ## US Federal & Defense Compliance (NIST 800-53 / CMMC)
 *Strict controls for systems handling CUI (Controlled Unclassified Information).*
 
-14. **System Use Notification Banner (AC-8)** (Priority: High for DoD)
+8. **System Use Notification Banner (AC-8)** (Priority: High for DoD)
     - **Why**: Mandatory requirement for CMMC/NIST to warn users they are accessing a monitored system.
     - **Task**: Implement a configurable "Consent to Monitor" banner on the Login screen that users must accept before signing in.
 
-15. **FIPS 140-2 Cryptography Review (SC-13)** (Priority: High)
+9. **FIPS 140-2 Cryptography Review (SC-13)** (Priority: High)
     - **Why**: Federal systems often require FIPS-validated crypto modules.
     - **Task**: Review `CryptoJS` usage. Plan potential migration to Web Crypto API (browser native, often FIPS compliant on Windows/macOS) or server-side KMS for sensitive data at rest.
 
-16. **Media Sanitization & Destruction (MP-6)** (Priority: Medium)
+10. **Media Sanitization & Destruction (MP-6)** (Priority: Medium)
     - **Why**: CMMC requires assurance that deleted data is unrecoverable.
     - **Task**: Upgrade "Delete" features to overwrite data segments (crypto-shredding) rather than just removing pointers.
 
 ## Continuous Monitoring & Resilience (NIST/CMMC Advanced)
 *Automated controls to maintain compliance posture over time.*
 
-17. **Automated Vulnerability Scanning (RA-5)** (Priority: Medium)
+11. **Automated Vulnerability Scanning (RA-5)** (Priority: Medium)
     - **Why**: NIST requires detection of vulnerabilities in a timely manner.
     - **Task**: Integrate SAST (Static Analysis) and DAST (Dynamic Scanning) tools into the deployment pipeline to catch flaws before production.
 
-18. **Disaster Recovery (DR) Drill Mode (CP-4)** (Priority: Low)
+12. **Disaster Recovery (DR) Drill Mode (CP-4)** (Priority: Low)
     - **Why**: Recoverability must be tested, not just assumed.
     - **Task**: Create scripts to simulate a "Region Down" or "Data Loss" event and measure RTO (Recovery Time Objective) for restoring from encrypted backups.
 
 ## Middle East Regional Compliance (UAE/KSA/Qatar)
 *Specific modifications for GCC cybersecurity frameworks (NESA, NCA, QCB).*
 
-19. **Data Residency & Localization Strategy** (Priority: Critical for GCC)
+13. **Data Residency & Localization Strategy** (Priority: Critical for GCC)
     - **Why**: Saudi NCA ECC (2-1-3) and UAE NESA require restricted data geolocations.
     - **Task**: Architect Supabase deployment to support "Region Pinning" (e.g., ensuring data stored in AWS Middle East/Bahrain/UAE regions only) or On-Premise capability.
 
-20. **Extended Log Retention Archival** (Priority: Medium)
+14. **Extended Log Retention Archival** (Priority: Medium)
     - **Why**: NCA ECC & QCB often require audit logs to be retained for 12 months minimum.
     - **Task**: Implement automated "Cold Storage" offloading of logs to low-cost archival (S3 Glacier) to meet retention mandates without database bloat.
 
@@ -100,27 +100,27 @@ This document outlines the proposed development path for the GVR-VAMS.
 ## China Cybersecurity Law & MLPS 2.0 Compliance
 *Strict national controls for operations within mainland China (GB/T Standards).*
 
-22. **SM Series Cryptography (SM2/SM3/SM4)** (Priority: Critical for China)
+15. **SM Series Cryptography (SM2/SM3/SM4)** (Priority: Critical for China)
     - **Why**: MLPS 2.0 / State Cryptography Administration (SCA) mandate use of Chinese sovereign algorithms (SMx) over RSA/AES/SHA.
     - **Task**: Implement a toggleable "China Mode" that swaps `CryptoJS` AES-256 for **SM4-CBC** (Data at Rest) and uses **SM2** for identity verification.
 
-23. **Strict Data Localization (Data Sovereignty)** (Priority: Critical)
+16. **Strict Data Localization (Data Sovereignty)** (Priority: Critical)
     - **Why**: China Cybersecurity Law (CSL) prohibits cross-border transfer of Critical Infrastructure data.
     - **Task**: Ensure a fully isolated Supabase region within mainland China (e.g., AWS Beijing) with NO data replication to outside servers.
 
-24. **Real-Name Identity Verification** (Priority: High)
+17. **Real-Name Identity Verification** (Priority: High)
     - **Why**: CSL requirement for user accountability.
     - **Task**: Integrate with a verified SMS gateway or Government ID API for user registration in the China region.
 
 ## ISO/IEC 27701 Privacy & Compliance (PIMS)
 *Critical features for Regulatory Compliance and Data Privacy.*
 
-5. **Data Subject Rights Management** (Priority: High)
+18. **Data Subject Rights Management** (Priority: High)
    - **Why**: ISO 27701 / GDPR requirement for PII management.
    - **Task**: Implement "Right to Erasure" (Hard Delete) and "Right to Access" (Data Portability) tools for PII.
    - **Note**: Current "Soft Delete" is insufficient for "Right to be Forgotten" requests.
 
-7. **Privacy Impact Assessment (PIA) Workflow** (Priority: Medium)
+19. **Privacy Impact Assessment (PIA) Workflow** (Priority: Medium)
    - **Why**: Security by Design.
    - **Task**: Checklist integration for new deployments to verify privacy risks are mitigated.
 
