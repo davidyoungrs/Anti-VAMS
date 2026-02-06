@@ -209,6 +209,7 @@ export const jobService = {
                         jobId: v.job_id,
                         customerId: v.customer_id,
                         status: v.status,
+                        requiredDate: v.required_date,
                         // Add other fields as needed based on schema
                         createdAt: v.created_at,
                         updatedAt: v.updated_at,

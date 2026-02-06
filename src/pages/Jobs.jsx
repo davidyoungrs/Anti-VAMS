@@ -177,33 +177,66 @@ export const Jobs = ({ onNavigate }) => {
                                                 <th style={{ padding: '0.75rem' }}>Serial No</th>
                                                 <th style={{ padding: '0.75rem' }}>Description</th>
                                                 <th style={{ padding: '0.75rem' }}>Location</th>
+                                                <th style={{ padding: '0.75rem' }}>Required Date</th>
+                                                <th style={{ padding: '0.75rem' }}>Status</th>
                                                 <th style={{ padding: '0.75rem' }}>Last Update</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {jobValves.map(valve => (
-                                                <tr key={valve.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                                    <td style={{ padding: '0.75rem' }}>
-                                                        <span
-                                                            onClick={() => { if (onNavigate) onNavigate('record-detail', valve); }}
-                                                            style={{
-                                                                color: 'var(--primary)',
-                                                                fontWeight: 'bold',
-                                                                cursor: 'pointer',
-                                                                textDecoration: 'underline'
-                                                            }}
-                                                            title="Click to view full record"
-                                                        >
-                                                            {valve.serialNumber || 'N/A'}
-                                                        </span>
-                                                    </td>
-                                                    <td style={{ padding: '0.75rem' }}>{valve.description || '-'}</td>
-                                                    <td style={{ padding: '0.75rem' }}>{valve.location || '-'}</td>
-                                                    <td style={{ padding: '0.75rem', color: 'var(--text-muted)' }}>
-                                                        {valve.updatedAt ? new Date(valve.updatedAt).toLocaleDateString() : '-'}
-                                                    </td>
-                                                </tr>
-                                            ))}
+                                            {[...jobValves]
+                                                .sort((a, b) => {
+                                                    const dateA = a.requiredDate ? new Date(a.requiredDate).getTime() : Infinity;
+                                                    const dateB = b.requiredDate ? new Date(b.requiredDate).getTime() : Infinity;
+                                                    return dateA - dateB;
+                                                })
+                                                .map(valve => (
+                                                    <tr key={valve.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                                        <td style={{ padding: '0.75rem' }}>
+                                                            <span
+                                                                onClick={() => { if (onNavigate) onNavigate('record-detail', valve); }}
+                                                                style={{
+                                                                    color: 'var(--primary)',
+                                                                    fontWeight: 'bold',
+                                                                    cursor: 'pointer',
+                                                                    textDecoration: 'underline'
+                                                                }}
+                                                                title="Click to view full record"
+                                                            >
+                                                                {valve.serialNumber || 'N/A'}
+                                                            </span>
+                                                        </td>
+                                                        <td style={{ padding: '0.75rem' }}>{valve.description || '-'}</td>
+                                                        <td style={{ padding: '0.75rem' }}>{valve.location || '-'}</td>
+                                                        <td style={{
+                                                            padding: '0.75rem',
+                                                            fontWeight: 'bold',
+                                                            color: (valve.requiredDate && new Date(valve.requiredDate) < new Date()) ? '#ef4444' : 'var(--accent)'
+                                                        }}>
+                                                            {valve.requiredDate ? new Date(valve.requiredDate).toLocaleDateString() : '-'}
+                                                        </td>
+                                                        <td style={{ padding: '0.75rem' }}>
+                                                            <span style={(() => {
+                                                                const status = valve.status;
+                                                                const isShipped = status === 'Shipped';
+                                                                const isWaiting = status?.includes('Hold') || status?.includes('Waiting');
+                                                                return {
+                                                                    padding: '0.2rem 0.6rem',
+                                                                    borderRadius: '20px',
+                                                                    background: isShipped ? 'rgba(16, 185, 129, 0.2)' : isWaiting ? 'rgba(239, 68, 68, 0.2)' : 'rgba(59, 130, 246, 0.2)',
+                                                                    color: isShipped ? '#4ade80' : isWaiting ? '#f87171' : '#60a5fa',
+                                                                    fontSize: '0.8rem',
+                                                                    fontWeight: '700',
+                                                                    border: `1px solid ${isShipped ? 'rgba(16, 185, 129, 0.3)' : isWaiting ? 'rgba(239, 68, 68, 0.3)' : 'rgba(59, 130, 246, 0.3)'}`
+                                                                };
+                                                            })()}>
+                                                                {valve.status || 'No Status'}
+                                                            </span>
+                                                        </td>
+                                                        <td style={{ padding: '0.75rem', color: 'var(--text-muted)' }}>
+                                                            {valve.updatedAt ? new Date(valve.updatedAt).toLocaleDateString() : '-'}
+                                                        </td>
+                                                    </tr>
+                                                ))}
                                         </tbody>
                                     </table>
                                 </div>

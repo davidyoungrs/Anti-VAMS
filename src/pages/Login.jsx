@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
 import { auditService } from '../services/auditService';
+import { SecurityBannerModal } from '../components/SecurityBannerModal';
+import { config } from '../config';
 
 export const Login = () => {
     const { signIn } = useAuth();
@@ -9,6 +11,17 @@ export const Login = () => {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [bannerAccepted, setBannerAccepted] = useState(false);
+
+    const handleAcceptBanner = async () => {
+        // Log acceptance immediately (even before login attempt)
+        await auditService.logEvent('SECURITY_BANNER_ACCEPTED', {
+            timestamp: new Date().toISOString(),
+            status: 'CONSENTED'
+        }, 'INFO', email || 'Anonymous');
+
+        setBannerAccepted(true);
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -40,6 +53,16 @@ export const Login = () => {
             background: 'var(--bg-app)',
             color: 'var(--text-primary)'
         }}>
+            {config.security.showBanner && !bannerAccepted && (
+                <SecurityBannerModal
+                    title={config.security.bannerTitle}
+                    text={config.security.bannerText}
+                    acceptButtonText={config.security.acceptButtonText}
+                    onAccept={handleAcceptBanner}
+                    onReject={() => window.location.href = 'https://thevalve.pro'} // Redirect on decline
+                />
+            )}
+
             <div className="glass-panel" style={{
                 padding: '3rem',
                 borderRadius: 'var(--radius-lg)',

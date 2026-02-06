@@ -930,6 +930,21 @@ function App() {
                               📎 {(record.files?.length || record.file_urls?.length)}
                             </span>
                           )}
+                          {(record.jobId || record.job_id) && jobs[record.jobId || record.job_id] && (
+                            <span style={{
+                              fontSize: '0.75rem',
+                              background: '#3b82f6',
+                              color: 'white',
+                              padding: '2px 8px',
+                              borderRadius: '12px',
+                              fontWeight: '600',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}>
+                              🏢 {jobs[record.jobId || record.job_id].name}
+                            </span>
+                          )}
                         </div>
                         <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                           {record.customer} | {record.oem} | {record.valveType || 'N/A'} | {record.sizeClass || 'N/A'} | {record.mawp || 'N/A'}
