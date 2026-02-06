@@ -1,0 +1,30 @@
+name: OWASP ZAP Baseline Scan
+
+on:
+  schedule:
+    # Runs at 00:00 every Monday
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: 'URL to scan'
+        required: true
+        default: 'https://anti-vams.vercel.app' # Placeholder URL
+
+jobs:
+  zap_scan:
+    runs-on: ubuntu-latest
+    name: Scan the web application
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: ZAP Scan
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          target: ${{ github.event.inputs.target_url || 'https://anti-vams.vercel.app' }}
+          rules_file_name: '.zap/rules.tsv'
+          fail_action: true
+          allow_issue_writing: true

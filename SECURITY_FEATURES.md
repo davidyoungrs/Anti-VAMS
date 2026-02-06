@@ -85,6 +85,15 @@ The GVS-VAMS (Valve Asset Management System) is engineered with a **Defense-in-D
     *   **Auto-Logout:** Automatically signs out users after 10 minutes of inactivity, clearing local session storage and redirecting to the login portal.
     *   **State Clean:** Ensures no sensitive data remnants persist in browser memory or storage after timeout.
 
+## 9. Extended Log Retention & Archival (Compliance RA-5 / GCC-12)
+**Justification:** Regional regulations (NCA ECC, QCB) and international standards often require audit logs to be retained for 12 months or longer. Storing large volumes of logs in a primary production database can cause "bloat," degrading system performance.
+
+*   **Automated "Cold Storage" Archival:**
+    *   **Scheduled Offloading:** A Supabase Edge Function runs on a weekly schedule to identify audit logs older than 365 days.
+    *   **Secure Archival Format:** Logs are exported in NDJSON (Newline Delimited JSON) format and uploaded to a dedicated, restricted storage bucket (`audit-logs-archival`).
+    *   **S3/Glacier Lifecycle:** The archival bucket is configured with lifecycle policies to move objects to low-cost archival storage (S3 Glacier) after 30 days, ensuring long-term retention at minimal cost.
+    *   **Database Pruning:** Upon successful verification of the archival upload, the system automatically prunes the primary `audit_logs` table, maintaining optimal database performance while preserving forensic history.
+
 ---
 
 ## Conclusion

@@ -66,9 +66,9 @@ This document outlines the proposed development path for the GVR-VAMS.
 ## Continuous Monitoring & Resilience (NIST/CMMC Advanced)
 *Automated controls to maintain compliance posture over time.*
 
-9. **Automated Vulnerability Scanning (RA-5)** (Priority: Medium)
+9. **Automated Vulnerability Scanning (RA-5)** (Status: **Completed**)
     - **Why**: NIST requires detection of vulnerabilities in a timely manner.
-    - **Task**: Integrate SAST (Static Analysis) and DAST (Dynamic Scanning) tools into the deployment pipeline to catch flaws before production.
+    - **Task**: Integrated SAST (ESLint + CodeQL) and DAST (OWASP ZAP) into the deployment pipeline.
 
 10. **Disaster Recovery (DR) Drill Mode (CP-4)** (Priority: Low)
     - **Why**: Recoverability must be tested, not just assumed.
@@ -81,9 +81,7 @@ This document outlines the proposed development path for the GVR-VAMS.
     - **Why**: Saudi NCA ECC (2-1-3) and UAE NESA require restricted data geolocations.
     - **Task**: Architect Supabase deployment to support "Region Pinning" (e.g., ensuring data stored in AWS Middle East/Bahrain/UAE regions only) or On-Premise capability.
 
-12. **Extended Log Retention Archival** (Priority: Medium)
-    - **Why**: NCA ECC & QCB often require audit logs to be retained for 12 months minimum.
-    - **Task**: Implement automated "Cold Storage" offloading of logs to low-cost archival (S3 Glacier) to meet retention mandates without database bloat.
+
 
 
 ## China Cybersecurity Law & MLPS 2.0 Compliance
