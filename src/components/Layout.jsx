@@ -112,6 +112,15 @@ export const Layout = ({ children, activeView, onNavigate, userRole }) => {
               )}
             </li>
 
+
+            <li style={{ marginBottom: '0.5rem' }}>
+              <a onClick={() => onNavigate('unit-converter')} style={getItemStyle('unit-converter')}>
+                Calculators
+              </a>
+            </li>
+
+            <li style={{ marginBottom: '0.5rem' }}> <a href="https://thevalve.pro" target="_blank" rel="noopener noreferrer" style={{ ...getItemStyle('TheValve.pro'), color: 'white', fontWeight: 'bold', border: '1px solid white' }} > TheValve.pro </a>
+            </li>
             <li style={{ marginBottom: '0.5rem' }}>
               <div
                 onClick={() => setIsAdminOpen(!isAdminOpen)}
@@ -155,8 +164,6 @@ export const Layout = ({ children, activeView, onNavigate, userRole }) => {
                   </li>
                 </ul>
               )}
-            </li>
-            <li style={{ marginBottom: '0.5rem' }}> <a href="https://thevalve.pro" target="_blank" rel="noopener noreferrer" style={{ ...getItemStyle('TheValve.pro'), color: 'white', fontWeight: 'bold', border: '1px solid white' }} > TheValve.pro </a>
             </li>
             <li style={{ marginBottom: '0.5rem' }}>
               <a onClick={() => onNavigate('security')} style={getItemStyle('security')}>

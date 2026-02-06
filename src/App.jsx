@@ -25,6 +25,8 @@ import { jobService } from './services/jobService';
 import { JobSelectionModal } from './components/JobSelectionModal';
 import { SearchableJobSelect } from './components/SearchableJobSelect';
 import { Jobs } from './pages/Jobs';
+import { UnitConverter } from './pages/UnitConverter';
+
 
 // Import Markdown Content
 import featuresContent from '../FEATURES.md?raw';
@@ -563,11 +565,14 @@ function App() {
       case 'licenses':
         return <MarkdownPage title="Licenses & Attribution" content={licensesContent} />;
       case 'analytics':
-        return <AnalyticsDashboard records={records} />;
+        return <AnalyticsDashboard records={records} onNavigate={handleNavigate} />;
       case 'scheduler':
         return <MaintenanceScheduler />;
       case 'jobs':
         return <Jobs onNavigate={handleNavigate} />;
+      case 'unit-converter':
+        return <UnitConverter />;
+
       case 'record-detail':
         return <RecordForm key={selectedRecord?.id || 'detail'} initialData={selectedRecord} onSave={handleSave} onNavigate={handleNavigate} />;
       case 'search':

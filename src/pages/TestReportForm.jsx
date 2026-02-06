@@ -8,6 +8,8 @@ const PRESSURE_UNITS = ['PSI', 'Bar', 'MPa'];
 const LEAKAGE_UNITS = ['bubbles/min', 'ml/min', 'cc/min', 'drops/min'];
 const SIGNAL_TYPES = ['mA', 'PSI', 'Bar'];
 
+import { standardsService } from '../services/standardsService';
+
 export default function TestReportForm({ valveId, reportId, inspectionId, onBack, onSave }) {
     const [report, setReport] = useState({
         valveId: valveId,
@@ -77,8 +79,60 @@ export default function TestReportForm({ valveId, reportId, inspectionId, onBack
         }
     }, [report.strokeTest.minSignal, report.strokeTest.maxSignal]);
 
+    const handleCalculateStandards = () => {
+        if (!valveData) {
+            alert("No valve data available to calculate standards.");
+            return;
+        }
+
+        const standards = standardsService.calculate(valveData.sizeClass, valveData.mawp);
+
+        if (standards.notes.length > 0) {
+            // Show notes but proceed if possible
+            alert(`Calculation Notes:\n- ${standards.notes.join('\n- ')}\n\nProceeding with available data...`);
+        }
+
+        if (standards.shell.pressure === 0 && standards.seatHP.pressure === 0) {
+            alert("Could not calculate pressures. Please check Valve Size and Pressure Class inputs.");
+            return;
+        }
+
+        if (!window.confirm(`Apply API 598 Standards?\n\nShell: ${standards.shell.pressure} ${standards.shell.unit} (${standards.shell.duration}s)\nSeat (HP): ${standards.seatHP.pressure} ${standards.seatHP.unit} (${standards.seatHP.duration}s)\nSeat (LP): ${standards.seatLP.pressure} ${standards.seatLP.unit}\n\nThis will overwrite current 'Allowable' fields.`)) {
+            return;
+        }
+
+        setReport(prev => ({
+            ...prev,
+            pressureTest: {
+                ...prev.pressureTest,
+                hydrotest: {
+                    ...prev.pressureTest.hydrotest,
+                    allowable: standards.shell.pressure,
+                    unit: standards.shell.unit,
+                    duration: (standards.shell.duration / 60).toString() // Convert seconds to mins
+                },
+                lowPressureGas: {
+                    ...prev.pressureTest.lowPressureGas,
+                    allowable: standards.seatLP.pressure,
+                    unit: standards.seatLP.unit,
+                    duration: (standards.seatLP.duration / 60).toString(),
+                    allowableLeakage: '0', // ISO 5208 Rate A default? Or user must specify? API 598 usually "No visible leakage" for gas depending on size/type.
+                    // Let's leave leakage empty or set '0' for strict.
+                },
+                highPressureLiquid: {
+                    ...prev.pressureTest.highPressureLiquid,
+                    allowable: standards.seatHP.pressure,
+                    unit: standards.seatHP.unit,
+                    duration: (standards.seatHP.duration / 60).toString(),
+                    allowableLeakage: '0'
+                }
+            }
+        }));
+    };
+
     useEffect(() => {
         const loadData = async () => {
+
             if (valveId) {
                 const records = await storageService.getAll();
                 const valve = records.find(r => r.id === valveId);
@@ -173,6 +227,33 @@ export default function TestReportForm({ valveId, reportId, inspectionId, onBack
 
     const isControlValve = valveData?.valveType === 'Globe Control Valve'; // Or other control types
 
+    const renderPassFail = (actual, limit, type) => {
+        if (!actual || !limit) return null;
+        const a = parseFloat(actual);
+        const l = parseFloat(limit);
+        if (isNaN(a) || isNaN(l)) return null;
+
+        let passed = false;
+        if (type === 'pressure') passed = a >= l; // Pressure Test: Must hold at least Required Pressure
+        if (type === 'leakage') passed = a <= l; // Leakage: Must be less than Max Allowed
+
+        return (
+            <span style={{
+                marginLeft: '0.5rem',
+                fontSize: '0.7em',
+                padding: '1px 4px',
+                borderRadius: '4px',
+                background: passed ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                color: passed ? '#22c55e' : '#ef4444',
+                border: `1px solid ${passed ? '#22c55e' : '#ef4444'}`,
+                fontWeight: 'bold',
+                verticalAlign: 'middle'
+            }}>
+                {passed ? 'PASS' : 'FAIL'}
+            </span>
+        );
+    };
+
     return (
         <div className="inspection-form">
             <div className="inspection-header">
@@ -185,8 +266,26 @@ export default function TestReportForm({ valveId, reportId, inspectionId, onBack
             <form onSubmit={handleSubmit}>
                 {/* Pressure Test Section */}
                 <section className="form-section pressure-test-section">
-                    <div style={{ marginBottom: '1rem' }}>
+                    <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <h3>Pressure Test</h3>
+                        <button
+                            type="button"
+                            onClick={handleCalculateStandards}
+                            className="btn-secondary"
+                            style={{
+                                fontSize: '0.9rem',
+                                padding: '0.4rem 0.8rem',
+                                gap: '0.5rem',
+                                display: 'flex',
+                                alignItems: 'center',
+                                background: '#4b5563', // Gray-600
+                                color: 'white',
+                                border: '1px solid #374151'
+                            }}
+                            title="Auto-calculate Shell/Seat pressures based on Valve Size & Class (API 598)"
+                        >
+                            ⚡ Calculate API 598 Params
+                        </button>
                     </div>
 
                     <div className="grid-responsive" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
@@ -209,7 +308,10 @@ export default function TestReportForm({ valveId, reportId, inspectionId, onBack
                             </div>
                             <div className="grid-2">
                                 <div className="field-group">
-                                    <label>Actual Pressure</label>
+                                    <label>
+                                        Actual Pressure
+                                        {renderPassFail(report.pressureTest.hydrotest.actual, report.pressureTest.hydrotest.allowable, 'pressure')}
+                                    </label>
                                     <input
                                         type="text"
                                         value={report.pressureTest.hydrotest.actual}
@@ -262,7 +364,10 @@ export default function TestReportForm({ valveId, reportId, inspectionId, onBack
                             </div>
                             <div className="grid-2">
                                 <div className="field-group">
-                                    <label>Actual Pressure</label>
+                                    <label>
+                                        Actual Pressure
+                                        {renderPassFail(report.pressureTest.lowPressureGas.actual, report.pressureTest.lowPressureGas.allowable, 'pressure')}
+                                    </label>
                                     <input
                                         type="text"
                                         value={report.pressureTest.lowPressureGas.actual}
@@ -295,7 +400,10 @@ export default function TestReportForm({ valveId, reportId, inspectionId, onBack
                                     />
                                 </div>
                                 <div className="field-group">
-                                    <label>Actual Leakage</label>
+                                    <label>
+                                        Actual Leakage
+                                        {renderPassFail(report.pressureTest.lowPressureGas.actualLeakage, report.pressureTest.lowPressureGas.allowableLeakage, 'leakage')}
+                                    </label>
                                     <input
                                         type="text"
                                         value={report.pressureTest.lowPressureGas.actualLeakage || ''}
@@ -340,7 +448,10 @@ export default function TestReportForm({ valveId, reportId, inspectionId, onBack
                             </div>
                             <div className="grid-2">
                                 <div className="field-group">
-                                    <label>Actual Pressure</label>
+                                    <label>
+                                        Actual Pressure
+                                        {renderPassFail(report.pressureTest.highPressureLiquid.actual, report.pressureTest.highPressureLiquid.allowable, 'pressure')}
+                                    </label>
                                     <input
                                         type="text"
                                         value={report.pressureTest.highPressureLiquid.actual}
@@ -373,7 +484,10 @@ export default function TestReportForm({ valveId, reportId, inspectionId, onBack
                                     />
                                 </div>
                                 <div className="field-group">
-                                    <label>Actual Leakage</label>
+                                    <label>
+                                        Actual Leakage
+                                        {renderPassFail(report.pressureTest.highPressureLiquid.actualLeakage, report.pressureTest.highPressureLiquid.allowableLeakage, 'leakage')}
+                                    </label>
                                     <input
                                         type="text"
                                         value={report.pressureTest.highPressureLiquid.actualLeakage || ''}

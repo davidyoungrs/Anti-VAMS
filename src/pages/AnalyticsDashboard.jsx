@@ -23,8 +23,9 @@ ChartJS.register(
     Legend
 );
 
-export const AnalyticsDashboard = ({ records = [] }) => {
+export const AnalyticsDashboard = ({ records = [], onNavigate }) => {
     const [selectedOEMs, setSelectedOEMs] = useState([]); // Empty = All
+    const [drillDown, setDrillDown] = useState(null); // { type: 'status'|'oem_pf', label: string, datasetLabel?: string }
 
     // Extract unique OEMs for filter dropdown
     const uniqueOEMs = useMemo(() => {
@@ -160,7 +161,42 @@ export const AnalyticsDashboard = ({ records = [] }) => {
         } else {
             setSelectedOEMs(selected);
         }
+        setDrillDown(null); // Clear drilldown when filter changes
     };
+
+    const handleChartClick = (event, elements, chartType) => {
+        if (!elements || elements.length === 0) return;
+
+        const { index, datasetIndex } = elements[0];
+
+        if (chartType === 'WIP') {
+            const label = statusData.labels[index];
+            setDrillDown({ type: 'status', label });
+        } else if (chartType === 'OEM_PF') {
+            const oem = passFailData.labels[index];
+            const datasetLabel = passFailData.datasets[datasetIndex].label; // 'Pass' or 'Fail'
+            setDrillDown({ type: 'oem_pf', label: oem, datasetLabel });
+        }
+    };
+
+    const drillDownRecords = useMemo(() => {
+        if (!drillDown) return [];
+
+        return filteredRecords.filter(r => {
+            if (drillDown.type === 'status') {
+                return r.status === drillDown.label;
+            } else if (drillDown.type === 'oem_pf') {
+                const pf = (r.passFail || r.pass_fail || '').toUpperCase();
+                const matchesOEM = (r.oem || 'Unknown') === drillDown.label;
+                if (drillDown.datasetLabel === 'Pass') {
+                    return matchesOEM && (pf === 'PASS' || pf === 'Y');
+                } else {
+                    return matchesOEM && (pf === 'FAIL' || pf === 'N');
+                }
+            }
+            return false;
+        });
+    }, [filteredRecords, drillDown]);
 
     return (
         <div className="analytics-dashboard fade-in">
@@ -205,6 +241,14 @@ export const AnalyticsDashboard = ({ records = [] }) => {
                                 options={{
                                     responsive: true,
                                     maintainAspectRatio: false,
+                                    onClick: (evt, el) => handleChartClick(evt, el, 'OEM_PF'),
+                                    plugins: {
+                                        tooltip: {
+                                            callbacks: {
+                                                afterBody: () => '\nClick to view records'
+                                            }
+                                        }
+                                    },
                                     scales: {
                                         x: { stacked: true },
                                         y: { stacked: true }
@@ -263,6 +307,14 @@ export const AnalyticsDashboard = ({ records = [] }) => {
                             options={{
                                 responsive: true,
                                 maintainAspectRatio: false,
+                                onClick: (evt, el) => handleChartClick(evt, el, 'WIP'),
+                                plugins: {
+                                    tooltip: {
+                                        callbacks: {
+                                            afterBody: () => '\nClick to view records'
+                                        }
+                                    }
+                                },
                                 scales: {
                                     y: { beginAtZero: true, ticks: { stepSize: 1 } }
                                 }
@@ -270,6 +322,63 @@ export const AnalyticsDashboard = ({ records = [] }) => {
                         />
                     </div>
                 </div>
+
+                {/* Drill-down Detail List */}
+                {drillDown && (
+                    <div className="glass-panel mt-4 fade-in" style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--primary)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                            <h3 style={{ margin: 0 }}>
+                                {drillDown.type === 'status' ? `Valves: ${drillDown.label}` : `Valves: ${drillDown.label} (${drillDown.datasetLabel})`}
+                                <span style={{ marginLeft: '1rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>({drillDownRecords.length} found)</span>
+                            </h3>
+                            <button
+                                onClick={() => setDrillDown(null)}
+                                className="btn-secondary"
+                                style={{ padding: '0.25rem 0.75rem', fontSize: '0.8rem' }}
+                            >
+                                Close Details
+                            </button>
+                        </div>
+
+                        <div style={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                                <thead style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
+                                    <tr>
+                                        <th style={{ padding: '0.75rem', textAlign: 'left' }}>Tag No</th>
+                                        <th style={{ padding: '0.75rem', textAlign: 'left' }}>Serial No</th>
+                                        <th style={{ padding: '0.75rem', textAlign: 'left' }}>Customer</th>
+                                        <th style={{ padding: '0.75rem', textAlign: 'right' }}>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {drillDownRecords.map(r => (
+                                        <tr key={r.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                            <td style={{ padding: '0.75rem' }}>{r.tagNo || '-'}</td>
+                                            <td style={{ padding: '0.75rem' }}>{r.serialNumber}</td>
+                                            <td style={{ padding: '0.75rem' }}>{r.customer}</td>
+                                            <td style={{ padding: '0.75rem', textAlign: 'right' }}>
+                                                <button
+                                                    onClick={() => onNavigate('record-detail', r)}
+                                                    className="btn-primary"
+                                                    style={{ padding: '0.2rem 0.6rem', fontSize: '0.75rem' }}
+                                                >
+                                                    View Record
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {drillDownRecords.length === 0 && (
+                                        <tr>
+                                            <td colSpan="4" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                                                No records found for this selection.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
