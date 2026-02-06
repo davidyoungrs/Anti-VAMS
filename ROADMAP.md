@@ -40,19 +40,6 @@ This document outlines the proposed development path for the GVR-VAMS.
 # Security Features
 *Comprehensive regulatory compliance and cybersecurity controls.*
 
-## ISO/IEC 27701 Privacy & Compliance (PIMS)
-*Critical features for Regulatory Compliance and Data Privacy.*
-
-5. **Data Subject Rights Management** (Priority: High)
-   - **Why**: ISO 27701 / GDPR requirement for PII management.
-   - **Task**: Implement "Right to Erasure" (Hard Delete) and "Right to Access" (Data Portability) tools for PII.
-   - **Note**: Current "Soft Delete" is insufficient for "Right to be Forgotten" requests.
-
-
-
-7. **Privacy Impact Assessment (PIA) Workflow** (Priority: Medium)
-   - **Why**: Security by Design.
-   - **Task**: Checklist integration for new deployments to verify privacy risks are mitigated.
 
 ## ISO/IEC 27001/27002 ISMS Controls
 *Core information security controls for enterprise certification.*
@@ -124,3 +111,16 @@ This document outlines the proposed development path for the GVR-VAMS.
 24. **Real-Name Identity Verification** (Priority: High)
     - **Why**: CSL requirement for user accountability.
     - **Task**: Integrate with a verified SMS gateway or Government ID API for user registration in the China region.
+
+## ISO/IEC 27701 Privacy & Compliance (PIMS)
+*Critical features for Regulatory Compliance and Data Privacy.*
+
+5. **Data Subject Rights Management** (Priority: High)
+   - **Why**: ISO 27701 / GDPR requirement for PII management.
+   - **Task**: Implement "Right to Erasure" (Hard Delete) and "Right to Access" (Data Portability) tools for PII.
+   - **Note**: Current "Soft Delete" is insufficient for "Right to be Forgotten" requests.
+
+7. **Privacy Impact Assessment (PIA) Workflow** (Priority: Medium)
+   - **Why**: Security by Design.
+   - **Task**: Checklist integration for new deployments to verify privacy risks are mitigated.
+
