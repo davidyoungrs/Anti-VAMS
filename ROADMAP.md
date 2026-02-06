@@ -1,4 +1,4 @@
-# Strategic Development Roadmap
+# Strategic Development Roadmap <!-- trigger-update -->
 
 This document outlines the proposed development path for the GVR-VAMS.
 
