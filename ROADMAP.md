@@ -5,7 +5,7 @@ This document outlines the proposed development path for the GVR-VAMS.
 ## Phase 1: Inspection Efficiency (The "Wow" Factor)
 *Features that make the daily user's life easier.*
 
-1. **Integrated "Standards" Calculator** (Priority: Medium)
+1. **Integrated "Standards" Calculator** (Status: **Complete**)
    - **Why**: Eliminates manual lookups and human error.
    - **Task**: Implement API 598 / ISO 5208 logic.
    - **Benefit**: Instant "Pass/Fail" determination based on input pressure/size.
