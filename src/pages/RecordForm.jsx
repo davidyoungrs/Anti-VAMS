@@ -42,7 +42,10 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
     const [showSignaturePad, setShowSignaturePad] = useState(false);
     const [showFileManager, setShowFileManager] = useState(false);
     const toggleFileManager = (show) => {
-        if (show) window.scrollTo(0, 0);
+        if (show) {
+            const mainContent = document.querySelector('.main-content');
+            if (mainContent) mainContent.scrollTop = 0;
+        }
         setShowFileManager(show);
     };
     const [annotatingFile, setAnnotatingFile] = useState(null); // { file: File|string, index: number }

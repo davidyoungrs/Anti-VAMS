@@ -3,7 +3,8 @@ import { ATTACHMENT_CATEGORIES } from '../services/storage';
 
 export const FileManagerModal = ({ files, onUpdateFiles, onCancel, isReadOnly }) => {
     useEffect(() => {
-        window.scrollTo(0, 0);
+        const mainContent = document.querySelector('.main-content');
+        if (mainContent) mainContent.scrollTop = 0;
     }, []);
 
     const [currentFolder, setCurrentFolder] = useState(null); // null means root (folder view)
