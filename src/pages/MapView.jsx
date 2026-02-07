@@ -326,6 +326,6 @@ export function MapView({ records, jobs = [], onRecordClick, onLocationSelect, h
                     ))}
                 </MapContainer>
             </div>
-        </div >
+        </div>
     );
 }

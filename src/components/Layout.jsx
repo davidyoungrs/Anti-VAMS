@@ -212,15 +212,15 @@ export const Layout = ({ children, activeView, onNavigate, userRole }) => {
             </div>
           </div>
         </div>
-      </aside >
+      </aside>
 
       {/* Main Content */}
-      < main className="main-content" ref={mainContentRef} >
+      <main className="main-content" ref={mainContentRef}>
         {children}
         <footer style={{ marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)', textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-muted)', opacity: 0.7 }}>
           Copyright © 2026 TheValve.pro All rights reserved.
         </footer>
-      </main >
-    </div >
+      </main>
+    </div>
   );
 };
