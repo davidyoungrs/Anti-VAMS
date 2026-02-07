@@ -138,12 +138,14 @@ export const FileManagerModal = ({ files, onUpdateFiles, onCancel, isReadOnly })
             paddingTop: '2rem'
         }}>
             <div className="glass-panel" style={{
-                width: '100%', maxWidth: '900px', maxHeight: '90vh',
+                width: 'fit-content', minWidth: 'min(90vw, 350px)', maxWidth: '95vw', maxHeight: '90vh',
                 display: 'flex', flexDirection: 'column', overflow: 'hidden',
-                background: 'var(--bg-card)', padding: '1.5rem'
+                background: 'var(--bg-card)', padding: '1.5rem',
+                border: '2px solid var(--border-color)', // More pronounced "reasonable" border
+                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)'
             }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem' }}>
-                    <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem', gap: '2rem' }}>
+                    <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem', whiteSpace: 'nowrap' }}>
                         📁 Valve Documents
                     </h2>
                     <button onClick={onCancel} className="btn-secondary" style={{ padding: '0.5rem 1rem' }}>Close</button>
