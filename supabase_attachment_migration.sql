@@ -28,9 +28,26 @@ BEGIN
 END $$;
 
 -- 2. Storage Policy Recommendation
--- Ensure your 'valve-attachment' bucket RLS allows the new folder structure.
--- The new path format is: record_id/Category/filename.ext
+-- Run this in the SQL Editor to ensure nested folders (Record_ID/Category/File) are allowed.
 
--- If your current policy is path-restricted, ensure it uses 'starts with' logic:
--- Example (DO NOT RUN BLINDLY, tailored for your RLS):
--- USING (bucket_id = 'valve-attachment' AND (storage.foldername(name))[1] IS NOT NULL)
+-- This policy allows authenticated users to:
+-- 1. Upload files to ANY folder in the 'valve-attachment' bucket.
+-- 2. Read any file in that bucket.
+
+BEGIN;
+
+-- Drop existing generic policy if it conflicts (optional, adjust name as needed)
+-- DROP POLICY IF EXISTS "Give users access to own folder" ON storage.objects;
+
+CREATE POLICY "Allow authenticated full access to valve-attachment"
+ON storage.objects FOR ALL 
+TO authenticated 
+USING (bucket_id = 'valve-attachment')
+WITH CHECK (bucket_id = 'valve-attachment');
+
+COMMIT;
+
+-- VERIFICATION:
+-- In the Supabase Dashboard, go to Storage -> Policies.
+-- You should see "Allow authenticated full access to valve-attachment" under the 'Objects' table.
+-- Because there is no "(storage.foldername(name))[1]" restriction, it will work for any depth.

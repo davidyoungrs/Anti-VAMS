@@ -145,7 +145,17 @@ export const storageService = {
                         deletedAt: r.deleted_at, // Map Soft Delete timestamp
                         lastViewedAt: r.last_viewed_at,
                         valvePhoto: r.valve_photo,
-                        files: r.file_urls || []
+                        files: (r.file_urls || []).map(f => {
+                            if (typeof f === 'string') {
+                                return {
+                                    url: f,
+                                    category: (f.toLowerCase().includes('report') || f.endsWith('.pdf')) ? 'Inspection & Test report' : 'Photographs',
+                                    originalName: f.split('/').pop().split('?')[0] || 'Legacy File',
+                                    uploadDate: r.created_at
+                                };
+                            }
+                            return f;
+                        })
                     }));
 
                     // Safety: Only overwrite local if we actually got something from the cloud
@@ -829,6 +839,8 @@ export const storageService = {
             }
         }
 
+        // Also normalize local storage by forcing a reload/save cycle in state if needed,
+        // but for now, cleaning Supabase is the priority.
         console.log(`Migration complete. Updated ${migratedCount} records.`);
         return { success: true, migratedCount };
     }

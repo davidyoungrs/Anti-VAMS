@@ -9,14 +9,28 @@ export const FileManagerModal = ({ files, onUpdateFiles, onCancel, isReadOnly })
 
     const [currentFolder, setCurrentFolder] = useState(null); // null means root (folder view)
 
+    // Normalize files for backward compatibility (strings to objects)
+    const normalizedFiles = (files || []).map(f => {
+        if (typeof f === 'string') {
+            return {
+                url: f,
+                category: f.toLowerCase().includes('report') || f.endsWith('.pdf') ? 'Inspection & Test report' : 'Photographs',
+                originalName: f.split('/').pop().split('?')[0] || 'Legacy File',
+                uploadDate: null,
+                isLegacy: true
+            };
+        }
+        return f;
+    });
+
     // Group files by category
     const groupedFiles = {};
     ATTACHMENT_CATEGORIES.forEach(cat => {
-        groupedFiles[cat] = (files || []).filter(f => f.category === cat);
+        groupedFiles[cat] = normalizedFiles.filter(f => f.category === cat);
     });
 
-    // Special category logic (merge uncategorized into 'Other')
-    const uncategorized = (files || []).filter(f => !f.category || !ATTACHMENT_CATEGORIES.includes(f.category));
+    // Special category logic (merge remaining uncategorized into 'Other')
+    const uncategorized = normalizedFiles.filter(f => !f.category || !ATTACHMENT_CATEGORIES.includes(f.category));
     if (uncategorized.length > 0) {
         groupedFiles['Other'] = [...(groupedFiles['Other'] || []), ...uncategorized];
     }
@@ -89,8 +103,7 @@ export const FileManagerModal = ({ files, onUpdateFiles, onCancel, isReadOnly })
                     </div>
                 ) : (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem', padding: '1rem' }}>
-                        {folderFiles.map((f, i) => {
-                            const originalIndex = files.findIndex(original => original.url === f.url);
+                        {folderFiles.map((f, i_in_folder) => {
                             const name = f.originalName || 'Untitled File';
                             const date = f.uploadDate ? new Date(f.uploadDate).toLocaleDateString() : 'Unknown Date';
                             const isImage = f.url?.match(/\.(jpeg|jpg|png|webp|gif)/i) || f.url?.startsWith('data:image');
@@ -108,6 +121,7 @@ export const FileManagerModal = ({ files, onUpdateFiles, onCancel, isReadOnly })
                                     )}
                                     <div style={{ overflow: 'hidden' }}>
                                         <div style={{ fontWeight: 'bold', fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={name}>
+                                            {f.isLegacy && <span style={{ color: 'var(--accent)', fontSize: '0.7rem', marginRight: '0.5rem' }}>[LEGACY]</span>}
                                             {name}
                                         </div>
                                         <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{date}</div>
@@ -134,9 +148,11 @@ export const FileManagerModal = ({ files, onUpdateFiles, onCancel, isReadOnly })
                                                     defaultValue={f.category}
                                                     onChange={(e) => {
                                                         const newCategory = e.target.value;
-                                                        const newFiles = [...files];
-                                                        newFiles[originalIndex] = { ...newFiles[originalIndex], category: newCategory };
-                                                        onUpdateFiles(newFiles);
+                                                        // Upgrade/Update logic
+                                                        const newFiles = [...normalizedFiles];
+                                                        newFiles[i_in_folder] = { ...f, category: newCategory };
+                                                        // Extract just the simple list for parent to handle (no temporary UI flags)
+                                                        onUpdateFiles(newFiles.map(({ isLegacy, ...rest }) => rest));
                                                         e.target.style.display = 'none';
                                                     }}
                                                 >
@@ -146,7 +162,13 @@ export const FileManagerModal = ({ files, onUpdateFiles, onCancel, isReadOnly })
                                                     ))}
                                                 </select>
                                                 <button
-                                                    onClick={() => handleRemoveFile(originalIndex)}
+                                                    onClick={() => {
+                                                        if (window.confirm('Are you sure you want to remove this attachment?')) {
+                                                            const newFiles = [...normalizedFiles];
+                                                            newFiles.splice(newFiles.indexOf(f), 1);
+                                                            onUpdateFiles(newFiles.map(({ isLegacy, ...rest }) => rest));
+                                                        }
+                                                    }}
                                                     className="btn-secondary"
                                                     style={{ color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.3)', padding: '0.4rem' }}
                                                 >
