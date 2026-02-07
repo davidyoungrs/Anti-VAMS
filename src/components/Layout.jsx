@@ -210,6 +210,9 @@ export const Layout = ({ children, activeView, onNavigate, userRole }) => {
             <div style={{ marginTop: '0.2rem', fontFamily: 'monospace', fontWeight: 'bold', color: 'var(--primary)' }}>
               Rev: {typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'Dev'}
             </div>
+            <div style={{ fontSize: '0.6rem', marginTop: '0.1rem' }}>
+              Built: {typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__ : 'N/A'}
+            </div>
           </div>
         </div>
       </aside>
