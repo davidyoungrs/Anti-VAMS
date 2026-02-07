@@ -23,7 +23,7 @@ const getMarkerIcon = (status) => {
     if (status === 'N') color = '#ef4444'; // Red (Fail)
 
     const svgTemplate = `
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${color}" width="32" height="32">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${color}" width="32" height="32" style="pointer-events: none;">
             <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
         </svg>`;
 
@@ -203,7 +203,7 @@ export function MapView({ records, jobs = [], onRecordClick, onLocationSelect, h
 
             <div style={{ position: 'relative', height: 'calc(100% - 80px)' }}>
                 <MapContainer
-                    center={records.length === 1 && records[0].latitude ? [records[0].latitude, records[0].longitude] : (records.find(r => r.latitude)?.latitude ? [records.find(r => r.latitude).latitude, records.find(r => r.latitude).longitude] : defaultCenter)}
+                    center={records.length === 1 && records[0].latitude != null ? [records[0].latitude, records[0].longitude] : (records.find(r => r.latitude != null)?.latitude != null ? [records.find(r => r.latitude != null).latitude, records.find(r => r.latitude != null).longitude] : defaultCenter)}
                     zoom={13}
                     style={{ height: '100%', width: '100%', borderRadius: 'var(--radius-md)' }}
                 >
@@ -269,7 +269,7 @@ export function MapView({ records, jobs = [], onRecordClick, onLocationSelect, h
                         </Marker>
                     )}
 
-                    {records.filter(r => r.latitude && r.longitude).map(record => (
+                    {records.filter(r => r.latitude != null && r.longitude != null).map(record => (
                         <Marker
                             key={record.id}
                             position={[record.latitude, record.longitude]}
@@ -279,7 +279,7 @@ export function MapView({ records, jobs = [], onRecordClick, onLocationSelect, h
                                 dragend: (e) => {
                                     if (onLocationSelect) {
                                         const { lat, lng } = e.target.getLatLng();
-                                        onLocationSelect({ lat, lng });
+                                        onLocationSelect({ lat, lng }, record.id);
                                     }
                                 }
                             }}

@@ -697,6 +697,8 @@ function App() {
           <MapView
             records={records}
             jobs={Object.values(jobs)}
+            hasUnsavedChanges={hasUnsavedChanges}
+            onSave={handleMapSave}
             onNavigate={handleNavigate}
             onRecordClick={(record) => {
               if (hasUnsavedChanges) {
@@ -704,6 +706,15 @@ function App() {
                 setHasUnsavedChanges(false);
               }
               handleRecordClick(record);
+            }}
+            onLocationSelect={(latlng, recordId) => {
+              const target = records.find(r => r.id === recordId);
+              if (target) {
+                const updated = { ...target, latitude: latlng.lat, longitude: latlng.lng };
+                setSelectedRecord(updated);
+                setHasUnsavedChanges(true);
+                setRecords(prev => prev.map(r => r.id === updated.id ? updated : r));
+              }
             }}
           />
         );
