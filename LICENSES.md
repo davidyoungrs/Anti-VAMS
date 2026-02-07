@@ -23,6 +23,11 @@ The Global Valve Record (GVR-VAMS) application is built using the following open
 *   **Copyright**: (c) 2020 Supabase
 *   **Source**: [https://supabase.com/](https://supabase.com/)
 
+### Vercel Analytics
+*   **License**: MIT License
+*   **Copyright**: (c) 2024 Vercel, Inc.
+*   **Purpose**: Real-time traffic and performance monitoring.
+
 ### Crypto-JS
 *   **License**: MIT License
 *   **Copyright**: (c) 2009-2013 Jeff Mott, (c) 2013-2016 Evan Vosberg
@@ -55,6 +60,11 @@ The Global Valve Record (GVR-VAMS) application is built using the following open
 *   **License**: MIT License
 *   **Copyright**: (c) 2015 Titus Wormer
 
+### React Signature Canvas & React Sketch Canvas
+*   **License**: MIT License
+*   **Copyright**: (c) 2017-present Agilogy & Contributors
+*   **Purpose**: Capturing digital signatures and image annotations.
+
 ---
 
 ## Utilities
@@ -76,6 +86,11 @@ The Global Valve Record (GVR-VAMS) application is built using the following open
 ### JSZip
 *   **License**: MIT License
 *   **Copyright**: (c) 2009-2016 Stuart Knightley
+
+### QR Code Generator (node-qrcode)
+*   **License**: MIT License
+*   **Copyright**: (c) 2012 Soldair
+*   **Purpose**: Generating unique valve-specific QR codes for traceability.
 
 ---
 
