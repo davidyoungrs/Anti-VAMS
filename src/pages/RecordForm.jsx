@@ -12,6 +12,7 @@ import { inspectionService } from '../services/inspectionService';
 import { testReportService } from '../services/testReportService';
 import { SignaturePad } from '../components/SignaturePad';
 import { ImageAnnotator } from '../components/ImageAnnotator';
+import { FileManagerModal } from '../components/FileManagerModal';
 import { WORKFLOW_STATUS_OPTIONS } from '../constants/statusOptions';
 
 export const RecordForm = ({ initialData, onSave, onNavigate }) => {
@@ -39,6 +40,11 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
     const [files, setFiles] = useState(() => initialData?.files || []);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showSignaturePad, setShowSignaturePad] = useState(false);
+    const [showFileManager, setShowFileManager] = useState(false);
+    const toggleFileManager = (show) => {
+        if (show) window.scrollTo({ top: 0, behavior: 'smooth' });
+        setShowFileManager(show);
+    };
     const [annotatingFile, setAnnotatingFile] = useState(null); // { file: File|string, index: number }
 
     // Removed useEffect that was syncing props to state because App.jsx uses a key to remount the component.
@@ -53,6 +59,8 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
 
     const handleFiles = (newFiles) => {
         setFiles(prev => [...prev, ...newFiles]);
+        // After selecting files and categories, open file manager to show them
+        toggleFileManager(true);
     };
 
     const handleDelete = async () => {
@@ -108,20 +116,18 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
             // 3. Create PDF File object
             const fileName = `Report_${formData.serialNumber || 'Valve'}_${new Date().toISOString().split('T')[0]}.pdf`;
             const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+            const pdfWithCategory = { file: pdfFile, category: 'Inspection & Test report' };
 
             // 4. Generate QR Code Image File
             // Variable was used before initialization. Creating a temp object for QR generation (only needs ID).
             const qrInputRecord = { ...formData, id: initialData.id };
             const qrDataUrl = await generateValveQR(qrInputRecord);
 
-            let filesToSave = [...files, pdfFile];
+            let filesToSave = [...files, pdfWithCategory];
 
             if (qrDataUrl) {
-                // Convert Data URL to File
-                const res = await fetch(qrDataUrl);
-                const blob = await res.blob();
-                const qrFile = new File([blob], `QR_${formData.serialNumber || 'Valve'}.png`, { type: 'image/png' });
-                filesToSave.push(qrFile);
+                // Generate logic remains if needed elsewhere, but we don't push to filesToSave anymore
+                // as the user requested to delete QR codes from attachments.
             }
 
             // 5. Upload via storageService
@@ -496,71 +502,29 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
                     <fieldset disabled={isReadOnly} style={{ border: 'none', padding: 0, margin: 0, width: '100%', display: 'block' }}>
                         {!isReadOnly && <FileUpload label="Upload Images or PDFs" onFilesSelected={handleFiles} />}
 
-                        <div className="mt-4" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
-                            <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-                                📎 Attached Files ({files.length})
-                            </h4>
-
-                            {files.length === 0 ? (
-                                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontStyle: 'italic' }}>
-                                    No attachments found for this record.
-                                </p>
-                            ) : (
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
-                                    {files.map((f, i) => {
-                                        const isUrl = typeof f === 'string';
-                                        let name = '';
-                                        if (isUrl) {
-                                            name = f.split('/').pop();
-                                        } else {
-                                            name = f.name || `File ${i + 1}`;
-                                        }
-
-                                        const size = isUrl ? '' : (f.size ? `(${Math.round(f.size / 1024)} KB)` : '');
-
-                                        return (
-                                            <div key={i} className="glass-panel" style={{ padding: '0.75rem', fontSize: '0.9rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', border: '1px solid var(--primary-light)' }}>
-                                                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 'bold' }} title={name}>
-                                                    {name}
-                                                </div>
-                                                {size && <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{size}</div>}
-                                                <div className="flex-row" style={{ gap: '0.5rem', marginTop: '0.25rem' }}>
-                                                    {isUrl ? (
-                                                        <a href={f} target="_blank" rel="noopener noreferrer" className="btn-primary" style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', textDecoration: 'none', textAlign: 'center', flex: 1 }}>
-                                                            Browse File
-                                                        </a>
-                                                    ) : (
-                                                        <span style={{ color: 'var(--accent)', fontWeight: 'bold', fontSize: '0.8rem', flex: 1 }}>Pending Save</span>
-                                                    )}
-
-                                                    {/* Annotation Button - Only for images */}
-                                                    {(isUrl ? f.match(/\.(jpeg|jpg|png|webp)$/i) : f.type?.startsWith('image/')) && !isReadOnly && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                                const src = isUrl ? f : URL.createObjectURL(f);
-                                                                setAnnotatingFile({ file: f, index: i, src });
-                                                            }}
-                                                            style={{ background: 'rgba(14, 165, 233, 0.1)', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.8rem', padding: '0.35rem', borderRadius: '4px' }}
-                                                            title="Annotate Image"
-                                                        >
-                                                            ✏️
-                                                        </button>
-                                                    )}
-
-                                                    {!isReadOnly && <button
-                                                        type="button"
-                                                        onClick={() => setFiles(prev => prev.filter((_, index) => index !== i))}
-                                                        style={{ background: 'rgba(239, 68, 68, 0.1)', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.8rem', padding: '0.35rem', borderRadius: '4px' }}
-                                                    >
-                                                        Remove
-                                                    </button>}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
+                        <div className="mt-4" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem', textAlign: 'center' }}>
+                            <button
+                                type="button"
+                                onClick={() => toggleFileManager(true)}
+                                style={{
+                                    display: 'inline-flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    gap: '0.5rem',
+                                    padding: '1.5rem 3rem',
+                                    background: 'var(--bg-surface)',
+                                    border: '1px solid var(--border-color)',
+                                    borderRadius: 'var(--radius-lg)',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--primary)'}
+                                onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border-color)'}
+                            >
+                                <div style={{ fontSize: '3rem' }}>📂</div>
+                                <div style={{ fontWeight: 'bold', color: 'var(--primary)' }}>Documents & Photos</div>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>({files.length} items)</div>
+                            </button>
                         </div>
                     </fieldset>
                 </div>
@@ -662,6 +626,15 @@ export const RecordForm = ({ initialData, onSave, onNavigate }) => {
                     </div>
                 )
             }
+            {/* File Manager Modal */}
+            {showFileManager && (
+                <FileManagerModal
+                    files={files}
+                    isReadOnly={isReadOnly}
+                    onUpdateFiles={(newFiles) => setFiles(newFiles)}
+                    onCancel={() => toggleFileManager(false)}
+                />
+            )}
         </form >
     );
 };

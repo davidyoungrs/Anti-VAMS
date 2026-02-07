@@ -36,6 +36,34 @@ import legalContent from '../LEGAL_TERMS.md?raw';
 import licensesContent from '../LICENSES.md?raw';
 import securityContent from '../SECURITY_FEATURES.md?raw';
 
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) { return { hasError: true, error }; }
+  componentDidCatch(error, errorInfo) { console.error("App Crash:", error, errorInfo); }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '2rem', textAlign: 'center', background: 'var(--bg-app)', color: 'white', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <h1 style={{ color: '#ef4444' }}>⚠️ Something went wrong</h1>
+          <p style={{ color: 'var(--text-muted)', maxWidth: '600px', margin: '1rem 0' }}>
+            The application encountered an unexpected error. This usually happens due to a data mismatch or connection issue.
+          </p>
+          <div className="glass-panel" style={{ padding: '1rem', textAlign: 'left', fontSize: '0.8rem', maxWidth: '800px', overflowX: 'auto', background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+            <code>{this.state.error?.toString()}</code>
+          </div>
+          <button className="btn-primary" style={{ marginTop: '2rem' }} onClick={() => window.location.reload()}>
+            🔄 Refresh Application
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function App() {
   const { user, role, allowedCustomers, signOut } = useAuth();
   // Persist Navigation State
@@ -201,15 +229,15 @@ function App() {
     };
     init();
 
-    const channel = supabase
+    const channel = supabase ? supabase
       .channel('public:valve_records')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'valve_records' }, (payload) => {
         loadData();
       })
-      .subscribe();
+      .subscribe() : null;
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) supabase.removeChannel(channel);
     };
   }, [loadData, handleRecordClick]);
 
@@ -898,7 +926,7 @@ function App() {
             <div className="mt-4 glass-panel" style={{ padding: '1.5rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)' }}>
               <h3 style={{ marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>Latest Activity</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {[...records]
+                {(records || [])
                   .sort((a, b) => {
                     const getTime = (r) => {
                       const t1 = new Date(r.updatedAt || 0).getTime();
@@ -1048,9 +1076,11 @@ function App() {
   }
 
   return (
-    <Layout activeView={currentView} onNavigate={handleNavigate} userRole={role} onLogout={signOut}>
-      {renderContent()}
-    </Layout >
+    <ErrorBoundary>
+      <Layout activeView={currentView} onNavigate={handleNavigate} userRole={role} onLogout={signOut}>
+        {renderContent()}
+      </Layout >
+    </ErrorBoundary>
   );
 }
 

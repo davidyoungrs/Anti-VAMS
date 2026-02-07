@@ -5,6 +5,17 @@ import { systemSettingsService } from './systemSettingsService';
 
 const STORAGE_KEY = 'global_valve_records'; // Legacy key for migration
 
+export const ATTACHMENT_CATEGORIES = [
+    'Drawing',
+    'BOM',
+    'Datasheet',
+    'SPIR',
+    'Inspection & Test report',
+    'Photographs',
+    'Report - Other',
+    'Other'
+];
+
 export const storageService = {
     // 0. Migration Helper
     migrateFromLocalStorage: async () => {
@@ -247,16 +258,21 @@ export const storageService = {
         // 2b. Handle Attachments (Support Offline via Base64)
         if (finalRecord.files && finalRecord.files.length > 0) {
             try {
-                const processedFiles = await Promise.all(finalRecord.files.map(async (file) => {
-                    if (typeof file === 'string') return file; // Already URL or Base64
+                const processedFiles = await Promise.all(finalRecord.files.map(async (f) => {
+                    // Normalize input: could be a URL string (legacy), a metadata object, or a File (new)
+                    if (typeof f === 'string') return { url: f, category: 'Other', originalName: f.split('/').pop(), uploadDate: new Date().toISOString() };
+                    if (f.url) return f; // Already a metadata object
+
+                    const file = f.file || f;
+                    const category = f.category || (file.name?.toLowerCase().includes('report') ? 'Inspection & Test report' : 'Other');
 
                     // Try Supabase upload if available
                     if (supabase) {
                         try {
                             const fileExt = file.name.split('.').pop();
                             const fileNameWithoutExt = file.name.substring(0, file.name.lastIndexOf('.'));
-                            // User request: Show original name first. We use suffix for uniqueness.
-                            const filePath = `${finalRecord.id}/${fileNameWithoutExt}_${Date.now()}.${fileExt}`;
+                            // User request: Supabase storage buck should reflect this folder structure
+                            const filePath = `${finalRecord.id}/${category}/${fileNameWithoutExt}_${Date.now()}.${fileExt}`;
 
                             const { error: uploadError } = await supabase.storage
                                 .from('valve-attachment')
@@ -266,7 +282,13 @@ export const storageService = {
                                 const { data: { publicUrl } } = supabase.storage
                                     .from('valve-attachment')
                                     .getPublicUrl(filePath);
-                                return publicUrl;
+
+                                return {
+                                    url: publicUrl,
+                                    category: category,
+                                    originalName: file.name,
+                                    uploadDate: new Date().toISOString()
+                                };
                             }
                             console.warn('Supabase upload failed, falling back to local base64:', uploadError);
                         } catch (err) {
@@ -278,7 +300,12 @@ export const storageService = {
                     return new Promise((resolve, reject) => {
                         const reader = new FileReader();
                         reader.readAsDataURL(file);
-                        reader.onload = () => resolve(reader.result);
+                        reader.onload = () => resolve({
+                            url: reader.result,
+                            category: category,
+                            originalName: file.name,
+                            uploadDate: new Date().toISOString()
+                        });
                         reader.onerror = error => reject(error);
                     });
                 }));
@@ -630,7 +657,13 @@ export const storageService = {
                         // Actually, for sync, we probably want to keep it as File object if upload fails so we can try next time?
                         // BUT, we are upserting to DB which expects JSON compatible types (strings for URLs).
                         // If we can't upload, we can't sync this file to cloud DB column array.
-                        return null;
+                        const category = file.category || (file.name?.toLowerCase().includes('report') ? 'Inspection & Test report' : 'Other');
+                        return {
+                            url: "pending_upload", // Or keep base64
+                            category: category,
+                            originalName: file.name,
+                            uploadDate: new Date().toISOString()
+                        };
                     }));
 
                     // Filter out failures
@@ -742,5 +775,61 @@ export const storageService = {
         }
 
         return { success: true, count: syncedCount, cloudTotal };
+    },
+
+    migrateAttachments: async () => {
+        if (!supabase) return { error: 'Supabase not available' };
+
+        console.log('Starting attachment migration...');
+        const { data: records, error } = await supabase.from('valve_records').select('id, file_urls');
+        if (error) return { error: error.message };
+
+        let migratedCount = 0;
+        for (const record of records) {
+            const urls = record.file_urls || [];
+            if (urls.length === 0) continue;
+
+            const newFiles = [];
+            let changed = false;
+
+            for (const item of urls) {
+                // Check if already migrated (metadata object)
+                if (typeof item === 'object' && item.url) {
+                    newFiles.push(item);
+                    continue;
+                }
+
+                const url = item;
+                const fileName = url.split('/').pop().split('?')[0];
+
+                // 1. Delete QR codes
+                if (fileName.startsWith('QR_') || fileName.toLowerCase().includes('qr')) {
+                    changed = true;
+                    continue;
+                }
+
+                // 2. Categorize
+                let category = 'Photographs';
+                if (fileName.toLowerCase().includes('report') || fileName.endsWith('.pdf')) {
+                    category = 'Inspection & Test report';
+                }
+
+                newFiles.push({
+                    url: url,
+                    category: category,
+                    originalName: fileName,
+                    uploadDate: new Date().toISOString()
+                });
+                changed = true;
+            }
+
+            if (changed) {
+                await supabase.from('valve_records').update({ file_urls: newFiles }).eq('id', record.id);
+                migratedCount++;
+            }
+        }
+
+        console.log(`Migration complete. Updated ${migratedCount} records.`);
+        return { success: true, migratedCount };
     }
 };

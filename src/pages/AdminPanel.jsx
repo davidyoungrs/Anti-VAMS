@@ -15,7 +15,7 @@ import { saveAs } from 'file-saver';
 
 export const AdminPanel = ({ onNavigate }) => {
     const { role } = useAuth();
-    const [activeTab, setActiveTab] = useState('trash'); // 'trash' | 'history' | 'users' | 'security' | 'logs'
+    const [activeTab, setActiveTab] = useState('trash'); // 'trash' | 'history' | 'users' | 'security' | 'logs' | 'maintenance'
     const [deletedRecords, setDeletedRecords] = useState([]);
     const [history, setHistory] = useState([]);
     const [currentRecords, setCurrentRecords] = useState([]);
@@ -179,6 +179,21 @@ export const AdminPanel = ({ onNavigate }) => {
             setUsers(users.map(u => u.id === userId ? { ...u, allowed_customers: newAllowed } : u));
         } catch (e) {
             alert('Failed to update allowed customers: ' + e.message);
+        }
+    };
+
+    const handleMigrateAttachments = async () => {
+        if (!window.confirm("This will organize all attachments into folders and delete QR codes. Are you sure?")) return;
+        setLoading(true);
+        try {
+            const result = await storageService.migrateAttachments();
+            if (result.error) throw new Error(result.error);
+            alert(`Migration complete! Updated ${result.migratedCount} records.`);
+            loadData();
+        } catch (e) {
+            alert('Migration failed: ' + e.message);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -365,18 +380,18 @@ export const AdminPanel = ({ onNavigate }) => {
                 )}
                 {role === 'super_user' && (
                     <button
-                        onClick={() => setActiveTab('logs')}
+                        onClick={() => setActiveTab('maintenance')}
                         style={{
                             padding: '1rem 2rem',
-                            background: activeTab === 'logs' ? 'var(--primary)' : 'var(--bg-card)',
-                            color: activeTab === 'logs' ? 'white' : 'var(--text-muted)',
+                            background: activeTab === 'maintenance' ? 'var(--primary)' : 'var(--bg-card)',
+                            color: activeTab === 'maintenance' ? 'white' : 'var(--text-muted)',
                             border: 'none',
                             borderRadius: 'var(--radius-md)',
                             fontWeight: 'bold',
                             cursor: 'pointer'
                         }}
                     >
-                        📋 Audit Logs
+                        ⚙️ Maintenance
                     </button>
                 )}
                 {role === 'super_user' && (
@@ -847,6 +862,36 @@ export const AdminPanel = ({ onNavigate }) => {
                                         )}
                                     </tbody>
                                 </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'maintenance' && (
+                        <div style={{ padding: '1rem' }}>
+                            <h3 style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem', marginBottom: '2rem' }}>
+                                System Maintenance & Database Utilities
+                            </h3>
+
+                            <div className="glass-panel" style={{ padding: '2rem', border: '1px solid var(--primary)', background: 'rgba(14, 165, 233, 0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '2rem' }}>
+                                <div style={{ flex: 1 }}>
+                                    <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--primary)' }}>📁 Attachment Re-organization</h4>
+                                    <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                                        Scans all valve records to organize files into categorized folders (Drawings, BOMs, Reports, etc.).
+                                        Also cleans up legacy QR code files to save storage space.
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={handleMigrateAttachments}
+                                    className="btn-primary"
+                                    style={{ whiteSpace: 'nowrap' }}
+                                    disabled={loading}
+                                >
+                                    🚀 Run Migration Utility
+                                </button>
+                            </div>
+
+                            <div style={{ marginTop: '2rem', color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic' }}>
+                                Note: Utilities in this section affect global data. Use with caution.
                             </div>
                         </div>
                     )}

@@ -168,7 +168,19 @@ export const AuthProvider = ({ children }) => {
 
     return (
         <AuthContext.Provider value={value}>
-            {!loading && children}
+            {loading ? (
+                <div style={{
+                    height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    background: 'var(--bg-app)', color: 'white', gap: '1.5rem'
+                }}>
+                    <div className="spinner" style={{
+                        width: '40px', height: '40px', border: '4px solid rgba(255,255,255,0.1)',
+                        borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 1s linear infinite'
+                    }}></div>
+                    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+                    <div style={{ fontSize: '1.1rem', fontWeight: '500', opacity: 0.8 }}>Initializing Secure Session...</div>
+                </div>
+            ) : children}
         </AuthContext.Provider>
     );
 };
