@@ -1,7 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ATTACHMENT_CATEGORIES } from '../services/storage';
 
 export const FileManagerModal = ({ files, onUpdateFiles, onCancel, isReadOnly }) => {
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
+
     const [currentFolder, setCurrentFolder] = useState(null); // null means root (folder view)
 
     // Group files by category
