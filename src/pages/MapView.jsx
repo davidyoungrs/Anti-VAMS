@@ -284,8 +284,8 @@ export function MapView({ records, jobs = [], onRecordClick, onLocationSelect, h
                                 }
                             }}
                         >
-                            <Popup maxWidth={250}>
-                                <div style={{ padding: '5px', minWidth: '200px' }}>
+                            <Popup maxWidth={300}>
+                                <div style={{ padding: '10px', minWidth: '220px' }}>
                                     <h4 style={{ margin: '0 0 5px 0', color: 'var(--primary)' }}>{record.serialNumber}</h4>
 
 
@@ -315,10 +315,10 @@ export function MapView({ records, jobs = [], onRecordClick, onLocationSelect, h
                                     </p>
                                     <button
                                         className="btn-primary"
-                                        style={{ padding: '4px 8px', fontSize: '0.75rem', width: '100%' }}
+                                        style={{ padding: '8px 12px', fontSize: '0.85rem', width: '100%', marginTop: '8px' }}
                                         onClick={() => onRecordClick(record)}
                                     >
-                                        Open Record
+                                        🔍 Open Valve Record
                                     </button>
                                 </div>
                             </Popup>

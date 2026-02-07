@@ -703,8 +703,7 @@ function App() {
                 if (!window.confirm("You have unsaved location changes. Are you sure you want to leave?")) return;
                 setHasUnsavedChanges(false);
               }
-              setSelectedRecord(record);
-              setCurrentView('record-detail');
+              handleRecordClick(record);
             }}
           />
         );
@@ -723,8 +722,7 @@ function App() {
                 if (!window.confirm("You have unsaved location changes. Are you sure you want to leave?")) return;
                 setHasUnsavedChanges(false);
               }
-              setSelectedRecord(record);
-              setCurrentView('record-detail');
+              handleRecordClick(record);
             }}
             onLocationSelect={(latlng) => {
               if (selectedRecord) {
