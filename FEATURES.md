@@ -55,10 +55,15 @@
   - **WIP Status**: Bar chart showing real-time volume of valves at each workflow stage.
   - **Pass/Fail Rates**: Bar charts comparing performance across OEMs.
   - **Failure Modes**: Pie charts visualizing common failure reasons (e.g., Seat Leaks).
+- **Maintenance Monitoring**:
+  - **"Due Soon" Awareness**: Visual highlighting of valves approaching their "Required Date" within Job views.
+  - **Predictive Data**: Foundation laid for MTBF analysis based on historical failure modes.
 - **OEM Filtering**: Multi-select dropdown to filter analytics by specific manufacturers.
-- **Maintenance Scheduler**: (Coming Soon) Tools for scheduling and tracking recurring maintenance.
+- **Maintenance Scheduler**: (Under Development) Advanced calendar views for recurring maintenance.
 
-## 8. Advanced Tools
+## 8. Advanced Geo-Spatial Tools
+- **Offline Maps**: Cached standard and satellite imagery for remote field sites with no signal.
+- **Geo-Fencing**: Automatic browser notifications when entering a defined Job Site area.
 - **Deep Linking**: 
   - Use QR codes to bypass the dashboard and open specific valve records immediately.
   - Physical-to-Digital bridge for workshop efficiency.

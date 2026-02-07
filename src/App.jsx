@@ -696,6 +696,7 @@ function App() {
         return (
           <MapView
             records={records}
+            jobs={jobs}
             onNavigate={handleNavigate}
             onRecordClick={(record) => {
               if (hasUnsavedChanges) {
@@ -713,6 +714,7 @@ function App() {
         return (
           <MapView
             records={selectedRecord ? [selectedRecord] : []}
+            jobs={jobs}
             hasUnsavedChanges={hasUnsavedChanges}
             onSave={handleMapSave}
             onNavigate={handleNavigate}

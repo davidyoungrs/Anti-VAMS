@@ -1,7 +1,9 @@
 import React from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import { calculateDistance } from '../utils/geoUtils';
+import { notificationService } from '../services/notificationService';
 
 // Fix for default marker icons in Leaflet with React
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
@@ -43,8 +45,14 @@ function LocationPicker({ onLocationSelect }) {
     return null;
 }
 
-function UserLocationTracker({ isFollowing, onLocationUpdate }) {
+function UserLocationTracker({ isFollowing, onLocationUpdate, jobs }) {
     const map = useMapEvents({});
+    const [activeGeofence, setActiveGeofence] = React.useState(null);
+
+    React.useEffect(() => {
+        // Request notification permission on mount
+        notificationService.requestPermission();
+    }, []);
 
     React.useEffect(() => {
         if (!navigator.geolocation) return;
@@ -56,6 +64,30 @@ function UserLocationTracker({ isFollowing, onLocationUpdate }) {
             onLocationUpdate(latlng);
             if (isFollowing) {
                 map.flyTo(latlng, map.getZoom());
+            }
+
+            // Geofencing Check
+            if (jobs && jobs.length > 0) {
+                let foundSite = null;
+                jobs.forEach(job => {
+                    if (job.latitude && job.longitude) {
+                        const dist = calculateDistance(latitude, longitude, job.latitude, job.longitude);
+                        const radius = job.radius || 500;
+                        if (dist <= radius) {
+                            foundSite = job;
+                        }
+                    }
+                });
+
+                if (foundSite && (!activeGeofence || activeGeofence.id !== foundSite.id)) {
+                    notificationService.send(
+                        "Entering Job Site",
+                        `You have entered the area for: ${foundSite.name}`
+                    );
+                    setActiveGeofence(foundSite);
+                } else if (!foundSite && activeGeofence) {
+                    setActiveGeofence(null);
+                }
             }
         };
 
@@ -72,7 +104,7 @@ function UserLocationTracker({ isFollowing, onLocationUpdate }) {
         return () => {
             if (watchId) navigator.geolocation.clearWatch(watchId);
         };
-    }, [isFollowing, map, onLocationUpdate]);
+    }, [isFollowing, map, onLocationUpdate, jobs, activeGeofence]);
 
     return null;
 }
@@ -115,7 +147,7 @@ function SearchControl({ onLocationFound }) {
     );
 }
 
-export function MapView({ records, onRecordClick, onLocationSelect, hasUnsavedChanges, onSave, onNavigate }) {
+export function MapView({ records, jobs = [], onRecordClick, onLocationSelect, hasUnsavedChanges, onSave, onNavigate }) {
     const [mapType, setMapType] = React.useState('standard');
     const [userLocation, setUserLocation] = React.useState(null);
     const [isFollowing, setIsFollowing] = React.useState(false);
@@ -176,7 +208,27 @@ export function MapView({ records, onRecordClick, onLocationSelect, hasUnsavedCh
                     style={{ height: '100%', width: '100%', borderRadius: 'var(--radius-md)' }}
                 >
                     <SearchControl />
-                    <UserLocationTracker isFollowing={isFollowing} onLocationUpdate={setUserLocation} />
+                    <UserLocationTracker isFollowing={isFollowing} onLocationUpdate={setUserLocation} jobs={jobs} />
+
+                    {/* Geofence Circles */}
+                    {jobs.filter(j => j.latitude && j.longitude).map(job => (
+                        <Circle
+                            key={`geofence-${job.id}`}
+                            center={[job.latitude, job.longitude]}
+                            radius={job.radius || 500}
+                            pathOptions={{
+                                color: 'var(--primary)',
+                                fillColor: 'var(--primary)',
+                                fillOpacity: 0.1,
+                                dashArray: '5, 10'
+                            }}
+                        >
+                            <Popup>
+                                <strong>Job Site:</strong> {job.name}<br />
+                                Radius: {job.radius || 500}m
+                            </Popup>
+                        </Circle>
+                    ))}
 
                     {mapType === 'standard' ? (
                         <TileLayer

@@ -7,6 +7,9 @@ export const JobSelectionModal = ({ selectedCount, onCancel, onConfirm }) => {
     const [selectedJobId, setSelectedJobId] = useState('');
     const [newJobName, setNewJobName] = useState('');
     const [newClientName, setNewClientName] = useState('');
+    const [newLat, setNewLat] = useState('');
+    const [newLng, setNewLng] = useState('');
+    const [newRadius, setNewRadius] = useState('500');
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -32,6 +35,9 @@ export const JobSelectionModal = ({ selectedCount, onCancel, onConfirm }) => {
                 const newJob = await jobService.saveJob({
                     name: newJobName,
                     clientName: newClientName,
+                    latitude: newLat ? parseFloat(newLat) : null,
+                    longitude: newLng ? parseFloat(newLng) : null,
+                    radius: newRadius ? parseInt(newRadius) : 500,
                     status: 'Active'
                 });
                 finalJobId = newJob.id;
@@ -124,8 +130,58 @@ export const JobSelectionModal = ({ selectedCount, onCancel, onConfirm }) => {
                                 value={newClientName}
                                 onChange={(e) => setNewClientName(e.target.value)}
                                 placeholder="e.g. Shell"
-                                style={{ width: '100%', padding: '0.8rem', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                                style={{ width: '100%', padding: '0.8rem', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)', marginBottom: '1rem' }}
                             />
+                        </div>
+                        <div style={{ padding: '1rem', background: 'rgba(59, 130, 246, 0.05)', borderRadius: '8px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                <label style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>📍 Job Site Geofence</label>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (navigator.geolocation) {
+                                            navigator.geolocation.getCurrentPosition((pos) => {
+                                                setNewLat(pos.coords.latitude.toFixed(6));
+                                                setNewLng(pos.coords.longitude.toFixed(6));
+                                            });
+                                        }
+                                    }}
+                                    style={{ padding: '4px 8px', fontSize: '0.7rem', background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                                >
+                                    Use Current Location
+                                </button>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                <div>
+                                    <input
+                                        type="number"
+                                        step="any"
+                                        placeholder="Latitude"
+                                        value={newLat}
+                                        onChange={(e) => setNewLat(e.target.value)}
+                                        style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.85rem' }}
+                                    />
+                                </div>
+                                <div>
+                                    <input
+                                        type="number"
+                                        step="any"
+                                        placeholder="Longitude"
+                                        value={newLng}
+                                        onChange={(e) => setNewLng(e.target.value)}
+                                        style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.85rem' }}
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Radius (meters)</label>
+                                <input
+                                    type="number"
+                                    value={newRadius}
+                                    onChange={(e) => setNewRadius(e.target.value)}
+                                    style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.85rem' }}
+                                />
+                            </div>
                         </div>
                     </div>
                 )}

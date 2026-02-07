@@ -104,9 +104,25 @@ Gain insights into your valve population using the visual dashboard.
    - **Pass/Fail Rates**: Bar chart showing testing outcomes by manufacturer.
    - **Top Failure Modes**: Pie chart highlighting the most common reasons for valve failure (e.g., "Seat Leak", "Stem Damage").
 
+4. **"Due Soon" Highlights**:
+   - In the **Job Management** view, any valve whose "Required Date" has passed or is imminent will be visually highlighted in **bold red** or **amber** to help prioritize work.
+
 ---
 
-## 7. Data Synchronization (Cloud)
+## 7. Field Operations & Geofencing
+
+### Offline Maps
+- Standard and Satellite maps are automatically cached as you view them.
+- If you lose internet on-site, the map will continue to show the areas you previously loaded.
+
+### Job Site Alerts
+- When creating a Job, you can define a geographic **Geofence** (Latitude/Longitude and Radius).
+- The system will send a **Browser Notification** to your device when you physically enter the job site area.
+- Dashboards and Map views will show a dashed circle around active geofenced sites.
+
+---
+
+## 8. Data Synchronization (Cloud)
 
 Your data is stored **locally** on your browser first, so you can work offline. To backup or share data:
 

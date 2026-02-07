@@ -2,13 +2,18 @@
 
 This document outlines the development path for the GVR-VAMS. Completed items have been archived to reflect current and future priorities.
 
+## Completed Milestones (Archived)
+- [x] **Analytics & WIP Tracking**: Real-time dashboard with workflow stages, failure mode analysis, and pass/fail rates.
+- [x] **"Due Soon" Awareness**: Implemented via `Required Date` highlighting in Job management and record views.
+- [x] **Digital Signatures & PDF Intelligence**: Professional certificates with embedded QR and high-fidelity layouts.
+- [x] **Offline Maps & Geofencing**: Cached satellite imagery and proximity notifications for field work.
+
 ## Phase 1: Advanced Intelligence & Reporting
 *Features that provide deep value and analytics.*
 
-1. **Analytics & Predictive Maintenance** (Status: **In Progress**)
-   - **Task**: "Due Soon" scheduler, Failure Mode analysis.
-   - **Context**: Leveraging WIP Status Tracking (Real-time dashboard of valve workflow stages).
-   - **Note**: Needs OREDA standardized fields (Failure Mode, Cause) to be effective.
+1. **Predictive Analytics (Future)** (Status: **Planned**)
+   - **Task**: Trend analysis for "Mean Time Between Failure" (MTBF) calculations.
+   - **Note**: Needs OREDA standardized fields (Cause) to be fully effective.
 
 2. **Inventory & Repair Costing** (Priority: Low - depends on business logic)
    - **Task**: Spare parts tracking, BOM, Cost estimation.

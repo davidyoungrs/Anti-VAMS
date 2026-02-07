@@ -24,25 +24,14 @@ ChartJS.register(
 );
 
 export const AnalyticsDashboard = ({ records = [], onNavigate }) => {
-    const [selectedOEMs, setSelectedOEMs] = useState([]); // Empty = All
     const [drillDown, setDrillDown] = useState(null); // { type: 'status'|'oem_pf', label: string, datasetLabel?: string }
 
-    // Extract unique OEMs for filter dropdown
-    const uniqueOEMs = useMemo(() => {
-        const oems = new Set(records.map(r => r.oem).filter(Boolean));
-        return Array.from(oems).sort();
-    }, [records]);
 
-    // Filter records based on selection
-    const filteredRecords = useMemo(() => {
-        if (selectedOEMs.length === 0) return records;
-        return records.filter(r => selectedOEMs.includes(r.oem));
-    }, [records, selectedOEMs]);
 
     // --- Chart 1: Pass/Fail by OEM ---
     const passFailData = useMemo(() => {
         const stats = {};
-        filteredRecords.forEach(r => {
+        records.forEach(r => {
             const oem = r.oem || 'Unknown';
             if (!stats[oem]) stats[oem] = { pass: 0, fail: 0, pending: 0 };
 
@@ -69,12 +58,12 @@ export const AnalyticsDashboard = ({ records = [], onNavigate }) => {
                 }
             ]
         };
-    }, [filteredRecords]);
+    }, [records]);
 
     // --- Chart 2: Common Failure Modes ---
     const failureModeData = useMemo(() => {
         const modes = {};
-        filteredRecords.forEach(r => {
+        records.forEach(r => {
             const pf = (r.passFail || r.pass_fail || '').toUpperCase();
             if (pf === 'FAIL' || pf === 'N') {
                 const mode = (r.failMode || 'Unspecified').trim();
@@ -103,7 +92,7 @@ export const AnalyticsDashboard = ({ records = [], onNavigate }) => {
             }]
         };
 
-    }, [filteredRecords]);
+    }, [records]);
 
     // --- Chart 3: WIP Status (Active Jobs) ---
     const statusData = useMemo(() => {
@@ -115,7 +104,7 @@ export const AnalyticsDashboard = ({ records = [], onNavigate }) => {
 
         // Add 'Other' bucket for unknown statuses if needed, or just let them be
 
-        filteredRecords.forEach(r => {
+        records.forEach(r => {
             if (r.status && r.status !== 'Shipped') {
                 // Determine if status is in our list, exact match
                 if (counts[r.status] !== undefined) {
@@ -151,18 +140,8 @@ export const AnalyticsDashboard = ({ records = [], onNavigate }) => {
                 borderRadius: 4
             }]
         };
-    }, [filteredRecords]);
+    }, [records]);
 
-    // Handlers
-    const handleSelectionChange = (e) => {
-        const selected = Array.from(e.target.selectedOptions, option => option.value);
-        if (selected.includes('ALL')) {
-            setSelectedOEMs([]); // Reset to select all
-        } else {
-            setSelectedOEMs(selected);
-        }
-        setDrillDown(null); // Clear drilldown when filter changes
-    };
 
     const handleChartClick = (event, elements, chartType) => {
         if (!elements || elements.length === 0) return;
@@ -182,7 +161,7 @@ export const AnalyticsDashboard = ({ records = [], onNavigate }) => {
     const drillDownRecords = useMemo(() => {
         if (!drillDown) return [];
 
-        return filteredRecords.filter(r => {
+        return records.filter(r => {
             if (drillDown.type === 'status') {
                 return r.status === drillDown.label;
             } else if (drillDown.type === 'oem_pf') {
@@ -196,95 +175,15 @@ export const AnalyticsDashboard = ({ records = [], onNavigate }) => {
             }
             return false;
         });
-    }, [filteredRecords, drillDown]);
+    }, [records, drillDown]);
 
     return (
         <div className="analytics-dashboard fade-in">
             <div className="glass-panel mb-4" style={{ padding: '2rem', borderRadius: 'var(--radius-lg)' }}>
                 <h2 className="section-title">Analytics Dashboard</h2>
 
-                {/* Filters */}
-                <div className="mb-4">
-                    <label style={{ display: 'block', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
-                        Filter by OEM <small>(Hold Cmd/Ctrl to select multiple)</small>:
-                    </label>
-                    <select
-                        multiple
-                        value={selectedOEMs.length === 0 ? ['ALL'] : selectedOEMs}
-                        onChange={handleSelectionChange}
-                        style={{
-                            width: '100%',
-                            padding: '0.5rem',
-                            borderRadius: 'var(--radius-md)',
-                            border: '1px solid var(--border-color)',
-                            background: 'rgba(255,255,255,0.05)',
-                            color: 'inherit',
-                            minHeight: '120px'
-                        }}
-                    >
-                        <option value="ALL">-- All OEMs --</option>
-                        {uniqueOEMs.map(oem => (
-                            <option key={oem} value={oem}>{oem}</option>
-                        ))}
-                    </select>
-                </div>
-
-                {/* Charts Grid */}
-                <div className="grid-responsive" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2rem', marginTop: '2rem' }}>
-
-                    {/* Pass/Fail Chart */}
-                    <div className="glass-panel" style={{ padding: '1.5rem', background: 'var(--bg-surface)', borderRadius: 'var(--radius-md)' }}>
-                        <h3 style={{ textAlign: 'center', marginBottom: '1rem' }}>Pass/Fail Rates by OEM</h3>
-                        <div style={{ height: '300px' }}>
-                            <Bar
-                                data={passFailData}
-                                options={{
-                                    responsive: true,
-                                    maintainAspectRatio: false,
-                                    onClick: (evt, el) => handleChartClick(evt, el, 'OEM_PF'),
-                                    plugins: {
-                                        tooltip: {
-                                            callbacks: {
-                                                afterBody: () => '\nClick to view records'
-                                            }
-                                        }
-                                    },
-                                    scales: {
-                                        x: { stacked: true },
-                                        y: { stacked: true }
-                                    }
-                                }}
-                            />
-                        </div>
-                    </div>
-
-                    {/* Failure Modes Chart */}
-                    <div className="glass-panel" style={{ padding: '1.5rem', background: 'var(--bg-surface)', borderRadius: 'var(--radius-md)' }}>
-                        <h3 style={{ textAlign: 'center', marginBottom: '1rem' }}>Top Failure Modes</h3>
-                        <div style={{ height: '300px', display: 'flex', justifyContent: 'center' }}>
-                            {failureModeData.labels.length > 0 ? (
-                                <Pie
-                                    data={failureModeData}
-                                    options={{
-                                        responsive: true,
-                                        maintainAspectRatio: false,
-                                        plugins: {
-                                            legend: { position: 'right' }
-                                        }
-                                    }}
-                                />
-                            ) : (
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)' }}>
-                                    No failure data available for selection.
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                </div>
-
-                {/* WIP Status Chart */}
-                <div className="glass-panel mt-4" style={{ padding: '1.5rem', background: 'var(--bg-surface)', borderRadius: 'var(--radius-md)' }}>
+                {/* WIP Status Chart - Top Priority */}
+                <div className="glass-panel mb-4" style={{ padding: '1.5rem', background: 'var(--bg-surface)', borderRadius: 'var(--radius-md)' }}>
                     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '1rem', position: 'relative' }}>
                         <h3 style={{ margin: 0 }}>Work In Progress (WIP) Status</h3>
                         <div style={{
@@ -323,9 +222,9 @@ export const AnalyticsDashboard = ({ records = [], onNavigate }) => {
                     </div>
                 </div>
 
-                {/* Drill-down Detail List */}
+                {/* Drill-down Detail List - Moved below WIP chart */}
                 {drillDown && (
-                    <div className="glass-panel mt-4 fade-in" style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--primary)' }}>
+                    <div className="glass-panel mt-4 mb-4 fade-in" style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--primary)' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                             <h3 style={{ margin: 0 }}>
                                 {drillDown.type === 'status' ? `Valves: ${drillDown.label}` : `Valves: ${drillDown.label} (${drillDown.datasetLabel})`}
@@ -379,6 +278,62 @@ export const AnalyticsDashboard = ({ records = [], onNavigate }) => {
                         </div>
                     </div>
                 )}
+
+                {/* Charts Grid */}
+                <div className="grid-responsive" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2rem', marginTop: '2rem' }}>
+
+                    {/* Pass/Fail Chart */}
+                    <div className="glass-panel" style={{ padding: '1.5rem', background: 'var(--bg-surface)', borderRadius: 'var(--radius-md)' }}>
+                        <h3 style={{ textAlign: 'center', marginBottom: '1rem' }}>Pass/Fail Rates by OEM</h3>
+                        <div style={{ height: '300px' }}>
+                            <Bar
+                                data={passFailData}
+                                options={{
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    onClick: (evt, el) => handleChartClick(evt, el, 'OEM_PF'),
+                                    plugins: {
+                                        tooltip: {
+                                            callbacks: {
+                                                afterBody: () => '\nClick to view records'
+                                            }
+                                        }
+                                    },
+                                    scales: {
+                                        x: { stacked: true },
+                                        y: { stacked: true }
+                                    }
+                                }}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Failure Modes Chart */}
+                    <div className="glass-panel" style={{ padding: '1.5rem', background: 'var(--bg-surface)', borderRadius: 'var(--radius-md)' }}>
+                        <h3 style={{ textAlign: 'center', marginBottom: '1rem' }}>Top Failure Modes</h3>
+                        <div style={{ height: '300px', display: 'flex', justifyContent: 'center' }}>
+                            {failureModeData.labels.length > 0 ? (
+                                <Pie
+                                    data={failureModeData}
+                                    options={{
+                                        responsive: true,
+                                        maintainAspectRatio: false,
+                                        plugins: {
+                                            legend: { position: 'right' }
+                                        }
+                                    }}
+                                />
+                            ) : (
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)' }}>
+                                    No failure data available.
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                </div>
+
+
             </div>
         </div>
     );

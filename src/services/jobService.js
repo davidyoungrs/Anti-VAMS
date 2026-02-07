@@ -41,6 +41,9 @@ export const jobService = {
                         name: j.name,
                         clientName: j.client_name,
                         status: j.status,
+                        latitude: j.latitude,
+                        longitude: j.longitude,
+                        radius: j.radius,
                         createdAt: j.created_at,
                         updatedAt: j.updated_at
                     }));
@@ -102,6 +105,9 @@ export const jobService = {
                         name: finalJob.name,
                         client_name: finalJob.clientName,
                         status: finalJob.status,
+                        latitude: finalJob.latitude,
+                        longitude: finalJob.longitude,
+                        radius: finalJob.radius,
                         created_at: finalJob.createdAt,
                         updated_at: finalJob.updatedAt
                     });
