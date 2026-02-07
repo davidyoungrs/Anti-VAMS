@@ -112,18 +112,47 @@ export const FileManagerModal = ({ files, onUpdateFiles, onCancel, isReadOnly })
                                         </div>
                                         <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{date}</div>
                                     </div>
-                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                        <a href={f.url} target="_blank" rel="noopener noreferrer" className="btn-primary" style={{ flex: 1, padding: '0.4rem', fontSize: '0.8rem', textAlign: 'center', textDecoration: 'none' }}>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                        <a href={f.url} target="_blank" rel="noopener noreferrer" className="btn-primary" style={{ flex: 1, padding: '0.4rem', fontSize: '0.8rem', textAlign: 'center', textDecoration: 'none', minWidth: '60px' }}>
                                             Open
                                         </a>
                                         {!isReadOnly && (
-                                            <button
-                                                onClick={() => handleRemoveFile(originalIndex)}
-                                                className="btn-secondary"
-                                                style={{ color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.3)', padding: '0.4rem' }}
-                                            >
-                                                🗑️
-                                            </button>
+                                            <>
+                                                <button
+                                                    onClick={(e) => {
+                                                        const select = e.currentTarget.nextElementSibling;
+                                                        select.style.display = select.style.display === 'none' ? 'block' : 'none';
+                                                    }}
+                                                    className="btn-secondary"
+                                                    style={{ padding: '0.4rem', fontSize: '0.8rem' }}
+                                                    title="Move to folder"
+                                                >
+                                                    📁→
+                                                </button>
+                                                <select
+                                                    style={{ display: 'none', width: '100%', marginTop: '0.5rem', fontSize: '0.75rem', padding: '0.3rem' }}
+                                                    defaultValue={f.category}
+                                                    onChange={(e) => {
+                                                        const newCategory = e.target.value;
+                                                        const newFiles = [...files];
+                                                        newFiles[originalIndex] = { ...newFiles[originalIndex], category: newCategory };
+                                                        onUpdateFiles(newFiles);
+                                                        e.target.style.display = 'none';
+                                                    }}
+                                                >
+                                                    <option value="" disabled>Move to...</option>
+                                                    {ATTACHMENT_CATEGORIES.map(cat => (
+                                                        <option key={cat} value={cat}>{cat}</option>
+                                                    ))}
+                                                </select>
+                                                <button
+                                                    onClick={() => handleRemoveFile(originalIndex)}
+                                                    className="btn-secondary"
+                                                    style={{ color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.3)', padding: '0.4rem' }}
+                                                >
+                                                    🗑️
+                                                </button>
+                                            </>
                                         )}
                                     </div>
                                 </div>
