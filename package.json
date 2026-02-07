@@ -1,14 +1,14 @@
 {
   "name": "anti_vams",
   "private": true,
-  "version": "0.1.13",
+  "version": "0.1.14",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "update-rev": "npm version patch --no-git-tag-version && git add package.json"
+    "update-rev": "npm version patch --no-git-tag-version && touch vite.config.js && git add package.json"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.91.0",
