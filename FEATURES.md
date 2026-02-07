@@ -42,6 +42,16 @@
   - **Cloud Sync**: One-click, intelligent synchronization with Supabase.
   - **Real-Time Collaboration**: Updates from other devices appear instantly on your dashboard.
 - **Sequential Media Uploads**: Robust file handling optimized for field network conditions (prevents timeouts).
+- **Categorized Attachment System**: 
+  - **Logical Folders**: Automatic grouping into Datasheets, BOMs, Photos, SPIRs, and Reports.
+  - **Drag-and-Drop Categorization**: Assign categories individually or in bulk during upload.
+  - **"Move to Folder"**: Reorganize existing attachments instantly within the record.
+  - **Smart Scroll**: Immediate viewport reset when opening documents for rapid access.
+
+## 6. Stability & Resilience
+- **Global Error Boundary**: Intelligent crash recovery that shows a helpful "Something went wrong" screen instead of a blank page.
+- **Visual Feedback**: Interactive "Initializing Secure Session" indicators during authentication and data loading.
+- **Defensive State Management**: Robust handling of incomplete or malformed data to ensure UI continuity.
 
 ## 6. Workflow & Job Tracking
 - **Detailed Status Tracking**: Move beyond simple "Pending/Complete". Track distinct stages:
@@ -59,7 +69,7 @@
   - **"Due Soon" Awareness**: Visual highlighting of valves approaching their "Required Date" within Job views.
   - **Predictive Data**: Foundation laid for MTBF analysis based on historical failure modes.
 - **OEM Filtering**: Multi-select dropdown to filter analytics by specific manufacturers.
-- **Maintenance Scheduler**: (Under Development) Advanced calendar views for recurring maintenance.
+- **Maintenance Scheduler**: Advanced analytics and date-tracking views to manage recurring maintenance intervals.
 
 ## 8. Advanced Geo-Spatial Tools
 - **Offline Maps**: Cached standard and satellite imagery for remote field sites with no signal.
@@ -67,6 +77,11 @@
 - **Deep Linking**: 
   - Use QR codes to bypass the dashboard and open specific valve records immediately.
   - Physical-to-Digital bridge for workshop efficiency.
+
+## 9. Regulatory & Security Compliance
+- **Inactivity Timer**: Automatic session timeout after 10 minutes of idle time (ISO 27002 compliance).
+- **Soft Delete (Historical Traceability)**: Records are never permanently destroyed on the first click; instead, they are archived with a `deleted_at` timestamp for audit trails.
+- **Encryption-at-Rest**: All sensitive valve data and job details are encrypted locally using FIPS-ready standards before being synced to the cloud.
 
 ---
 
