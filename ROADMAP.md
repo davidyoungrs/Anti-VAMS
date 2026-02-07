@@ -2,12 +2,6 @@
 
 This document outlines the development path for the GVR-VAMS. Completed items have been archived to reflect current and future priorities.
 
-## Completed Milestones (Archived)
-- [x] **Analytics & WIP Tracking**: Real-time dashboard with workflow stages, failure mode analysis, and pass/fail rates.
-- [x] **"Due Soon" Awareness**: Implemented via `Required Date` highlighting in Job management and record views.
-- [x] **Digital Signatures & PDF Intelligence**: Professional certificates with embedded QR and high-fidelity layouts.
-- [x] **Offline Maps & Geofencing**: Cached satellite imagery and proximity notifications for field work.
-
 ## Phase 1: Advanced Intelligence & Reporting
 *Features that provide deep value and analytics.*
 
