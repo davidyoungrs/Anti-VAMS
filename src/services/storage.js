@@ -105,6 +105,7 @@ export const storageService = {
                         status: r.status,
                         latitude: r.latitude,
                         longitude: r.longitude,
+                        jobId: r.job_id,
                         // Globe Control Valve Specifics
                         actuatorSerial: r.actuator_serial,
                         actuatorMake: r.actuator_make,
@@ -361,6 +362,7 @@ export const storageService = {
                         test_medium: finalRecord.testMedium,
                         latitude: sanitizeNum(finalRecord.latitude),
                         longitude: sanitizeNum(finalRecord.longitude),
+                        job_id: finalRecord.jobId,
                         // Globe Control Valve Specifics
                         actuator_serial: finalRecord.actuatorSerial,
                         actuator_make: finalRecord.actuatorMake,
@@ -685,6 +687,7 @@ export const storageService = {
                 test_medium: record.testMedium,
                 latitude: sanitizeNum(record.latitude),
                 longitude: sanitizeNum(record.longitude),
+                job_id: record.jobId,
                 valve_photo: record.valvePhoto,
                 file_urls: record.files || []
             });
