@@ -34,8 +34,6 @@ The GVS-VAMS (Valve Asset Management System) is engineered with a **Defense-in-D
 **Justification:** Rapid containment and forensic integrity are critical during an active threat.
 *   **Emergency Mode (Kill Switch):** A global read-only lock can be triggered to freeze all write operations system-wide.
 *   **Forensic Time Assurance (NTP):** Authoritative server-side timestamping prevents client-side clock manipulation and ensures audit log admissibility.
-*   [x] **Media Sanitization & Destruction (MP-6)** (Status: **Complete**)
-    - **Task**: Implemented professional "Crypto-shredding" for records exceeding the 30-day retention period, ensuring data is irretrievably destroyed. Records are overwritten with cryptographic noise before permanent deletion to prevent forensic recovery.
 
 ## 7. Comprehensive Audit Logging (SIEM Ready)
 **Justification:** ISO 27002 8.15 mandates logging for forensic and compliance purposes.
@@ -51,7 +49,12 @@ The GVS-VAMS (Valve Asset Management System) is engineered with a **Defense-in-D
 *   **Automated Auditing (SCA):** Real-time vulnerability scanning via `npm audit` integrated into the development lifecycle.
 *   **SBOM Generation:** Automatically generates a machine-readable Software Bill of Materials (`bom.json`) in CycloneDX format for full dependency tracing.
 
+## 10. Media Sanitization & Destruction (MP-6)
+**Justification:** Mandated by NIST 800-171 and ISO 27001 for professional data disposal.
+*   **Crypto-shredding:** Implements professional "sanitization" of valve records before permanent deletion. Sensitive fields are overwritten with cryptographic noise, and Snapshot history is purged to prevent any forensic reconstruction of the data.
+*   **30-Day Automated Cycle:** Integrated into the maintenance engine, ensuring that soft-deleted items are held for safety before being irretrievably destroyed.
+
 ---
 
 ## Conclusion
-GVS-VAMS moves beyond basic password protection. By layering **Database RLS**, **AES-256 Encryption**, **Automated Scanning (RA-5)**, and **Supply Chain Assurance**, it provides a hardened environment for critical infrastructure asset management.
+GVS-VAMS moves beyond basic password protection. By layering **Database RLS**, **AES-256 Encryption**, **Automated Scanning (RA-5)**, and **Media Sanitization (MP-6)**, it provides a hardened environment for critical infrastructure asset management.

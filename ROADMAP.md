@@ -28,14 +28,11 @@ This document outlines the development path for the GVR-VAMS. Completed items ha
    - **Standard**: ISO 27002 9.4.3 & 24.1.
    - **Task**: Enforce MFA (TOTP) for 'Admin' and 'Inspector' roles.
 
-5. [x] **Media Sanitization & Destruction (MP-6)** (Status: **Complete**)
-   - **Task**: Implemented professional "Crypto-shredding" for records exceeding the 30-day retention period, ensuring data is irretrievably destroyed.
-
-6. **Data Residency & Localization (GCC/Middle East)** (Priority: Critical)
+5. **Data Residency & Localization (GCC/Middle East)** (Priority: Critical)
    - **Standard**: Saudi NCA ECC / UAE NESA.
    - **Task**: Architect Supabase deployment for "Region Pinning" (e.g., AWS Bahrain/UAE) or On-Premise capability.
 
-7. **SM Series Cryptography (MLPS 2.0 / China Mode)** (Priority: High)
+6. **SM Series Cryptography (MLPS 2.0 / China Mode)** (Priority: High)
    - **Task**: Alternative crypto stack using SM4-CBC and SM2 for sovereign algorithm compliance.
 
 ---
@@ -43,7 +40,7 @@ This document outlines the development path for the GVR-VAMS. Completed items ha
 ## Phase 4: Future Standards & Technical Debt
 *Strategic improvements with high complexity or long-term implementation horizons.*
 
-8. **FIPS 140-2 Cryptography Review (SC-13)** (Priority: High)
+7. **FIPS 140-2 Cryptography Review (SC-13)** (Priority: High)
    - **Task**: Plan migration from CryptoJS to Web Crypto API (browser-native, FIPS-compliant on host OS).
    - **Note**: High difficulty due to Async migration and re-encryption of legacy data.
 
