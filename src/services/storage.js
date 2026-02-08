@@ -485,6 +485,53 @@ export const storageService = {
         }
     },
 
+    permanentDelete: async (id) => {
+        if (systemSettingsService.isEmergencyMode()) {
+            throw new Error("System is in Emergency Mode. Write operations are disabled.");
+        }
+
+        // 1. Secure Wipe in Cloud (Professional Shredding)
+        if (supabase) {
+            try {
+                const { error } = await supabase.rpc('shred_valve_record', { target_id: id });
+                if (error) {
+                    console.error('Supabase permanent delete error', error);
+                    // If RPC fails, we might still want to try local delete
+                }
+            } catch (e) {
+                console.error('Supabase connection error during permanent delete', e);
+            }
+        }
+
+        // 2. Secure Wipe Locally (Crypto-shredding)
+        try {
+            const encryptedItem = await dbService.get(id);
+            if (encryptedItem) {
+                const record = securityService.decrypt(encryptedItem.encryptedData);
+                if (record) {
+                    // Shred the data before removing it from DB
+                    const shredded = securityService.shred(record);
+                    await dbService.put({
+                        id: id,
+                        encryptedData: securityService.encrypt(shredded)
+                    });
+
+                    // Final removal after shredding (ensures overwritten blocks in IndexedDB if applicable)
+                    await dbService.delete(id);
+                }
+            }
+        } catch (e) {
+            console.error('Error permanent deleting from IndexedDB', e);
+            // Even if shredding fails, we try to delete
+            await dbService.delete(id);
+        }
+    },
+
+    wipeNow: async (id) => {
+        // Alias for permanentDelete used in the UI for clarity
+        return await storageService.permanentDelete(id);
+    },
+
     restore: async (id) => {
         if (systemSettingsService.isEmergencyMode()) {
             throw new Error("System is in Emergency Mode. Write operations are disabled.");

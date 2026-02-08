@@ -125,6 +125,21 @@ export const AdminPanel = ({ onNavigate }) => {
         loadData(); // Refresh list
     };
 
+    const handlePermanentDelete = async (id) => {
+        if (!window.confirm("🔴 DANGER: This will PERMANENTLY SHRED this record and all its history using Media Sanitization (MP-6). This action is IRREVERSIBLE. Continue?")) return;
+
+        try {
+            setLoading(true);
+            await storageService.permanentDelete(id);
+            alert("Record securely wiped and destroyed.");
+            loadData();
+        } catch (e) {
+            alert("Failed to wipe record: " + e.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleRevert = async (historyItem) => {
         if (!window.confirm(`Are you sure you want to revert valve ${historyItem.serialNumber} to this version? Current data will be overwritten.`)) return;
 
@@ -198,10 +213,10 @@ export const AdminPanel = ({ onNavigate }) => {
     };
 
     const getDaysRemaining = (deletedAt) => {
-        if (!deletedAt) return 5;
+        if (!deletedAt) return 30;
         const deleteDate = new Date(deletedAt);
         const expiryDate = new Date(deleteDate);
-        expiryDate.setDate(deleteDate.getDate() + 5);
+        expiryDate.setDate(deleteDate.getDate() + 30);
 
         const now = new Date();
         const diffTime = expiryDate - now;
@@ -424,7 +439,7 @@ export const AdminPanel = ({ onNavigate }) => {
                     {activeTab === 'trash' && (
                         <div>
                             <h3 style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem', marginBottom: '1rem' }}>
-                                Deleted Records (Held for 5 Days)
+                                Deleted Records (Held for 30 Days before Auto-Shredding)
                             </h3>
                             {deletedRecords.length === 0 ? (
                                 <p style={{ color: 'var(--text-muted)' }}>Trash is empty.</p>
@@ -448,13 +463,23 @@ export const AdminPanel = ({ onNavigate }) => {
                                                     Deleted: {new Date(record.deletedAt).toLocaleDateString()} ({getDaysRemaining(record.deletedAt)} days remaining)
                                                 </div>
                                             </div>
-                                            <button
-                                                onClick={() => handleRestore(record.id)}
-                                                className="btn-primary"
-                                                style={{ background: '#22c55e' }}
-                                            >
-                                                ♻️ Restore
-                                            </button>
+                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                <button
+                                                    onClick={() => handleRestore(record.id)}
+                                                    className="btn-primary"
+                                                    style={{ background: '#22c55e', padding: '0.5rem 1rem' }}
+                                                >
+                                                    ♻️ Restore
+                                                </button>
+                                                <button
+                                                    onClick={() => handlePermanentDelete(record.id)}
+                                                    className="btn-primary"
+                                                    style={{ background: '#ef4444', padding: '0.5rem 1rem' }}
+                                                    title="Secure Wipe (Permanent Destruction)"
+                                                >
+                                                    💀 Wipe Now
+                                                </button>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>

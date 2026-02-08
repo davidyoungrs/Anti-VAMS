@@ -11,6 +11,8 @@ AS $$
 DECLARE
     v_logs_purged INT;
     v_users_downgraded INT;
+    v_records_shredded INT := 0;
+    v_record_id UUID;
     v_downgraded_list TEXT[];
 BEGIN
     -- 1. Purge Audit Logs older than 1 year
@@ -43,13 +45,25 @@ BEGIN
     -- Calculate count from the list (array_length returns null for empty array)
     v_users_downgraded := COALESCE(array_length(v_downgraded_list, 1), 0);
 
-    -- 3. Log this maintenance action (Self-Logging)
+    -- 3. Securely Shred Valve Records older than 30 days
+    -- Logic: Execute shred_valve_record for each ID
+    FOR v_record_id IN 
+        SELECT id FROM public.valve_records 
+        WHERE deleted_at IS NOT NULL 
+        AND deleted_at < (now() - INTERVAL '30 days')
+    LOOP
+        PERFORM public.shred_valve_record(v_record_id);
+        v_records_shredded := v_records_shredded + 1;
+    END LOOP;
+
+    -- 4. Log this maintenance action (Self-Logging)
     INSERT INTO public.audit_logs (action, details, severity)
     VALUES (
         'DATA_RETENTION_RUN',
         jsonb_build_object(
             'logs_purged', v_logs_purged,
             'users_downgraded', v_users_downgraded,
+            'records_shredded', v_records_shredded,
             'affected_user_ids', v_downgraded_list
         ),
         'INFO'
@@ -58,7 +72,8 @@ BEGIN
     RETURN jsonb_build_object(
         'success', true,
         'logs_purged', v_logs_purged,
-        'users_downgraded', v_users_downgraded
+        'users_downgraded', v_users_downgraded,
+        'records_shredded', v_records_shredded
     );
 END;
 $$;

@@ -52,5 +52,39 @@ export const securityService = {
             console.error('Decryption failed:', e);
             return null;
         }
+    },
+
+    /**
+     * Generates random noise for data sanitization (MP-6).
+     * @param {number} length 
+     * @returns {string} 
+     */
+    generateShreddedBuffer: (length = 32) => {
+        return CryptoJS.lib.WordArray.random(length).toString();
+    },
+
+    /**
+     * Professional Sanitization (Crypto-shredding) of a record object.
+     * Replaces sensitive fields with noise before disposal.
+     */
+    shred: (record) => {
+        const noise = () => securityService.generateShreddedBuffer(16);
+        return {
+            ...record,
+            serialNumber: `SHREDDED_${noise()}`,
+            customer: 'PURGED',
+            oem: 'PURGED',
+            tagNo: null,
+            jobNo: null,
+            orderNo: null,
+            plantArea: null,
+            siteLocation: null,
+            valvePhoto: null,
+            files: [],
+            signatureDataUrl: null,
+            signedBy: null,
+            deletedAt: new Date().toISOString(),
+            isShredded: true
+        };
     }
 };

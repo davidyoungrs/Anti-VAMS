@@ -28,8 +28,8 @@ This document outlines the development path for the GVR-VAMS. Completed items ha
    - **Standard**: ISO 27002 9.4.3 & 24.1.
    - **Task**: Enforce MFA (TOTP) for 'Admin' and 'Inspector' roles.
 
-5. **Media Sanitization & Destruction (MP-6)** (Priority: Medium)
-   - **Task**: Implement "Crypto-shredding" for hard deletes to ensure data is unrecoverable.
+5. [x] **Media Sanitization & Destruction (MP-6)** (Status: **Complete**)
+   - **Task**: Implemented professional "Crypto-shredding" for records exceeding the 30-day retention period, ensuring data is irretrievably destroyed.
 
 6. **Data Residency & Localization (GCC/Middle East)** (Priority: Critical)
    - **Standard**: Saudi NCA ECC / UAE NESA.

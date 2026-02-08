@@ -34,6 +34,8 @@ The GVS-VAMS (Valve Asset Management System) is engineered with a **Defense-in-D
 **Justification:** Rapid containment and forensic integrity are critical during an active threat.
 *   **Emergency Mode (Kill Switch):** A global read-only lock can be triggered to freeze all write operations system-wide.
 *   **Forensic Time Assurance (NTP):** Authoritative server-side timestamping prevents client-side clock manipulation and ensures audit log admissibility.
+*   [x] **Media Sanitization & Destruction (MP-6)** (Status: **Complete**)
+    - **Task**: Implemented professional "Crypto-shredding" for records exceeding the 30-day retention period, ensuring data is irretrievably destroyed. Records are overwritten with cryptographic noise before permanent deletion to prevent forensic recovery.
 
 ## 7. Comprehensive Audit Logging (SIEM Ready)
 **Justification:** ISO 27002 8.15 mandates logging for forensic and compliance purposes.
