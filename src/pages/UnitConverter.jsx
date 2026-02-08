@@ -1398,7 +1398,7 @@ export const UnitConverter = ({ records = [], role = '' }) => {
                             border: activeTab === 'rbi' ? '1px solid #0ea5e9' : '1px solid var(--border-color)'
                         }}
                     >
-                        🛡️ PRV RBI
+                        PRV RBI
                     </button>
                 </div>
 

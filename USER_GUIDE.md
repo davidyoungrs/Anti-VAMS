@@ -130,3 +130,40 @@ Your data is stored **locally** on your browser first, so you can work offline. 
 2. If it is **Blue**, you have new local changes.
 3. Click the button to push your records to the Cloud (Supabase).
 4. **Sync from Cloud**: This happens automatically on load, but you can refresh the page to pull the latest updates from other users.
+
+---
+
+## 9. PRV RBI Calculator (SV-ENG-0002)
+
+The PRV RBI module is a specialized engineering tool designed to determine risk-based inspection intervals specifically for Pressure Relief Valves.
+
+### Accessing the Calculator
+1. Navigate to **"Calculators"** in the sidebar.
+2. Select the **"PRV RBI"** tab (this tab is restricted to 'Admin' and 'Inspector' roles).
+
+### Performing an Assessment
+1. **Valve Lookup**: Use the "Lookup Valve from Database" dropdown to select an existing valve record. 
+   - This automatically populates the Customer, OEM, Serial Number, Tag, Model, and Set Pressure.
+   - Alternatively, you can enter these details manually for custom assessments.
+2. **Consequence of Failure (COF)**: 
+   - Enter the Operating Temperature and Pressure.
+   - Define the Containment Type (Pipe or Vessel) and its size.
+   - Select the Fluid Type. The system will automatically apply risk multipliers based on the SVS standard.
+   - Enter the Estimated Repair Cost.
+3. **Probability of Failure (POF)**:
+   - Choose the History Category (New/Low History vs. Proven History).
+   - Record the Service Condition and latest Pre-Pop test result.
+   - Select all **Repair Actions** performed (Lapping, Machining, etc.) to calculate a cumulative condition score.
+   - Record the Final Leak Test result.
+4. **Assessment Results**:
+   - The **Summary Card** updates in real-time, showing the COF rank, POF rank, and the **Suggested Interval (months)**.
+   - **Primary Action**: The system recommends the next move (e.g., "Full Overhaul" or "OLSPV / In-situ Test").
+   - **50% Rule**: If the new interval is more than double the previous one, the system will automatically flag a safety override and require an intermediate examination.
+
+### Generating & Syncing Reports
+1. Ensure all mandatory fields (Identification and Process Data) are filled.
+2. Click **"Generate RBI Report"** under the Assessment Summary.
+3. The system will:
+   - Create a professional engineering PDF report.
+   - Download the report to your device.
+   - **Cloud Sync**: Automatically upload the report to the selected valve's **"Inspection & Test report"** folder in Supabase for long-term traceability.

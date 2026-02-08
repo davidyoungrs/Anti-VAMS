@@ -84,6 +84,9 @@
   - **Recertification Matrices**: Automated interval recommendations (12-60 months) based on Category 1 & 2 history logic.
   - **"50% Rule" Safety Logic**: Automatic detection and recommendation for intermediate exams when extending intervals beyond double the current period.
   - **Online Testing (OLSPV)**: Decision engine to recommend Bench Test vs. In-situ testing based on risk and history.
+  - **Database Integration**: One-click lookup and auto-population of metadata from existing valve records.
+  - **Automated Reporting**: Professional jsPDF report generation with risk summaries and automated interval calculation results.
+  - **Integrated Cloud Storage**: Automated saving of generated PDF reports to the valve's specific inspection history folder in Supabase.
   - **Environmental Normalization**: Built-in unit conversion (Celsius/Fahrenheit, Bar/PSI) to ensure calculation accuracy against standards.
 - **Valve Sizing & Conversion**:
   - **Cv/Kv Calculation**: Sizing tools for Liquid, Gas, Steam, and Multiphase flow types.
