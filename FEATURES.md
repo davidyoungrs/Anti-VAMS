@@ -78,7 +78,19 @@
   - Use QR codes to bypass the dashboard and open specific valve records immediately.
   - Physical-to-Digital bridge for workshop efficiency.
 
-## 9. Regulatory & Security Compliance
+## 9. Engineering Calculations & RBI
+- **PRV RBI System (SV-ENG-0002)**:
+  - **Automated Risk Profiling**: Full implementation of the SVS Consequence of Failure (COF) and Probability of Failure (POF) flowcharts.
+  - **Recertification Matrices**: Automated interval recommendations (12-60 months) based on Category 1 & 2 history logic.
+  - **"50% Rule" Safety Logic**: Automatic detection and recommendation for intermediate exams when extending intervals beyond double the current period.
+  - **Online Testing (OLSPV)**: Decision engine to recommend Bench Test vs. In-situ testing based on risk and history.
+  - **Environmental Normalization**: Built-in unit conversion (Celsius/Fahrenheit, Bar/PSI) to ensure calculation accuracy against standards.
+- **Valve Sizing & Conversion**:
+  - **Cv/Kv Calculation**: Sizing tools for Liquid, Gas, Steam, and Multiphase flow types.
+  - **Flange Tables**: Instant lookup for ASME, DIN, and API flange dimensions and bolt patterns.
+  - **Mass/Volume Tools**: Real-time flow rate conversions using fluid density.
+
+## 10. Regulatory & Security Compliance
 - **Inactivity Timer**: Automatic session timeout after 10 minutes of idle time (ISO 27002 compliance).
 - **Soft Delete (Historical Traceability)**: Records are never permanently destroyed on the first click; instead, they are archived with a `deleted_at` timestamp for audit trails.
 - **Encryption-at-Rest**: All sensitive valve data and job details are encrypted locally using FIPS-ready standards before being synced to the cloud.

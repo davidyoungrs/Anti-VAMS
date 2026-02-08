@@ -5,6 +5,10 @@ This document outlines the development path for the GVR-VAMS. Completed items ha
 ## Phase 1: Advanced Intelligence & Reporting
 *Features that provide deep value and analytics.*
 
+0. **PRV RBI System (SV-ENG-0002)** (Status: **Complete**)
+   - **Feature**: Automated Risk-Based Inspection calculator for Iraqi projects.
+   - **Logic**: Cumulative COF/POF flowcharts and proven history matrices.
+
 1. **Predictive Analytics (Future)** (Status: **Planned**)
    - **Task**: Trend analysis for "Mean Time Between Failure" (MTBF) calculations.
    - **Note**: Needs OREDA standardized fields (Cause) to be fully effective.

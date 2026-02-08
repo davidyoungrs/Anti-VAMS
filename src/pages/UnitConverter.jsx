@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { supabase } from '../services/supabaseClient';
+import { generateRbiReport } from '../services/reportGenerator';
 
 const CONVERTERS = {
     temperature: {
@@ -133,8 +135,56 @@ const FLANGE_DATA = {
     }
 };
 
+const RBI_CONFIG = {
+    COF: {
+        temp: { multiplier: 1.2, low: -15, high: 65 },
+        pressure: { critical: 20, low: 3, criticalMult: 1.5, standardMult: 1.3, lowMult: 1.0 },
+        vessel: { small: 0.2, medium: 1.0, large: 2.0, smallMult: 1.0, mediumMult: 1.5, largeMult: 2.0 },
+        pipe: { criticalDiam: 4, largeMult: 1.5, standardMult: 1.0 },
+        fluid: {
+            'Utility/Seawater': 1.0,
+            'Air': 1.2,
+            'N2 Gas': 1.2,
+            'Drilling/Cement': 1.4,
+            'Chemicals': 1.4,
+            'Produced Water': 1.5,
+            'HC Vapour': 2.0,
+            'HC Liquid': 1.8,
+            'Gas Condensate': 1.9
+        },
+        vp: { critical: 1, mult: 1.3 }
+    },
+    POF: {
+        condition: { VGOOD: 0, GOOD: 1, FAIR: 15, POOR: 100, BENT: 100 },
+        action: {
+            'LAP AND POLISH': 0,
+            'POLISHED': 1,
+            'PAINTED': 0,
+            'CLEAN': 1,
+            'BLAST & CLEAN': 1,
+            'MACHINED TRIM': 10,
+            'MACHINED': 100,
+            'NEW PART': 100,
+            'O RING REPLACED': 1,
+            'B.E.R.': 1000
+        }
+    },
+    MATRICES: {
+        CAT1: [
+            [12, 24, 36], // POF High [COF High, Med, Low]
+            [24, 36, 48], // POF Medium
+            [36, 48, 60]  // POF Low
+        ],
+        CAT2: [
+            [24, 36, 48],
+            [36, 48, 60],
+            [48, 60, 60]
+        ]
+    }
+};
 
-export const UnitConverter = () => {
+
+export const UnitConverter = ({ records = [], role = '' }) => {
     const [activeTab, setActiveTab] = useState('sizing');
 
     // General Converter State
@@ -170,6 +220,62 @@ export const UnitConverter = () => {
     const [flangeStandard, setFlangeStandard] = useState('ASME B16.5');
     const [flangeClass, setFlangeClass] = useState('150');
     const [flangeSearch, setFlangeSearch] = useState('');
+
+    // PRV RBI State - Valve Metadata
+    const [rbiSelectedValveId, setRbiSelectedValveId] = useState('');
+    const [rbiCustomer, setRbiCustomer] = useState('');
+    const [rbiOem, setRbiOem] = useState('');
+    const [rbiSerialNumber, setRbiSerialNumber] = useState('');
+    const [rbiTagNumber, setRbiTagNumber] = useState('');
+    const [rbiModelNumber, setRbiModelNumber] = useState('');
+    const [rbiSetPressure, setRbiSetPressure] = useState('');
+    const [rbiSetPressureUnit, setRbiSetPressureUnit] = useState('Bar');
+
+    // PRV RBI State - Calculation 
+    const [rbiTemp, setRbiTemp] = useState('');
+    const [rbiTempUnit, setRbiTempUnit] = useState('Celsius');
+    const [rbiPressure, setRbiPressure] = useState('');
+    const [rbiPressureUnit, setRbiPressureUnit] = useState('Bar');
+    const [rbiContainmentType, setRbiContainmentType] = useState('Pipe'); // Pipe or Vessel
+    const [rbiVesselSize, setRbiVesselSize] = useState('Small'); // Small, Medium, Large
+    const [rbiPipeDiam, setRbiPipeDiam] = useState('');
+    const [rbiPipeDiamUnit, setRbiPipeDiamUnit] = useState('Inches');
+    const [rbiFluidType, setRbiFluidType] = useState('Utility/Seawater');
+    const [rbiVapourPressure, setRbiVapourPressure] = useState(''); // Only for HC Liquid/Condensate
+    const [rbiRepairCost, setRbiRepairCost] = useState('');
+    const [rbiRepairCostCurrency, setRbiRepairCostCurrency] = useState('£');
+
+    const [rbiHistoryCount, setRbiHistoryCount] = useState('0'); // <2 or >=2
+    const [rbiServiceType, setRbiServiceType] = useState('1'); // 1: Clean, 2: Dirty
+    const [rbiCurrentPrePop, setRbiCurrentPrePop] = useState('Pass'); // Pass or Fail
+    const [rbiPrevInspections, setRbiPrevInspections] = useState('Pass'); // Pass or Fail
+    const [rbiProblemCorrected, setRbiProblemCorrected] = useState('Yes');
+    const [rbiSimilarHistory, setRbiSimilarHistory] = useState('Good'); // Good or Poor
+    const [rbiCondition, setRbiCondition] = useState('VGOOD');
+    const [rbiActions, setRbiActions] = useState(['LAP AND POLISH']); // Multiple selections
+    const [rbiLeakTest, setRbiLeakTest] = useState('Pass');
+    const [rbiCurrentInterval, setRbiCurrentInterval] = useState('12');
+
+    // PRV Filtering
+    const prvRecords = records.filter(r => r.valveType === 'Pressure Relief Valve');
+
+    const handleValveSelect = (valveId) => {
+        setRbiSelectedValveId(valveId);
+        const valve = records.find(r => r.id === valveId);
+        if (valve) {
+            setRbiCustomer(valve.customer || '');
+            setRbiOem(valve.oem || '');
+            setRbiSerialNumber(valve.serialNumber || '');
+            setRbiTagNumber(valve.tagNo || '');
+            setRbiModelNumber(valve.modelNo || '');
+            setRbiSetPressure(valve.bodyPressure || valve.mawp || '');
+            setRbiSetPressureUnit(valve.bodyPressureUnit || 'Bar');
+
+            // Auto-populate calculation fields if context is clear
+            if (valve.mawp) setRbiPressure(valve.mawp);
+            if (valve.tagNo) setRbiTagNumber(valve.tagNo);
+        }
+    };
 
     // Initialize defaults when tab changes
     React.useEffect(() => {
@@ -318,6 +424,226 @@ export const UnitConverter = () => {
 
     const sizingRes = calculateSizingResult();
 
+    const calculateRbiResults = () => {
+        // 1. Calculate COF (F)
+        let F = 1.0;
+
+        // Step 1: Temp
+        const tempC = rbiTempUnit === 'Celsius' ? parseFloat(rbiTemp) : (parseFloat(rbiTemp) - 32) * 5 / 9;
+        if (!isNaN(tempC) && (tempC < RBI_CONFIG.COF.temp.low || tempC > RBI_CONFIG.COF.temp.high)) {
+            F *= RBI_CONFIG.COF.temp.multiplier;
+        }
+
+        // Step 2: Pressure
+        const pressBar = rbiPressureUnit === 'Bar' ? parseFloat(rbiPressure) :
+            rbiPressureUnit === 'PSI' ? parseFloat(rbiPressure) * 0.0689476 :
+                parseFloat(rbiPressure) * 0.01;
+        if (!isNaN(pressBar)) {
+            if (pressBar > RBI_CONFIG.COF.pressure.critical) F *= RBI_CONFIG.COF.pressure.criticalMult;
+            else if (pressBar < RBI_CONFIG.COF.pressure.low) F *= RBI_CONFIG.COF.pressure.lowMult;
+            else F *= RBI_CONFIG.COF.pressure.standardMult;
+        }
+
+        // Step 3: Containment
+        if (rbiContainmentType === 'Vessel') {
+            if (rbiVesselSize === 'Small') F *= RBI_CONFIG.COF.vessel.smallMult;
+            else if (rbiVesselSize === 'Medium') F *= RBI_CONFIG.COF.vessel.mediumMult;
+            else F *= RBI_CONFIG.COF.vessel.largeMult;
+        } else {
+            const diamIn = rbiPipeDiamUnit === 'Inches' ? parseFloat(rbiPipeDiam) : parseFloat(rbiPipeDiam) / 25.4;
+            if (!isNaN(diamIn) && diamIn > RBI_CONFIG.COF.pipe.criticalDiam) F *= RBI_CONFIG.COF.pipe.largeMult;
+            else F *= RBI_CONFIG.COF.pipe.standardMult;
+        }
+
+        // Step 4: Fluid
+        F *= (RBI_CONFIG.COF.fluid[rbiFluidType] || 1.0);
+
+        // Step 5: Vapour Pressure
+        if (rbiFluidType === 'HC Liquid' || rbiFluidType === 'Gas Condensate') {
+            const vpBar = parseFloat(rbiVapourPressure);
+            if (!isNaN(vpBar) && vpBar >= RBI_CONFIG.COF.vp.critical) {
+                F *= RBI_CONFIG.COF.vp.mult;
+            }
+        }
+
+        // Step 6: Consequence Rank
+        let cofRank = 'LOW';
+        const cost = parseFloat(rbiRepairCost) || 0;
+        if (F > 3.5) {
+            cofRank = 'HIGH';
+        } else if (F > 1.8) {
+            if (cost > 250000) cofRank = 'HIGH';
+            else if (cost < 50000) cofRank = 'LOW';
+            else cofRank = 'MEDIUM';
+        } else {
+            if (cost >= 50000) cofRank = 'MEDIUM';
+            else cofRank = 'LOW';
+        }
+
+        // 2. Calculate POF
+        let pofRank = 'HIGH';
+        const condScore = RBI_CONFIG.POF.condition[rbiCondition] || 0;
+
+        // VC Score (CUMULATIVE for multiple actions)
+        const actionScore = rbiActions.reduce((total, action) => total + (RBI_CONFIG.POF.action[action] || 0), 0);
+
+        const totalScore = condScore + actionScore + 1;
+
+        if (rbiHistoryCount === '0') {
+            // New Application logic
+            pofRank = rbiSimilarHistory === 'Good' ? 'MEDIUM' : 'HIGH';
+        } else {
+            // Existing Valve logic
+            if (rbiCurrentPrePop === 'Pass') {
+                if (rbiServiceType === '1' || rbiPrevInspections === 'Pass') {
+                    if (totalScore >= 250) pofRank = 'MEDIUM';
+                    else pofRank = rbiLeakTest === 'Pass' ? 'LOW' : 'MEDIUM';
+                } else {
+                    pofRank = 'MEDIUM';
+                }
+            } else {
+                pofRank = rbiProblemCorrected === 'Yes' ? (rbiSimilarHistory === 'Good' ? 'MEDIUM' : 'HIGH') : 'HIGH';
+            }
+        }
+
+        // 3. Matrix lookup
+        const matrix = rbiHistoryCount === 'Category 2' ? RBI_CONFIG.MATRICES.CAT2 : RBI_CONFIG.MATRICES.CAT1;
+        const rankIdxMap = { 'HIGH': 0, 'MEDIUM': 1, 'LOW': 2 };
+        const recommendedInterval = matrix[rankIdxMap[pofRank]][rankIdxMap[cofRank]];
+
+        // 4. Safety Override (50% Rule)
+        const currentPeriod = parseInt(rbiCurrentInterval) || 12;
+        let finalInterval = recommendedInterval;
+        let intermediateRequired = false;
+        let intermediateInterval = null;
+
+        if (recommendedInterval > 2 * currentPeriod) {
+            intermediateRequired = true;
+            intermediateInterval = Math.min(30, recommendedInterval * 0.5);
+        }
+
+        // 5. OLSPV Recommendation
+        let nextAction = 'Bench Test';
+        if (cofRank === 'LOW') {
+            nextAction = 'Bench / OLSPV';
+        } else if (rbiHistoryCount === 'Category 2' && rbiCurrentPrePop === 'Pass') {
+            nextAction = 'OLSPV (In-situ)';
+        }
+
+        return {
+            cofFactor: F.toFixed(2),
+            cofRank,
+            pofRank,
+            recommendedInterval,
+            intermediateRequired,
+            intermediateInterval,
+            nextAction,
+            metadata: {
+                customer: rbiCustomer,
+                oem: rbiOem,
+                serialNumber: rbiSerialNumber,
+                tagNumber: rbiTagNumber,
+                modelNumber: rbiModelNumber,
+                setPressure: `${rbiSetPressure} ${rbiSetPressureUnit}`
+            }
+        };
+    };
+
+    const handleGenerateReport = async () => {
+        try {
+            const results = calculateRbiResults();
+
+            const inputs = {
+                temp: rbiTemp,
+                tempUnit: rbiTempUnit,
+                pressure: rbiPressure,
+                pressureUnit: rbiPressureUnit,
+                containmentType: rbiContainmentType,
+                containmentValue: rbiContainmentType === 'Vessel' ? rbiVesselSize : `${rbiPipeDiam} ${rbiPipeDiamUnit}`,
+                fluidType: rbiFluidType,
+                repairCost: rbiRepairCost,
+                repairCostCurrency: rbiRepairCostCurrency,
+                historyCount: rbiHistoryCount === 'Category 2' ? ">= 2 Tests" : "< 2 Tests",
+                serviceType: rbiServiceType,
+                currentPrePop: rbiCurrentPrePop,
+                problemCorrected: rbiProblemCorrected,
+                condition: rbiCondition,
+                actions: rbiActions,
+                leakTest: rbiLeakTest,
+                currentInterval: rbiCurrentInterval
+            };
+
+            const pdfBlob = await generateRbiReport(results, inputs);
+
+            // 1. Download locally
+            const url = window.URL.createObjectURL(pdfBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `RBI_Report_${rbiSerialNumber || 'Export'}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+
+            // 2. Save to Cloud if valve is selected
+            if (supabase && rbiSelectedValveId) {
+                const fileName = `RBI_Report_${new Date().toISOString().split('T')[0]}_${crypto.randomUUID().substring(0, 5)}.pdf`;
+                const filePath = `${rbiSelectedValveId}/Inspection & Test report/${fileName}`;
+
+                const { error: uploadError } = await supabase.storage
+                    .from('valve-attachment')
+                    .upload(filePath, pdfBlob);
+
+                if (uploadError) {
+                    console.error("Cloud upload failed", uploadError);
+                } else {
+                    const { data: { publicUrl } } = supabase.storage
+                        .from('valve-attachment')
+                        .getPublicUrl(filePath);
+
+                    // Update the valve record's file list
+                    const valve = records.find(r => r.id === rbiSelectedValveId);
+                    if (valve) {
+                        const newFile = {
+                            url: publicUrl,
+                            category: 'Inspection & Test report',
+                            originalName: fileName,
+                            uploadDate: new Date().toISOString()
+                        };
+                        const updatedFiles = [...(valve.files || []), newFile].map(f => {
+                            if (f.file) {
+                                return {
+                                    url: f.url,
+                                    category: f.category,
+                                    originalName: f.originalName,
+                                    uploadDate: f.uploadDate
+                                };
+                            }
+                            return f;
+                        });
+
+                        const { error: updateError } = await supabase
+                            .from('records')
+                            .update({
+                                file_urls: updatedFiles,
+                                updated_at: new Date().toISOString()
+                            })
+                            .eq('id', rbiSelectedValveId);
+
+                        if (updateError) {
+                            console.error("Failed to update record with new file URL", updateError);
+                        }
+                    }
+                }
+            }
+        } catch (err) {
+            console.error("Error generating RBI report:", err);
+            alert("Failed to generate report. Check console for details.");
+        }
+    };
+
+    const rbiResults = calculateRbiResults();
+
     const renderTabContent = () => {
         switch (activeTab) {
             case 'flangeTables':
@@ -326,9 +652,356 @@ export const UnitConverter = () => {
                 return renderSizing();
             case 'massVol':
                 return renderMassVol();
+            case 'rbi':
+                return renderRbi();
             default:
                 return renderGeneralConverter();
         }
+    };
+
+    const renderRbi = () => {
+        if (role === 'client') {
+            return (
+                <div style={{ padding: '2rem', textAlign: 'center', opacity: 0.6 }}>
+                    <h3>Access Restricted</h3>
+                    <p>The RBI Module is reserved for engineering and inspection personnel.</p>
+                </div>
+            );
+        }
+
+        return (
+            <div className="grid-2">
+                {/* Header / Info */}
+                <div style={{ gridColumn: '1 / -1', marginBottom: '1rem', padding: '1rem', background: 'rgba(14, 165, 233, 0.1)', borderRadius: 'var(--radius-md)', borderLeft: '4px solid #0ea5e9', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                        <h4 style={{ margin: '0 0 0.5rem 0', color: '#0ea5e9' }}>Pressure Relief Valve RBI Module</h4>
+                        <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.8 }}>
+                            Calculates intervals based on Consequence and Probability of Failure flowcharts (SV-ENG-0002).
+                        </p>
+                    </div>
+                </div>
+
+                {/* Valve Selection & Metadata */}
+                <div style={{ gridColumn: '1 / -1', padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', marginBottom: '1rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                        <div className="field-group">
+                            <label>Lookup Valve from Database (SN / Tag)</label>
+                            <select
+                                value={rbiSelectedValveId}
+                                onChange={e => handleValveSelect(e.target.value)}
+                                style={{
+                                    background: 'rgba(255,255,255,0.05)',
+                                    borderColor: '#0ea5e9',
+                                    color: rbiSelectedValveId === '' ? 'rgba(255,255,255,0.4)' : 'white'
+                                }}
+                            >
+                                <option value="">-- Manual Entry / Custom --</option>
+                                {prvRecords.map(r => (
+                                    <option key={r.id} value={r.id}>
+                                        {r.serialNumber} {r.tagNo ? `[${r.tagNo}]` : ''} - {r.customer}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="field-group">
+                            <label>&nbsp;</label>
+                            <button
+                                onClick={() => {
+                                    setRbiSelectedValveId('');
+                                    setRbiCustomer('');
+                                    setRbiOem('');
+                                    setRbiSerialNumber('');
+                                    setRbiTagNumber('');
+                                    setRbiModelNumber('');
+                                    setRbiSetPressure('');
+                                }}
+                                style={{ width: '100%', padding: '0.65rem', background: 'transparent', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', color: 'var(--text-muted)', cursor: 'pointer' }}
+                            >
+                                Reset Metadata
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+                        <div className="field-group">
+                            <label>Customer</label>
+                            <input value={rbiCustomer} onChange={e => setRbiCustomer(e.target.value)} placeholder="Cust Name" />
+                        </div>
+                        <div className="field-group">
+                            <label>OEM / Manufacturer</label>
+                            <input value={rbiOem} onChange={e => setRbiOem(e.target.value)} placeholder="e.g. Crosby" />
+                        </div>
+                        <div className="field-group">
+                            <label>Serial Number</label>
+                            <input value={rbiSerialNumber} onChange={e => setRbiSerialNumber(e.target.value)} placeholder="S/N" />
+                        </div>
+                        <div className="field-group">
+                            <label>Tag Number</label>
+                            <input value={rbiTagNumber} onChange={e => setRbiTagNumber(e.target.value)} placeholder="Tag ID" />
+                        </div>
+                        <div className="field-group">
+                            <label>Model Number</label>
+                            <input value={rbiModelNumber} onChange={e => setRbiModelNumber(e.target.value)} placeholder="Model" />
+                        </div>
+                        <div className="field-group">
+                            <label>Set Pressure</label>
+                            <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                <input value={rbiSetPressure} onChange={e => setRbiSetPressure(e.target.value)} placeholder="e.g. 15.5" style={{ flex: 1 }} />
+                                <select value={rbiSetPressureUnit} onChange={e => setRbiSetPressureUnit(e.target.value)} style={{ width: 'auto' }}>
+                                    <option value="Bar">Bar</option>
+                                    <option value="PSI">PSI</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Section 1: Consequence Factors */}
+                <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+                    <h5 style={{ margin: '0 0 1rem 0', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>1. Consequence of Failure</h5>
+
+                    <div className="field-group">
+                        <label>Temperature</label>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <input type="number" value={rbiTemp} onChange={e => setRbiTemp(e.target.value)} placeholder="Operating Temp" />
+                            <select value={rbiTempUnit} onChange={e => setRbiTempUnit(e.target.value)}>
+                                {CONVERTERS.temperature.units.map(u => <option key={u} value={u}>{u}</option>)}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="field-group">
+                        <label>Operating Pressure</label>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <input type="number" value={rbiPressure} onChange={e => setRbiPressure(e.target.value)} placeholder="Max Op Pressure" />
+                            <select value={rbiPressureUnit} onChange={e => setRbiPressureUnit(e.target.value)}>
+                                {['Bar', 'PSI', 'kPa'].map(u => <option key={u} value={u}>{u}</option>)}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="field-group">
+                        <label>Containment Type</label>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                            {['Pipe', 'Vessel'].map(t => (
+                                <button key={t} onClick={() => setRbiContainmentType(t)} style={{ padding: '0.5rem', background: rbiContainmentType === t ? 'var(--primary)' : 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', cursor: 'pointer' }}>{t}</button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {rbiContainmentType === 'Vessel' ? (
+                        <div className="field-group">
+                            <label>Vessel Size ($m^3$)</label>
+                            <select value={rbiVesselSize} onChange={e => setRbiVesselSize(e.target.value)}>
+                                <option value="Small">Small (&lt; 0.2)</option>
+                                <option value="Medium">Medium (0.2 - 2.0)</option>
+                                <option value="Large">Large (&gt; 2.0)</option>
+                            </select>
+                        </div>
+                    ) : (
+                        <div className="field-group">
+                            <label>Pipe Diameter</label>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <input type="number" value={rbiPipeDiam} onChange={e => setRbiPipeDiam(e.target.value)} placeholder="Diameter" />
+                                <select value={rbiPipeDiamUnit} onChange={e => setRbiPipeDiamUnit(e.target.value)}>
+                                    <option value="Inches">Inches</option>
+                                    <option value="mm">mm</option>
+                                </select>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="field-group">
+                        <label>Fluid Type</label>
+                        <select value={rbiFluidType} onChange={e => setRbiFluidType(e.target.value)}>
+                            {Object.keys(RBI_CONFIG.COF.fluid).map(f => <option key={f} value={f}>{f}</option>)}
+                        </select>
+                    </div>
+
+                    {(rbiFluidType === 'HC Liquid' || rbiFluidType === 'Gas Condensate') && (
+                        <div className="field-group">
+                            <label>Vapour Pressure (Bar)</label>
+                            <input type="number" value={rbiVapourPressure} onChange={e => setRbiVapourPressure(e.target.value)} placeholder="VP in Bar" />
+                        </div>
+                    )}
+
+                    <div className="field-group">
+                        <label>Estimated Repair Cost</label>
+                        <div style={{ display: 'flex', gap: '0.25rem' }}>
+                            <select
+                                value={rbiRepairCostCurrency}
+                                onChange={e => setRbiRepairCostCurrency(e.target.value)}
+                                style={{ width: 'auto', minWidth: '3.5rem' }}
+                            >
+                                <option value="£">£</option>
+                                <option value="$">$</option>
+                                <option value="€">€</option>
+                            </select>
+                            <input type="number" value={rbiRepairCost} onChange={e => setRbiRepairCost(e.target.value)} placeholder="e.g. 75000" style={{ flex: 1 }} />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Section 2: Probability Factors */}
+                <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+                    <h5 style={{ margin: '0 0 1rem 0', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>2. Probability of Failure</h5>
+
+                    <div className="field-group">
+                        <label>History Availability</label>
+                        <select value={rbiHistoryCount} onChange={e => setRbiHistoryCount(e.target.value)}>
+                            <option value="0">New / &lt; 2 Tests (Cat 1)</option>
+                            <option value="Category 2">&ge; 2 Recent Shop Reports (Cat 2)</option>
+                        </select>
+                    </div>
+
+                    <div className="field-group">
+                        <label>Service Condition</label>
+                        <select value={rbiServiceType} onChange={e => setRbiServiceType(e.target.value)}>
+                            <option value="1">Clean, Non-Corrosive</option>
+                            <option value="2">Dirty, Corrosive, Cyclic</option>
+                        </select>
+                    </div>
+
+                    {rbiHistoryCount === 'Category 2' && (
+                        <div className="field-group">
+                            <label>Current Pre-Pop Test Result</label>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                                {['Pass', 'Fail'].map(r => (
+                                    <button key={r} onClick={() => setRbiCurrentPrePop(r)} style={{ padding: '0.4rem', background: rbiCurrentPrePop === r ? '#10b981' : 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', fontSize: '0.85rem', cursor: 'pointer' }}>{r}</button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {rbiCurrentPrePop === 'Fail' && (
+                        <div className="field-group">
+                            <label>Problem Corrected?</label>
+                            <select value={rbiProblemCorrected} onChange={e => setRbiProblemCorrected(e.target.value)}>
+                                <option value="Yes">Yes, Action Taken</option>
+                                <option value="No">No / Not Identified</option>
+                            </select>
+                        </div>
+                    )}
+
+                    <div className="field-group">
+                        <label>In-Service Inspection Condition</label>
+                        <select value={rbiCondition} onChange={e => setRbiCondition(e.target.value)}>
+                            {Object.keys(RBI_CONFIG.POF.condition).map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                    </div>
+
+                    <div className="field-group">
+                        <label>Latest Repair Actions (Select all that apply)</label>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', background: 'rgba(255,255,255,0.02)', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
+                            {Object.keys(RBI_CONFIG.POF.action).map(a => {
+                                const isSelected = rbiActions.includes(a);
+                                return (
+                                    <button
+                                        key={a}
+                                        onClick={() => {
+                                            if (isSelected) setRbiActions(rbiActions.filter(x => x !== a));
+                                            else setRbiActions([...rbiActions, a]);
+                                        }}
+                                        style={{
+                                            padding: '0.3rem 0.6rem',
+                                            background: isSelected ? 'var(--accent)' : 'rgba(255,255,255,0.05)',
+                                            border: `1px solid ${isSelected ? 'var(--accent)' : 'var(--border-color)'}`,
+                                            fontSize: '0.75rem',
+                                            borderRadius: '1rem',
+                                            color: isSelected ? 'black' : 'var(--text-muted)',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s'
+                                        }}
+                                    >
+                                        {a}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    <div className="field-group">
+                        <label>Final Leak Test</label>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                            {['Pass', 'Fail'].map(r => (
+                                <button key={r} onClick={() => setRbiLeakTest(r)} style={{ padding: '0.4rem', background: rbiLeakTest === r ? '#10b981' : 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', fontSize: '0.85rem', cursor: 'pointer' }}>{r}</button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="field-group">
+                        <label>Current Inspection Period (Months)</label>
+                        <input type="number" value={rbiCurrentInterval} onChange={e => setRbiCurrentInterval(e.target.value)} placeholder="e.g. 12" />
+                    </div>
+
+                </div>
+
+                {/* Results Report */}
+                <div style={{ gridColumn: '1 / -1', marginTop: '1.5rem', padding: '1.5rem', background: 'var(--bg-surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                        <h5 style={{ margin: 0, fontSize: '1.1rem' }}>Assessment Summary</h5>
+                        <div style={{ padding: '0.25rem 0.75rem', background: rbiHistoryCount === 'Category 2' ? '#10b981' : '#6b7280', color: 'white', borderRadius: '1rem', fontSize: '0.75rem' }}>
+                            {rbiHistoryCount === 'Category 2' ? 'Category 2 Protocol' : 'Category 1 Protocol'}
+                        </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+                        <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>COF Factor</div>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{rbiResults.cofFactor}</div>
+                            <div style={{ fontSize: '0.8rem', color: rbiResults.cofRank === 'HIGH' ? '#ef4444' : rbiResults.cofRank === 'MEDIUM' ? '#f59e0b' : '#10b981', fontWeight: 'bold' }}>{rbiResults.cofRank}</div>
+                        </div>
+                        <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Probability Rank</div>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>-</div>
+                            <div style={{ fontSize: '0.8rem', color: rbiResults.pofRank === 'HIGH' ? '#ef4444' : rbiResults.pofRank === 'MEDIUM' ? '#f59e0b' : '#10b981', fontWeight: 'bold' }}>{rbiResults.pofRank}</div>
+                        </div>
+                        <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Suggested Interval</div>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#0ea5e9' }}>{rbiResults.recommendedInterval} mo</div>
+                        </div>
+                        <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Primary Action</div>
+                            <div style={{ fontSize: '1.1rem', fontWeight: 'bold', height: '2.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{rbiResults.nextAction}</div>
+                        </div>
+                    </div>
+
+                    {rbiResults.intermediateRequired && (
+                        <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'rgba(245, 158, 11, 0.1)', borderRadius: 'var(--radius-md)', border: '1px solid #f59e0b', color: '#f59e0b' }}>
+                            <div style={{ fontWeight: 'bold', marginBottom: '0.25rem' }}>⚠️ Safety Override: 50% Rule Applied</div>
+                            <div style={{ fontSize: '0.85rem' }}>
+                                The suggested interval is &gt;2x the previous period. An **intermediate examination (OLSPV)** is recommended at **{rbiResults.intermediateInterval} months**.
+                            </div>
+                        </div>
+                    )}
+
+                    <div style={{ marginTop: '2rem' }}>
+                        <button
+                            onClick={() => handleGenerateReport()}
+                            className="btn-primary"
+                            disabled={!rbiCustomer || !rbiOem || !rbiSerialNumber || !rbiTagNumber || !rbiModelNumber || !rbiSetPressure || !rbiTemp || !rbiPressure || !rbiRepairCost}
+                            style={{
+                                width: '100%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '0.5rem',
+                                padding: '1rem',
+                                opacity: (!rbiCustomer || !rbiOem || !rbiSerialNumber || !rbiTagNumber || !rbiModelNumber || !rbiSetPressure || !rbiTemp || !rbiPressure || !rbiRepairCost) ? 0.5 : 1,
+                                cursor: (!rbiCustomer || !rbiOem || !rbiSerialNumber || !rbiTagNumber || !rbiModelNumber || !rbiSetPressure || !rbiTemp || !rbiPressure || !rbiRepairCost) ? 'not-allowed' : 'pointer'
+                            }}
+                        >
+                            <span>📄</span> Generate RBI Report
+                        </button>
+                        {(!rbiCustomer || !rbiOem || !rbiSerialNumber || !rbiTagNumber || !rbiModelNumber || !rbiSetPressure || !rbiTemp || !rbiPressure || !rbiRepairCost) && (
+                            <div style={{ fontSize: '0.7rem', color: '#ef4444', textAlign: 'center', marginTop: '0.5rem' }}>
+                                * All identification and process fields are mandatory
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
     };
 
     const renderFlangeTables = () => (
@@ -714,6 +1387,18 @@ export const UnitConverter = () => {
                         }}
                     >
                         🔩 Flange Tables
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('rbi')}
+                        className={`btn-calc ${activeTab === 'rbi' ? 'active' : ''}`}
+                        style={{
+                            whiteSpace: 'nowrap',
+                            background: activeTab === 'rbi' ? '#0ea5e9' : 'transparent', // Blue for RBI
+                            color: activeTab === 'rbi' ? 'white' : 'var(--text-muted)',
+                            border: activeTab === 'rbi' ? '1px solid #0ea5e9' : '1px solid var(--border-color)'
+                        }}
+                    >
+                        🛡️ PRV RBI
                     </button>
                 </div>
 

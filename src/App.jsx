@@ -581,7 +581,7 @@ function App() {
       case 'jobs':
         return <Jobs onNavigate={handleNavigate} />;
       case 'unit-converter':
-        return <UnitConverter />;
+        return <UnitConverter records={records} role={role} />;
 
       case 'record-detail':
         return <RecordForm key={selectedRecord?.id || 'detail'} initialData={selectedRecord} onSave={handleSave} onNavigate={handleNavigate} />;
