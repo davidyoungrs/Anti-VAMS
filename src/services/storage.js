@@ -86,7 +86,7 @@ export const storageService = {
             try {
                 const { data, error } = await supabase
                     .from('valve_records')
-                    .select('id, serial_number, customer, oem, valve_type, size_class, mawp, tag_no, status, job_id, created_at, updated_at, deleted_at')
+                    .select('*')
                     .order('created_at', { ascending: false });
 
                 if (error) {
@@ -104,7 +104,6 @@ export const storageService = {
                         serialNumber: r.serial_number,
                         jobNo: r.job_no,
                         tagNo: r.tag_no,
-                        order_no: r.order_no, // Ensure mapping for both cases if needed
                         orderNo: r.order_no,
                         dateIn: r.date_in,
                         requiredDate: r.required_date,
@@ -164,7 +163,7 @@ export const storageService = {
                         signedDate: r.signed_date,
 
                         updatedAt: r.updated_at,
-                        deletedAt: r.deleted_at, // Map Soft Delete timestamp
+                        deletedAt: r.deleted_at,
                         lastViewedAt: r.last_viewed_at,
                         valvePhoto: r.valve_photo,
                         files: (r.file_urls || []).map(f => {
@@ -670,12 +669,10 @@ export const storageService = {
 
         let syncedCount = 0;
         const failedRecords = [];
-        let lastError = null; // Restore missing variables
+        let lastError = null;
 
-        const BATCH_SIZE = 1;
-        const recordsToUpsert = [];
+        console.log(`[SyncDebug] Starting atomic sync for ${localRecords.length} records...`);
 
-        // Helper functions defined at top of scope
         const sanitizeVal = (val) => (!val || val === '') ? null : val;
         const sanitizeNum = (val) => {
             if (val === '' || val === null || val === undefined) return null;
@@ -685,7 +682,7 @@ export const storageService = {
         for (let i = 0; i < localRecords.length; i++) {
             let record = { ...localRecords[i] };
 
-            // 2b. Handle Valve Photo
+            // 1. Process Valve Photo
             if (supabase && record.valvePhoto && typeof record.valvePhoto !== 'string') {
                 try {
                     const file = record.valvePhoto;
@@ -703,23 +700,17 @@ export const storageService = {
                         record.valvePhoto = publicUrl;
                     }
                 } catch (e) {
-                    console.error('Error during valve photo upload:', e);
+                    console.error(`[SyncDebug] Error during valve photo upload for ${record.serialNumber}:`, e);
                 }
             }
 
-            // 2c. Handle Attachments
+            // 2. Process Attachments
             if (record.files && record.files.length > 0) {
                 try {
                     const processedFiles = await Promise.all(record.files.map(async (fileItem) => {
-                        // 1. If it's already a full URL string (legacy), return it
                         if (typeof fileItem === 'string') return fileItem;
+                        if (fileItem.url && !fileItem.url.startsWith('data:')) return fileItem;
 
-                        // 2. If it's already a synced metadata object (has a non-base64 URL), return it
-                        if (fileItem.url && !fileItem.url.startsWith('data:')) {
-                            return fileItem;
-                        }
-
-                        // 3. It needs uploading (either a File object or a Base64 metadata object)
                         if (supabase) {
                             try {
                                 let blobToUpload = null;
@@ -730,7 +721,6 @@ export const storageService = {
                                     blobToUpload = fileItem instanceof File ? fileItem : fileItem.file;
                                     fileName = blobToUpload.name;
                                 } else if (fileItem.url && fileItem.url.startsWith('data:')) {
-                                    // Base64 from previous failed upload or offline save
                                     blobToUpload = base64ToBlob(fileItem.url);
                                     fileName = fileItem.originalName || `synced_file_${Date.now()}`;
                                 }
@@ -756,45 +746,21 @@ export const storageService = {
                                             uploadDate: fileItem.uploadDate || new Date().toISOString()
                                         };
                                     }
-                                    console.warn('Sync upload failed:', uploadError);
                                 }
                             } catch (err) {
-                                console.warn('Supabase sync exception:', err);
+                                console.warn(`[SyncDebug] Supabase sync exception for ${record.serialNumber}:`, err);
                             }
                         }
-
-                        // Fallback: If we couldn't upload, keep what we have (Base64)
                         return fileItem;
                     }));
-
                     record.files = processedFiles.filter(f => f !== null);
-
-                    // Added: Check if we actually upgraded any files from Base64 to Cloud URLs
-                    const hasNewCloudUrls = record.files.some(f =>
-                        typeof f === 'object' && f.url && !f.url.startsWith('data:') &&
-                        localRecords[i].files.some(lf => lf.url?.startsWith('data:'))
-                    );
-
-                    if (hasNewCloudUrls) {
-                        console.log(`[SyncDebug] Upgraded files for ${record.serialNumber} from Base64 to Cloud URLs.`);
-                        // We need to update the local record so it doesn't try to re-upload next time
-                        const updatedLocalRecord = {
-                            ...localRecords[i],
-                            files: record.files,
-                            updatedAt: new Date().toISOString() // Ensure it's marked as updated
-                        };
-                        const encrypted = securityService.encrypt(updatedLocalRecord);
-                        await dbService.put({ id: record.id, encryptedData: encrypted });
-                    }
                 } catch (e) {
-                    console.error('Error handling files in sync:', e);
+                    console.error(`[SyncDebug] Error handling files in sync for ${record.serialNumber}:`, e);
                 }
-            } else {
-                record.files = record.files || [];
             }
 
-
-            recordsToUpsert.push({
+            // 3. Upsert to Supabase
+            const upsertPayload = {
                 id: record.id,
                 created_at: sanitizeVal(record.createdAt),
                 updated_at: sanitizeVal(record.updatedAt),
@@ -840,41 +806,32 @@ export const storageService = {
                 job_id: record.jobId,
                 valve_photo: record.valvePhoto,
                 file_urls: record.files || []
-            });
-        }
+            };
 
-        console.log(`[SyncDebug] Syncing ${recordsToUpsert.length} records to cloud...`);
-
-        // 3. Batch Upsert to Supabase
-        if (recordsToUpsert.length > 0) {
             try {
-                for (let i = 0; i < recordsToUpsert.length; i += BATCH_SIZE) {
-                    const chunk = recordsToUpsert.slice(i, i + BATCH_SIZE);
-                    const { error } = await supabase.from('valve_records').upsert(chunk, { onConflict: 'id' });
-
-                    if (error) {
-                        console.error('Batch sync failed:', error);
-                        lastError = error;
-                        chunk.forEach(r => failedRecords.push(r.id));
-                    } else {
-                        syncedCount += chunk.length;
-                    }
+                const { error: upsertError } = await supabase.from('valve_records').upsert(upsertPayload, { onConflict: 'id' });
+                if (upsertError) {
+                    console.error(`[SyncDebug] Upsert failed for ${record.serialNumber}:`, upsertError);
+                    failedRecords.push(record.serialNumber || record.id);
+                    lastError = upsertError;
+                } else {
+                    syncedCount++;
+                    const encrypted = securityService.encrypt(record);
+                    await dbService.put({ id: record.id, encryptedData: encrypted });
                 }
-            } catch (batchErr) {
-                console.error('Batch exception:', batchErr);
-                lastError = batchErr;
-                failedRecords.push('batch-failure');
+            } catch (err) {
+                console.error(`[SyncDebug] Exception during sync for ${record.serialNumber}:`, err);
+                failedRecords.push(record.serialNumber || record.id);
+                lastError = err;
             }
         }
 
-        // Skip local storage update since we didn't process files
         if (failedRecords.length > 0) {
-            return { success: false, count: syncedCount, error: `Failed to sync. Last Error: ${lastError?.message}` };
+            return { success: false, count: syncedCount, error: `Failed to sync ${failedRecords.length} records. Last Error: ${lastError?.message}` };
         }
 
         let cloudTotal = 'unknown';
         if (supabase) {
-            // Count only NON-DELETED records
             try {
                 const { count, error } = await supabase.from('valve_records')
                     .select('*', { count: 'exact', head: true })
@@ -882,7 +839,6 @@ export const storageService = {
 
                 if (error) {
                     console.warn('Failed to fetch cloud count:', error);
-                    // Don't fail the whole sync, just show unknown
                 } else {
                     cloudTotal = count;
                 }
