@@ -16,6 +16,11 @@ export const ATTACHMENT_CATEGORIES = [
     'Other'
 ];
 
+// Helper to check if a URL is already in Supabase Cloud
+const isCloudUrl = (url) => {
+    return typeof url === 'string' && (url.includes('supabase.co') || url.includes('supabase.net') || url.startsWith('http'));
+};
+
 // Helper to convert Base64 back to Blob for syncing
 const base64ToBlob = (base64) => {
     try {
@@ -276,7 +281,18 @@ export const storageService = {
 
                 if (uploadError) {
                     console.error('Valve photo upload failed:', uploadError);
-                    alert(`Valve photo upload failed: ${uploadError.message}`);
+                    // Fallback: Convert to Base64 so it's not lost when saving to IndexedDB
+                    try {
+                        finalRecord.valvePhoto = await new Promise((resolve, reject) => {
+                            const reader = new FileReader();
+                            reader.readAsDataURL(file);
+                            reader.onload = () => resolve(reader.result);
+                            reader.onerror = error => reject(error);
+                        });
+                        console.log('[StorageDebug] Saved photo as Base64 fallback.');
+                    } catch (readErr) {
+                        console.error('Failed to create Base64 fallback for photo:', readErr);
+                    }
                 } else {
                     const { data: { publicUrl } } = supabase.storage
                         .from('valve-attachment')
@@ -683,21 +699,30 @@ export const storageService = {
             let record = { ...localRecords[i] };
 
             // 1. Process Valve Photo
-            if (supabase && record.valvePhoto && typeof record.valvePhoto !== 'string') {
+            if (supabase && record.valvePhoto && (!isCloudUrl(record.valvePhoto) || typeof record.valvePhoto !== 'string')) {
                 try {
-                    const file = record.valvePhoto;
-                    const fileExt = file.name.split('.').pop();
-                    const filePath = `${record.id}/valve-photo-${crypto.randomUUID()}.${fileExt}`;
+                    let blobToUpload = null;
+                    let fileExt = 'jpg';
 
-                    const { error: uploadError } = await supabase.storage
-                        .from('valve-attachment')
-                        .upload(filePath, file);
+                    if (typeof record.valvePhoto !== 'string') {
+                        blobToUpload = record.valvePhoto;
+                        fileExt = blobToUpload.name?.split('.').pop() || 'jpg';
+                    } else if (record.valvePhoto.startsWith('data:')) {
+                        blobToUpload = base64ToBlob(record.valvePhoto);
+                    }
 
-                    if (!uploadError) {
-                        const { data: { publicUrl } } = supabase.storage
+                    if (blobToUpload) {
+                        const filePath = `${record.id}/valve-photo-${crypto.randomUUID()}.${fileExt}`;
+                        const { error: uploadError } = await supabase.storage
                             .from('valve-attachment')
-                            .getPublicUrl(filePath);
-                        record.valvePhoto = publicUrl;
+                            .upload(filePath, blobToUpload);
+
+                        if (!uploadError) {
+                            const { data: { publicUrl } } = supabase.storage
+                                .from('valve-attachment')
+                                .getPublicUrl(filePath);
+                            record.valvePhoto = publicUrl;
+                        }
                     }
                 } catch (e) {
                     console.error(`[SyncDebug] Error during valve photo upload for ${record.serialNumber}:`, e);
@@ -708,8 +733,11 @@ export const storageService = {
             if (record.files && record.files.length > 0) {
                 try {
                     const processedFiles = await Promise.all(record.files.map(async (fileItem) => {
-                        if (typeof fileItem === 'string') return fileItem;
-                        if (fileItem.url && !fileItem.url.startsWith('data:')) return fileItem;
+                        // If it's a URL string, check if it's already a cloud URL
+                        if (typeof fileItem === 'string' && isCloudUrl(fileItem)) return fileItem;
+
+                        // If it's a metadata object, check if the URL is already cloud
+                        if (fileItem.url && isCloudUrl(fileItem.url)) return fileItem;
 
                         if (supabase) {
                             try {
