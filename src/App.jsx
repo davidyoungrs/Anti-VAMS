@@ -98,12 +98,16 @@ function App() {
   const [connectionError, setConnectionError] = useState(null);
   const [viewHistory, setViewHistory] = useState([]); // Stack of previous states
   const [isSyncing, setIsSyncing] = useState(false);
+  const [criticalError, setCriticalError] = useState(null);
 
 
   // Load data on mount and view change
   // Move loadData to useCallback to avoid infinite loops and fix dependency issues
   const loadData = React.useCallback(async () => {
     setIsSyncing(true);
+    // Safety release for sync spinner (prevent hangs)
+    const syncTimeout = setTimeout(() => setIsSyncing(false), 15000);
+
     try {
       console.log(`[StorageDebug] Starting Load (Role: ${role}, Allowed: "${allowedCustomers}")`);
       // Basic permissions check needed here? for now just load all.
@@ -158,6 +162,7 @@ function App() {
         console.error('[StorageDebug] Global Load Error:', err);
       }
     } finally {
+      clearTimeout(syncTimeout);
       setIsSyncing(false);
     }
   }, [role, allowedCustomers]);
@@ -230,18 +235,22 @@ function App() {
   // Load data on mount and set up Real-Time subscription
   React.useEffect(() => {
     const init = async () => {
-      await loadData();
-
-      // Check for deep link
-      const params = new URLSearchParams(window.location.search);
-      const valveId = params.get('valveId');
-      if (valveId) {
-        const allRecords = await storageService.getAll();
-        const target = allRecords.find(r => r.id === valveId);
-        if (target) {
-          handleRecordClick(target);
-          window.history.replaceState({}, '', window.location.pathname);
+      try {
+        await loadData();
+        // Check for deep link
+        const params = new URLSearchParams(window.location.search);
+        const valveId = params.get('valveId');
+        if (valveId) {
+          const allRecords = await storageService.getAll();
+          const target = allRecords.find(r => r.id === valveId);
+          if (target) {
+            handleRecordClick(target);
+            window.history.replaceState({}, '', window.location.pathname);
+          }
         }
+      } catch (err) {
+        console.error('[App] Init Error:', err);
+        setCriticalError(`Init Error: ${err.message}`);
       }
     };
     init();
@@ -1113,6 +1122,24 @@ function App() {
 
   return (
     <ErrorBoundary>
+      {/* GLOBAL ERROR OVERLAY */}
+      {criticalError && (
+        <div style={{
+          position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)',
+          zIndex: 9999, background: '#ef4444', color: 'white', padding: '1rem 2rem',
+          borderRadius: '8px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+          maxWidth: '80%', textAlign: 'center'
+        }}>
+          <h3 style={{ margin: '0 0 0.5rem 0' }}>🚨 System Error</h3>
+          <p style={{ fontSize: '0.9rem', margin: 0 }}>{criticalError}</p>
+          <button
+            onClick={() => setCriticalError(null)}
+            style={{ marginTop: '1rem', background: 'white', color: '#ef4444', border: 'none', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
       <Layout activeView={currentView} onNavigate={handleNavigate} userRole={role} onLogout={signOut}>
         {renderContent()}
       </Layout >

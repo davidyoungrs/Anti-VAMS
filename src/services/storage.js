@@ -68,7 +68,7 @@ export const storageService = {
             try {
                 const { data, error } = await supabase
                     .from('valve_records')
-                    .select('id, serial_number, customer, oem, valve_type, size_class, mawp, tag_no, status, job_id, created_at, updated_at, deletedAt')
+                    .select('id, serial_number, customer, oem, valve_type, size_class, mawp, tag_no, status, job_id, created_at, updated_at, deleted_at')
                     .order('created_at', { ascending: false });
 
                 if (error) {
