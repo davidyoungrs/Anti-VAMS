@@ -21,7 +21,18 @@ This document outlines the development path for the GVR-VAMS. Completed items ha
 
 ---
 
-## Phase 3: Security updates and Compliance
+## Phase 3: AI Intelligence Layer (MCP Server)
+*Exposing lived history data to external AI agents via Model Context Protocol.*
+
+3. **MCP Server Deployment** (Status: **Planned**)
+   - **Objective**: Develop a Model Context Protocol (MCP) Server that exposes the `valve.app`’s "lived history" data to external AI agents.
+   - **Benefit**: Allows operators to "**chat with their fleet**," automate audit preparation, and instantly retrieve valve history without navigating the web UI.
+   - **Core Philosophy**: The MCP Server functions as the "**Intelligence Layer**" sitting on top of the "Shadow System" data. 
+   - **Quote**: *Compliance doesn’t mean understanding—MCP allows the AI to understand.*
+
+---
+
+## Phase 4: Security updates and Compliance
 *Mandatory controls for international and government operations.*
 
 4. **Multi-Factor Authentication (MFA)** (Priority: Critical for Admins)
@@ -37,7 +48,7 @@ This document outlines the development path for the GVR-VAMS. Completed items ha
 
 ---
 
-## Phase 4: Future Standards & Technical Debt
+## Phase 5: Future Standards & Technical Debt
 *Strategic improvements with high complexity or long-term implementation horizons.*
 
 7. **FIPS 140-2 Cryptography Review (SC-13)** (Priority: High)
