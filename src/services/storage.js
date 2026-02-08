@@ -16,6 +16,24 @@ export const ATTACHMENT_CATEGORIES = [
     'Other'
 ];
 
+// Helper to convert Base64 back to Blob for syncing
+const base64ToBlob = (base64) => {
+    try {
+        const parts = base64.split(';base64,');
+        const contentType = parts[0].split(':')[1];
+        const raw = window.atob(parts[1]);
+        const rawLength = raw.length;
+        const uInt8Array = new Uint8Array(rawLength);
+        for (let i = 0; i < rawLength; ++i) {
+            uInt8Array[i] = raw.charCodeAt(i);
+        }
+        return new Blob([uInt8Array], { type: contentType });
+    } catch (e) {
+        console.error('base64ToBlob failed:', e);
+        return null;
+    }
+};
+
 export const storageService = {
     // 0. Migration Helper
     migrateFromLocalStorage: async () => {
@@ -692,50 +710,68 @@ export const storageService = {
             // 2c. Handle Attachments
             if (record.files && record.files.length > 0) {
                 try {
-                    const processedFiles = await Promise.all(record.files.map(async (file) => {
-                        if (typeof file === 'string') return file;
+                    const processedFiles = await Promise.all(record.files.map(async (fileItem) => {
+                        // 1. If it's already a full URL string (legacy), return it
+                        if (typeof fileItem === 'string') return fileItem;
 
+                        // 2. If it's already a synced metadata object (has a non-base64 URL), return it
+                        if (fileItem.url && !fileItem.url.startsWith('data:')) {
+                            return fileItem;
+                        }
+
+                        // 3. It needs uploading (either a File object or a Base64 metadata object)
                         if (supabase) {
                             try {
-                                const fileExt = file.name.split('.').pop();
-                                const fileNameWithoutExt = file.name.substring(0, file.name.lastIndexOf('.'));
-                                const filePath = `${record.id}/${fileNameWithoutExt}_${Date.now()}.${fileExt}`;
+                                let blobToUpload = null;
+                                let fileName = '';
+                                let category = fileItem.category || 'Other';
 
-                                const { error: uploadError } = await supabase.storage
-                                    .from('valve-attachment')
-                                    .upload(filePath, file);
+                                if (fileItem instanceof File || (fileItem.file instanceof File)) {
+                                    blobToUpload = fileItem instanceof File ? fileItem : fileItem.file;
+                                    fileName = blobToUpload.name;
+                                } else if (fileItem.url && fileItem.url.startsWith('data:')) {
+                                    // Base64 from previous failed upload or offline save
+                                    blobToUpload = base64ToBlob(fileItem.url);
+                                    fileName = fileItem.originalName || `synced_file_${Date.now()}`;
+                                }
 
-                                if (!uploadError) {
-                                    const { data: { publicUrl } } = supabase.storage
+                                if (blobToUpload) {
+                                    const fileExt = fileName.split('.').pop();
+                                    const fileNameWithoutExt = fileName.substring(0, fileName.lastIndexOf('.'));
+                                    const filePath = `${record.id}/${category}/${fileNameWithoutExt}_${Date.now()}.${fileExt}`;
+
+                                    const { error: uploadError } = await supabase.storage
                                         .from('valve-attachment')
-                                        .getPublicUrl(filePath);
-                                    return publicUrl;
+                                        .upload(filePath, blobToUpload);
+
+                                    if (!uploadError) {
+                                        const { data: { publicUrl } } = supabase.storage
+                                            .from('valve-attachment')
+                                            .getPublicUrl(filePath);
+
+                                        return {
+                                            url: publicUrl,
+                                            category: category,
+                                            originalName: fileName,
+                                            uploadDate: fileItem.uploadDate || new Date().toISOString()
+                                        };
+                                    }
+                                    console.warn('Sync upload failed:', uploadError);
                                 }
                             } catch (err) {
-                                console.warn('Supabase upload exception:', err);
+                                console.warn('Supabase sync exception:', err);
                             }
                         }
 
-                        // Fallback: Convert to Base64 if upload fails or offline?
-                        // Actually, for sync, we probably want to keep it as File object if upload fails so we can try next time?
-                        // BUT, we are upserting to DB which expects JSON compatible types (strings for URLs).
-                        // If we can't upload, we can't sync this file to cloud DB column array.
-                        const category = file.category || (file.name?.toLowerCase().includes('report') ? 'Inspection & Test report' : 'Other');
-                        return {
-                            url: "pending_upload", // Or keep base64
-                            category: category,
-                            originalName: file.name,
-                            uploadDate: new Date().toISOString()
-                        };
+                        // Fallback: If we couldn't upload, keep what we have (Base64)
+                        return fileItem;
                     }));
 
-                    // Filter out failures
                     record.files = processedFiles.filter(f => f !== null);
                 } catch (e) {
                     console.error('Error handling files in sync:', e);
                 }
             } else {
-                // Ensure array
                 record.files = record.files || [];
             }
 
