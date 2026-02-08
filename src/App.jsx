@@ -566,7 +566,7 @@ function App() {
       case 'licenses':
         return <MarkdownPage title="Licenses & Attribution" content={licensesContent} />;
       case 'analytics':
-        return <AnalyticsDashboard records={records} onNavigate={handleNavigate} />;
+        return <AnalyticsDashboard records={records} onNavigate={handleNavigate} role={role} />;
       case 'scheduler':
         return <MaintenanceScheduler />;
       case 'jobs':
@@ -609,7 +609,7 @@ function App() {
               />
             </div>
 
-            {selectedValveIds.size > 0 && (
+            {role !== 'client' && selectedValveIds.size > 0 && (
               <div
                 className="glass-panel"
                 style={{
@@ -953,105 +953,115 @@ function App() {
               </div>
             </div>
 
-            <div className="grid-3 mt-4">
-              <div
-                onClick={() => handleNavigate('search')}
-                className="glass-panel clickable-card"
-                style={{ padding: '1.5rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)' }}
-              >
-                <h3 style={{ margin: '0 0 0.5rem 0' }}>Number of Records</h3>
-                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary)' }}>{stats.total}</div>
+            {role === 'client' && (
+              <div style={{ marginTop: '1.5rem' }}>
+                <AnalyticsDashboard records={records} showOnlyWIP={true} role={role} onNavigate={handleNavigate} />
               </div>
-              <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)' }}>
-                <h3 style={{ margin: '0 0 0.5rem 0' }}>Pending Inspection</h3>
-                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--accent)' }}>{stats.testPending}</div>
-              </div>
-            </div>
+            )}
 
-            <div className="mt-4 glass-panel" style={{ padding: '1.5rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)' }}>
-              <h3 style={{ marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>Latest Activity</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {(records || [])
-                  .sort((a, b) => {
-                    const getTime = (r) => {
-                      const t1 = new Date(r.updatedAt || 0).getTime();
-                      const t2 = new Date(r.createdAt || 0).getTime();
-                      const t3 = new Date(r.lastViewedAt || 0).getTime();
-                      return Math.max(isNaN(t1) ? 0 : t1, isNaN(t2) ? 0 : t2, isNaN(t3) ? 0 : t3);
-                    };
-                    return getTime(b) - getTime(a);
-                  })
-                  .slice(0, 5)
-                  .map(record => (
-                    <div
-                      key={record.id}
-                      onClick={() => handleRecordClick(record)}
-                      className="clickable-card"
-                      style={{
-                        padding: '0.75rem 1rem',
-                        borderRadius: 'var(--radius-md)',
-                        background: 'rgba(255,255,255,0.05)',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        border: '1px solid transparent'
-                      }}
-                    >
-                      <div>
-                        <div style={{ fontWeight: 'bold', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          {record.serialNumber}
-                          {(record.files?.length > 0 || record.file_urls?.length > 0) && (
-                            <span
-                              title={`${(record.files?.length || record.file_urls?.length)} attachments`}
-                              style={{
-                                fontSize: '0.9rem',
-                                color: 'var(--accent)',
-                                background: 'rgba(245, 158, 11, 0.1)',
-                                padding: '2px 6px',
-                                borderRadius: '4px'
-                              }}
-                            >
-                              📎 {(record.files?.length || record.file_urls?.length)}
-                            </span>
-                          )}
-                          {(record.jobId || record.job_id) && jobs[record.jobId || record.job_id] && (
-                            <span style={{
-                              fontSize: '0.75rem',
-                              background: '#3b82f6',
-                              color: 'white',
-                              padding: '2px 8px',
-                              borderRadius: '12px',
-                              fontWeight: '600',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px'
-                            }}>
-                              🏢 {jobs[record.jobId || record.job_id].name}
-                            </span>
-                          )}
-                        </div>
-                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                          {record.customer} | {record.oem} | {record.valveType || 'N/A'} | {record.sizeClass || 'N/A'} | {record.mawp || 'N/A'}
-                        </div>
-                      </div>
-                      <div style={{
-                        fontSize: '0.75rem',
-                        padding: '0.2rem 0.6rem',
-                        borderRadius: '4px',
-                        background: record.status === 'Shipped' ? 'rgba(16, 185, 129, 0.2)' :
-                          (record.status?.includes('Hold') || record.status?.includes('Waiting')) ? 'rgba(239, 68, 68, 0.2)' :
-                            'rgba(59, 130, 246, 0.2)',
-                        color: record.status === 'Shipped' ? '#4ade80' :
-                          (record.status?.includes('Hold') || record.status?.includes('Waiting')) ? '#f87171' :
-                            '#60a5fa',
-                        fontWeight: '600'
-                      }}>
-                        {record.status || 'No Status'}
-                      </div>
-                    </div>
-                  ))}
+            {role !== 'client' && (
+              <div className="grid-3 mt-4">
+                <div
+                  onClick={() => handleNavigate('search')}
+                  className="glass-panel clickable-card"
+                  style={{ padding: '1.5rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)' }}
+                >
+                  <h3 style={{ margin: '0 0 0.5rem 0' }}>Number of Records</h3>
+                  <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary)' }}>{stats.total}</div>
+                </div>
+                <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)' }}>
+                  <h3 style={{ margin: '0 0 0.5rem 0' }}>Pending Inspection</h3>
+                  <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--accent)' }}>{stats.testPending}</div>
+                </div>
               </div>
-            </div>
+            )}
+
+            {role !== 'client' && (
+              <div className="mt-4 glass-panel" style={{ padding: '1.5rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)' }}>
+                <h3 style={{ marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>Latest Activity</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {(records || [])
+                    .sort((a, b) => {
+                      const getTime = (r) => {
+                        const t1 = new Date(r.updatedAt || 0).getTime();
+                        const t2 = new Date(r.createdAt || 0).getTime();
+                        const t3 = new Date(r.lastViewedAt || 0).getTime();
+                        return Math.max(isNaN(t1) ? 0 : t1, isNaN(t2) ? 0 : t2, isNaN(t3) ? 0 : t3);
+                      };
+                      return getTime(b) - getTime(a);
+                    })
+                    .slice(0, 5)
+                    .map(record => (
+                      <div
+                        key={record.id}
+                        onClick={() => handleRecordClick(record)}
+                        className="clickable-card"
+                        style={{
+                          padding: '0.75rem 1rem',
+                          borderRadius: 'var(--radius-md)',
+                          background: 'rgba(255,255,255,0.05)',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          border: '1px solid transparent'
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 'bold', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            {record.serialNumber}
+                            {(record.files?.length > 0 || record.file_urls?.length > 0) && (
+                              <span
+                                title={`${(record.files?.length || record.file_urls?.length)} attachments`}
+                                style={{
+                                  fontSize: '0.9rem',
+                                  color: 'var(--accent)',
+                                  background: 'rgba(245, 158, 11, 0.1)',
+                                  padding: '2px 6px',
+                                  borderRadius: '4px'
+                                }}
+                              >
+                                📎 {(record.files?.length || record.file_urls?.length)}
+                              </span>
+                            )}
+                            {(record.jobId || record.job_id) && jobs[record.jobId || record.job_id] && (
+                              <span style={{
+                                fontSize: '0.75rem',
+                                background: '#3b82f6',
+                                color: 'white',
+                                padding: '2px 8px',
+                                borderRadius: '12px',
+                                fontWeight: '600',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}>
+                                🏢 {jobs[record.jobId || record.job_id].name}
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                            {record.customer} | {record.oem} | {record.valveType || 'N/A'} | {record.sizeClass || 'N/A'} | {record.mawp || 'N/A'}
+                          </div>
+                        </div>
+                        <div style={{
+                          fontSize: '0.75rem',
+                          padding: '0.2rem 0.6rem',
+                          borderRadius: '4px',
+                          background: record.status === 'Shipped' ? 'rgba(16, 185, 129, 0.2)' :
+                            (record.status?.includes('Hold') || record.status?.includes('Waiting')) ? 'rgba(239, 68, 68, 0.2)' :
+                              'rgba(59, 130, 246, 0.2)',
+                          color: record.status === 'Shipped' ? '#4ade80' :
+                            (record.status?.includes('Hold') || record.status?.includes('Waiting')) ? '#f87171' :
+                              '#60a5fa',
+                          fontWeight: '600'
+                        }}>
+                          {record.status || 'No Status'}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
 
             <div className="mt-4" style={{ marginTop: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>

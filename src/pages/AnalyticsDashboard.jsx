@@ -23,7 +23,7 @@ ChartJS.register(
     Legend
 );
 
-export const AnalyticsDashboard = ({ records = [], onNavigate }) => {
+export const AnalyticsDashboard = ({ records = [], onNavigate, role, showOnlyWIP = false }) => {
     const [drillDown, setDrillDown] = useState(null); // { type: 'status'|'oem_pf', label: string, datasetLabel?: string }
 
 
@@ -179,8 +179,8 @@ export const AnalyticsDashboard = ({ records = [], onNavigate }) => {
 
     return (
         <div className="analytics-dashboard fade-in">
-            <div className="glass-panel mb-4" style={{ padding: '2rem', borderRadius: 'var(--radius-lg)' }}>
-                <h2 className="section-title">Analytics Dashboard</h2>
+            <div className={showOnlyWIP ? "" : "glass-panel mb-4"} style={showOnlyWIP ? {} : { padding: '2rem', borderRadius: 'var(--radius-lg)' }}>
+                {!showOnlyWIP && <h2 className="section-title">Analytics Dashboard</h2>}
 
                 {/* WIP Status Chart - Top Priority */}
                 <div className="glass-panel mb-4" style={{ padding: '1.5rem', background: 'var(--bg-surface)', borderRadius: 'var(--radius-md)' }}>
@@ -279,59 +279,61 @@ export const AnalyticsDashboard = ({ records = [], onNavigate }) => {
                     </div>
                 )}
 
-                {/* Charts Grid */}
-                <div className="grid-responsive" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2rem', marginTop: '2rem' }}>
+                {/* Charts Grid - Only for non-clients */}
+                {role !== 'client' && (
+                    <div className="grid-responsive" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2rem', marginTop: '2rem' }}>
 
-                    {/* Pass/Fail Chart */}
-                    <div className="glass-panel" style={{ padding: '1.5rem', background: 'var(--bg-surface)', borderRadius: 'var(--radius-md)' }}>
-                        <h3 style={{ textAlign: 'center', marginBottom: '1rem' }}>Pass/Fail Rates by OEM</h3>
-                        <div style={{ height: '300px' }}>
-                            <Bar
-                                data={passFailData}
-                                options={{
-                                    responsive: true,
-                                    maintainAspectRatio: false,
-                                    onClick: (evt, el) => handleChartClick(evt, el, 'OEM_PF'),
-                                    plugins: {
-                                        tooltip: {
-                                            callbacks: {
-                                                afterBody: () => '\nClick to view records'
-                                            }
-                                        }
-                                    },
-                                    scales: {
-                                        x: { stacked: true },
-                                        y: { stacked: true }
-                                    }
-                                }}
-                            />
-                        </div>
-                    </div>
-
-                    {/* Failure Modes Chart */}
-                    <div className="glass-panel" style={{ padding: '1.5rem', background: 'var(--bg-surface)', borderRadius: 'var(--radius-md)' }}>
-                        <h3 style={{ textAlign: 'center', marginBottom: '1rem' }}>Top Failure Modes</h3>
-                        <div style={{ height: '300px', display: 'flex', justifyContent: 'center' }}>
-                            {failureModeData.labels.length > 0 ? (
-                                <Pie
-                                    data={failureModeData}
+                        {/* Pass/Fail Chart */}
+                        <div className="glass-panel" style={{ padding: '1.5rem', background: 'var(--bg-surface)', borderRadius: 'var(--radius-md)' }}>
+                            <h3 style={{ textAlign: 'center', marginBottom: '1rem' }}>Pass/Fail Rates by OEM</h3>
+                            <div style={{ height: '300px' }}>
+                                <Bar
+                                    data={passFailData}
                                     options={{
                                         responsive: true,
                                         maintainAspectRatio: false,
+                                        onClick: (evt, el) => handleChartClick(evt, el, 'OEM_PF'),
                                         plugins: {
-                                            legend: { position: 'right' }
+                                            tooltip: {
+                                                callbacks: {
+                                                    afterBody: () => '\nClick to view records'
+                                                }
+                                            }
+                                        },
+                                        scales: {
+                                            x: { stacked: true },
+                                            y: { stacked: true }
                                         }
                                     }}
                                 />
-                            ) : (
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)' }}>
-                                    No failure data available.
-                                </div>
-                            )}
+                            </div>
                         </div>
-                    </div>
 
-                </div>
+                        {/* Failure Modes Chart */}
+                        <div className="glass-panel" style={{ padding: '1.5rem', background: 'var(--bg-surface)', borderRadius: 'var(--radius-md)' }}>
+                            <h3 style={{ textAlign: 'center', marginBottom: '1rem' }}>Top Failure Modes</h3>
+                            <div style={{ height: '300px', display: 'flex', justifyContent: 'center' }}>
+                                {failureModeData.labels.length > 0 ? (
+                                    <Pie
+                                        data={failureModeData}
+                                        options={{
+                                            responsive: true,
+                                            maintainAspectRatio: false,
+                                            plugins: {
+                                                legend: { position: 'right' }
+                                            }
+                                        }}
+                                    />
+                                ) : (
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)' }}>
+                                        No failure data available.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                    </div>
+                )}
 
 
             </div>
