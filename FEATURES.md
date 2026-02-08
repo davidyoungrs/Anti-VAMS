@@ -82,6 +82,8 @@
 - **Inactivity Timer**: Automatic session timeout after 10 minutes of idle time (ISO 27002 compliance).
 - **Soft Delete (Historical Traceability)**: Records are never permanently destroyed on the first click; instead, they are archived with a `deleted_at` timestamp for audit trails.
 - **Encryption-at-Rest**: All sensitive valve data and job details are encrypted locally using FIPS-ready standards before being synced to the cloud.
+- **Software Supply Chain Security (SCA)**: 
+  - **Automated Auditing**: Real-time vulnerability scanning via `npm audit` integrated into the dev cycle.
+  - **SBOM Transparency**: Generates ISO 27032 compliant Software Bill of Materials (`bom.json`) for full architectural transparency.
 
 ---
-

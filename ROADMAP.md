@@ -28,9 +28,9 @@ This document outlines the development path for the GVR-VAMS. Completed items ha
    - **Standard**: ISO 27002 9.4.3 & 24.1.
    - **Task**: Enforce MFA (TOTP) for 'Admin' and 'Inspector' roles.
 
-5. **Software Supply Chain Security (SCA)** (Priority: High)
+5. [x] **Software Supply Chain Security (SCA)** (Status: **Complete**)
    - **Standard**: ISO 27032 / SBOM requirements.
-   - **Task**: Integrate automated dependency auditing and provide a Software Bill of Materials (SBOM).
+   - **Task**: Integrated automated dependency auditing (`npm audit`) and Software Bill of Materials generation (`bom.json`).
 
 6. **Media Sanitization & Destruction (MP-6)** (Priority: Medium)
    - **Task**: Implement "Crypto-shredding" for hard deletes to ensure data is unrecoverable.
