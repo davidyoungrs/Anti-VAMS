@@ -36,6 +36,7 @@ $$;
 -- Uses is_staff helper to check permissions without recursing into the profiles table SELECT policy.
 DROP POLICY IF EXISTS "Users can read own profile" ON public.profiles;
 DROP POLICY IF EXISTS "Super User Can View Profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Profile Read Access" ON public.profiles;
 
 CREATE POLICY "Profile Read Access"
 ON public.profiles
