@@ -78,6 +78,8 @@ export const AuthProvider = ({ children }) => {
         }
     }, []);
 
+    const userRef = React.useRef(null);
+
     useEffect(() => {
         const timeoutId = setTimeout(() => {
             if (loading) {
@@ -93,8 +95,11 @@ export const AuthProvider = ({ children }) => {
 
         const getSession = async () => {
             try {
+                // Check if we already have a user/role from a previous sync in the same session
                 const { data: { session } } = await supabase.auth.getSession();
                 if (session?.user) {
+                    console.log(`[AuthDebug] 🔄 Initial Session Found: ${session.user.id}`);
+                    userRef.current = session.user;
                     setUser(session.user);
                     await fetchRole(session.user.id);
                 }
@@ -109,15 +114,27 @@ export const AuthProvider = ({ children }) => {
         getSession();
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+            console.log(`[AuthDebug] 🔄 Auth Event: ${_event}`);
+
             if (session?.user) {
-                if (_event === 'SIGNED_IN' || !user || user.id !== session.user.id) {
-                    setLoading(true);
+                const isNewUser = !userRef.current || userRef.current.id !== session.user.id;
+
+                if (_event === 'SIGNED_IN' || isNewUser) {
+                    console.log(`[AuthDebug] 🛡️ Identity Change/Login: ${session.user.id}`);
+                    // Only show full loading if we don't have a user yet or it's a fresh sign-in
+                    if (isNewUser) setLoading(true);
+
+                    userRef.current = session.user;
                     setUser(session.user);
-                    fetchRole(session.user.id);
+                    await fetchRole(session.user.id);
                 } else {
+                    // Just update session data silently (e.g. TOKEN_REFRESHED)
+                    userRef.current = session.user;
                     setUser(session.user);
                 }
             } else {
+                console.log('[AuthDebug] 🚪 No Session');
+                userRef.current = null;
                 setUser(null);
                 setRole(null);
                 setAllowedCustomers('');
@@ -129,7 +146,7 @@ export const AuthProvider = ({ children }) => {
             subscription.unsubscribe();
             clearTimeout(timeoutId);
         };
-    }, [user, fetchRole]);
+    }, [fetchRole]);
 
     const signIn = async (email, password) => {
         if (!supabase) return { error: { message: "Supabase not configured" } };
