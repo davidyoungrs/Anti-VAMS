@@ -272,13 +272,17 @@ function App() {
     };
   }, [loadData, handleRecordClick]);
 
-  // Force Dashboard View only on NEW Login (User Identity Change)
-  // Use a ref to track the previous user ID so we don't reset on session refreshes
-  const prevUserIdRef = React.useRef(user?.id);
+  // Force Dashboard View only on NEW Login (User Identity Change) or Client Initial Load
+  // Use a ref to track the previous user ID. Start undefined to trigger on first load.
+  const prevUserIdRef = React.useRef();
 
   React.useEffect(() => {
-    // If user changed (and is logged in)
-    if (user && user.id !== prevUserIdRef.current) {
+    // 1. Reset if user changed (login/switch)
+    // 2. FORCE reset if client is landing for the first time in this session
+    const isNewUser = user && user.id !== prevUserIdRef.current;
+    const isClientLanding = user && role === 'client' && !prevUserIdRef.current;
+
+    if (isNewUser || isClientLanding) {
       const params = new URLSearchParams(window.location.search);
       // Only reset if no deep link
       if (!params.get('valveId')) {
@@ -287,7 +291,7 @@ function App() {
         setInspectionData(null);
         setViewHistory([]); // Clear history on user switch
 
-        // Clear persisted state for new user
+        // Clear persisted state
         localStorage.removeItem('app_currentView');
         localStorage.removeItem('app_selectedRecord');
         localStorage.removeItem('app_inspectionData');
@@ -295,7 +299,7 @@ function App() {
     }
     // Update ref
     prevUserIdRef.current = user?.id;
-  }, [user]);
+  }, [user, role]);
 
   // Sync State to LocalStorage
   React.useEffect(() => {
