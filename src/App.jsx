@@ -221,7 +221,12 @@ function App() {
 
   const handleRecordClick = React.useCallback(async (record) => {
     const updatedRecord = { ...record, lastViewedAt: new Date().toISOString() };
-    await storageService.save(updatedRecord);
+
+    // Optimization: Only staff can update records in the cloud. 
+    // Clients should only view, so we skip the cloud save to avoid RLS block.
+    if (role !== 'client') {
+      await storageService.save(updatedRecord);
+    }
 
     const normalizedRecord = {
       ...updatedRecord,
@@ -230,7 +235,7 @@ function App() {
 
     handleNavigate('record-detail', normalizedRecord);
     loadData();
-  }, [handleNavigate, loadData]);
+  }, [handleNavigate, loadData, role]);
 
   // Load data on mount and set up Real-Time subscription
   React.useEffect(() => {
