@@ -65,7 +65,11 @@ export const AuthProvider = ({ children }) => {
             setLoading(false);
 
         } catch (e) {
-            console.error('Exception fetching role:', e);
+            if (e.name === 'AbortError') {
+                console.error('[AuthDebug] 🚨 CRITICAL: Role fetch ABORTED (Possible SQL Recursion loop).');
+            } else {
+                console.error('[AuthDebug] Exception fetching role:', e);
+            }
             setRole('client');
             setLoading(false);
         }

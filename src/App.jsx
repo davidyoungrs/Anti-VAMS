@@ -101,49 +101,58 @@ function App() {
   // Load data on mount and view change
   // Move loadData to useCallback to avoid infinite loops and fix dependency issues
   const loadData = React.useCallback(async () => {
-    // Basic permissions check needed here? for now just load all.
-    let allRecords = await storageService.getAll();
+    try {
+      console.log(`[StorageDebug] Starting Load (Role: ${role}, Allowed: "${allowedCustomers}")`);
+      // Basic permissions check needed here? for now just load all.
+      let allRecords = await storageService.getAll();
 
-    // Client-side filtering as a backup measure (primary security is RLS)
-    if (role === 'client') {
-      console.log(`[StorageDebug] Client Filtering - Allowed: "${allowedCustomers}"`);
-      if (allowedCustomers && allowedCustomers.toLowerCase() !== 'all') {
-        const allowedList = allowedCustomers.split(',').map(s => s.trim().toLowerCase());
-        allRecords = allRecords.filter(r => {
-          if (!r.customer) return false;
-          const rCust = r.customer.toLowerCase();
-          return allowedList.some(allowed => rCust.includes(allowed));
-        });
-        console.log(`[StorageDebug] Records after client filter: ${allRecords.length}`);
-      } else if (!allowedCustomers) {
-        // If profile hasn't loaded 'allowedCustomers' yet, we skip client-side filtering
-        // and rely purely on RLS for now to avoid a blank screen.
-        console.warn(`[StorageDebug] Client profile not yet fully loaded or no customers assigned. Relying on RLS.`);
+      // Client-side filtering as a backup measure (primary security is RLS)
+      if (role === 'client') {
+        console.log(`[StorageDebug] Client Filtering - Allowed: "${allowedCustomers}"`);
+        if (allowedCustomers && allowedCustomers.toLowerCase() !== 'all') {
+          const allowedList = allowedCustomers.split(',').map(s => s.trim().toLowerCase());
+          allRecords = allRecords.filter(r => {
+            if (!r.customer) return false;
+            const rCust = r.customer.toLowerCase();
+            return allowedList.some(allowed => rCust.includes(allowed));
+          });
+          console.log(`[StorageDebug] Records after client filter: ${allRecords.length}`);
+        } else if (!allowedCustomers) {
+          // If profile hasn't loaded 'allowedCustomers' yet, we skip client-side filtering
+          // and rely purely on RLS for now to avoid a blank screen.
+          console.warn(`[StorageDebug] Client profile not yet fully loaded or no customers assigned. Relying on RLS.`);
+        }
       }
-    }
 
-    // Calc Stats
-    let inspectedValveIds = new Set();
-    try {
-      inspectedValveIds = await inspectionService.getValveIdsWithInspections();
-    } catch (e) {
-      console.error("Failed to load inspected valve IDs", e);
-    }
+      // Calc Stats
+      let inspectedValveIds = new Set();
+      try {
+        inspectedValveIds = await inspectionService.getValveIdsWithInspections();
+      } catch (e) {
+        console.error("Failed to load inspected valve IDs", e);
+      }
 
-    setStats({
-      total: allRecords.length,
-      testPending: allRecords.filter(r => !inspectedValveIds.has(r.id)).length
-    });
-    setRecords(allRecords);
+      setStats({
+        total: allRecords.length,
+        testPending: allRecords.filter(r => !inspectedValveIds.has(r.id)).length
+      });
+      setRecords(allRecords);
 
-    // Load Jobs
-    try {
-      const allJobs = await jobService.getAllJobs();
-      const jobMap = {};
-      allJobs.forEach(j => { jobMap[j.id] = j; });
-      setJobs(jobMap);
-    } catch (e) {
-      console.error('Failed to load jobs', e);
+      // Load Jobs
+      try {
+        const allJobs = await jobService.getAllJobs();
+        const jobMap = {};
+        allJobs.forEach(j => { jobMap[j.id] = j; });
+        setJobs(jobMap);
+      } catch (e) {
+        console.error('Failed to load jobs', e);
+      }
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        console.error('[StorageDebug] 🚨 Global Load ABORTED. Likely RLS Recursion.');
+      } else {
+        console.error('[StorageDebug] Global Load Error:', err);
+      }
     }
   }, [role, allowedCustomers]);
 

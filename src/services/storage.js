@@ -72,7 +72,11 @@ export const storageService = {
                     .order('created_at', { ascending: false });
 
                 if (error) {
-                    console.warn('Database fetch failed, using local records', error);
+                    if (error.message?.includes('aborted') || error.code === '42P17') {
+                        console.error('[StorageDebug] 🚨 CRITICAL: Database fetch ABORTED. This usually indicates an RLS infinite recursion loop in Supabase.');
+                    } else {
+                        console.warn('[StorageDebug] Database fetch failed, using local records', error);
+                    }
                     return localRecords;
                 }
 
