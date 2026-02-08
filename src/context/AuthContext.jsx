@@ -59,6 +59,7 @@ export const AuthProvider = ({ children }) => {
             // 4. Set state
             const finalRole = profileData?.role || 'client';
             const customers = profileData?.allowed_customers || '';
+            console.log(`[AuthDebug] Final Role: ${finalRole}, Allowed Customers: "${customers}"`);
             setRole(finalRole);
             setAllowedCustomers(customers);
             setLoading(false);

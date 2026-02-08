@@ -12,27 +12,33 @@ DROP POLICY IF EXISTS "Granular Read Access" ON public.valve_records;
 DROP POLICY IF EXISTS "Enable update for authenticated users" ON public.valve_records;
 DROP POLICY IF EXISTS "Inspectors and Admins can update valves" ON public.valve_records;
 
--- 3. Re-create SELECT Policy (Read)
 CREATE POLICY "Granular Read Access"
 ON public.valve_records
 FOR SELECT
 TO authenticated
 USING (
-  -- 1. Admin and Inspectors check
-  (auth.uid() IN (SELECT id FROM public.profiles WHERE role IN ('admin', 'inspector')))
-  OR
-  -- 2. Client checks
-  (auth.uid() IN (
-    SELECT id FROM public.profiles 
-    WHERE role = 'client' 
+  -- Check if the user has access via their profile
+  EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE profiles.id = auth.uid()
     AND (
-      allowed_customers ILIKE 'all'
-      OR EXISTS (
-        SELECT 1 FROM unnest(string_to_array(allowed_customers, ',')) AS k
-        WHERE k <> '' AND public.valve_records.customer ILIKE '%' || trim(k) || '%'
+      -- 1. Admins and Inspectors see everything
+      profiles.role IN ('admin', 'inspector', 'super_user')
+      OR
+      -- 2. Clients see their allowed customers
+      (
+        profiles.role = 'client'
+        AND (
+          profiles.allowed_customers ILIKE 'all'
+          OR EXISTS (
+            SELECT 1 FROM unnest(string_to_array(profiles.allowed_customers, ',')) AS keyword
+            WHERE keyword <> '' 
+            AND public.valve_records.customer ILIKE '%' || trim(keyword) || '%'
+          )
+        )
       )
     )
-  ))
+  )
 );
 
 -- 4. Create UPDATE Policy (Write) - CRITICAL FIX

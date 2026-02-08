@@ -106,17 +106,19 @@ function App() {
 
     // Client-side filtering as a backup measure (primary security is RLS)
     if (role === 'client') {
-      if (!allowedCustomers) {
-        allRecords = [];
-      } else if (allowedCustomers.toLowerCase() === 'all') {
-        // Show all
-      } else {
+      console.log(`[StorageDebug] Client Filtering - Allowed: "${allowedCustomers}"`);
+      if (allowedCustomers && allowedCustomers.toLowerCase() !== 'all') {
         const allowedList = allowedCustomers.split(',').map(s => s.trim().toLowerCase());
         allRecords = allRecords.filter(r => {
           if (!r.customer) return false;
           const rCust = r.customer.toLowerCase();
           return allowedList.some(allowed => rCust.includes(allowed));
         });
+        console.log(`[StorageDebug] Records after client filter: ${allRecords.length}`);
+      } else if (!allowedCustomers) {
+        // If profile hasn't loaded 'allowedCustomers' yet, we skip client-side filtering
+        // and rely purely on RLS for now to avoid a blank screen.
+        console.warn(`[StorageDebug] Client profile not yet fully loaded or no customers assigned. Relying on RLS.`);
       }
     }
 

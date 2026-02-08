@@ -158,6 +158,7 @@ export const storageService = {
                         })
                     }));
 
+                    console.log(`[StorageDebug] Found ${cloudRecords.length} records in cloud.`);
                     // Safety: Only overwrite local if we actually got something from the cloud
                     if (cloudRecords.length > 0) {
                         // MERGE STRATEGY: Prioritize the record with the most recent 'updatedAt' timestamp.
@@ -211,6 +212,7 @@ export const storageService = {
                         }));
                         await dbService.bulkPut(encryptedToSave);
 
+                        console.log(`[StorageDebug] Final Merged Count: ${finalMergedRecords.length}`);
                         // Filter out deleted records for the UI
                         return finalMergedRecords.filter(r => !r.deletedAt);
                     }
