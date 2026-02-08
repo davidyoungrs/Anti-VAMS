@@ -13,7 +13,8 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     const fetchRole = React.useCallback(async (userId, retries = 2) => {
-        console.log(`[AuthDebug] Fetching role for User ID: ${userId}`);
+        const startTime = Date.now();
+        console.log(`[AuthDebug] 🛰️ Starting fetchRole for: ${userId}`);
 
         try {
             // 1. Check for specific user overrides
@@ -72,11 +73,18 @@ export const AuthProvider = ({ children }) => {
             }
             setRole('client');
             setLoading(false);
+        } finally {
+            console.log(`[AuthDebug] ✅ fetchRole complete in ${Date.now() - startTime}ms`);
         }
     }, []);
 
     useEffect(() => {
-        const timeoutId = setTimeout(() => setLoading(false), 3000);
+        const timeoutId = setTimeout(() => {
+            if (loading) {
+                console.warn('[AuthDebug] ⏱️ Safety timeout reached. Forcing loading false.');
+                setLoading(false);
+            }
+        }, 1500);
 
         if (!supabase) {
             setLoading(false);

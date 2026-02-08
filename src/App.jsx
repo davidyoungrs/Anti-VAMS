@@ -95,12 +95,15 @@ function App() {
   const [selectedValveIds, setSelectedValveIds] = useState(new Set());
   const [showJobModal, setShowJobModal] = useState(false);
   const [jobFilter, setJobFilter] = useState(''); // NEW: Filter by specific job
+  const [connectionError, setConnectionError] = useState(null);
   const [viewHistory, setViewHistory] = useState([]); // Stack of previous states
+  const [isSyncing, setIsSyncing] = useState(false);
 
 
   // Load data on mount and view change
   // Move loadData to useCallback to avoid infinite loops and fix dependency issues
   const loadData = React.useCallback(async () => {
+    setIsSyncing(true);
     try {
       console.log(`[StorageDebug] Starting Load (Role: ${role}, Allowed: "${allowedCustomers}")`);
       // Basic permissions check needed here? for now just load all.
@@ -148,11 +151,14 @@ function App() {
         console.error('Failed to load jobs', e);
       }
     } catch (err) {
-      if (err.name === 'AbortError') {
+      if (err.name === 'AbortError' || err.message?.includes('aborted')) {
         console.error('[StorageDebug] 🚨 Global Load ABORTED. Likely RLS Recursion.');
+        setConnectionError('RLS_RECURSION');
       } else {
         console.error('[StorageDebug] Global Load Error:', err);
       }
+    } finally {
+      setIsSyncing(false);
     }
   }, [role, allowedCustomers]);
 
@@ -870,9 +876,28 @@ function App() {
       default:
         return (
           <div className="glass-panel" style={{ padding: '2rem', borderRadius: 'var(--radius-lg)' }}>
+            {/* Connection Error Banner */}
+            {connectionError === 'RLS_RECURSION' && (
+              <div className="glass-panel" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', padding: '1rem', marginBottom: '2rem', borderRadius: 'var(--radius-md)' }}>
+                <h3 style={{ color: '#ef4444', margin: '0 0 0.5rem 0' }}>⚠️ Database Connection Issue</h3>
+                <p style={{ fontSize: '0.9rem', margin: 0 }}>
+                  We detected an "RLS Recursion" loop. This happens if the latest security patches haven't been applied to Supabase.
+                  <br />
+                  <strong>Solution:</strong> Please run the <code>fix_rls_recursion.sql</code> script in your Supabase SQL Editor.
+                </p>
+              </div>
+            )}
+
             <div className="flex-row" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
-                <h2 className="section-title">Dashboard Overview</h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <h2 className="section-title" style={{ margin: 0 }}>Dashboard Overview</h2>
+                  {isSyncing && (
+                    <span style={{ fontSize: '0.8rem', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div className="spinner-small" /> Syncing Data...
+                    </span>
+                  )}
+                </div>
                 <p style={{ color: 'var(--text-muted)' }}>
                   Welcome to the Global Valve Record system. Select an option from the sidebar to begin.
                 </p>
