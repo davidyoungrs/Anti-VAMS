@@ -39,17 +39,17 @@ This document outlines the development path for the GVR-VAMS. Completed items ha
    - **Standard**: ISO 27002 9.4.3 & 24.1.
    - **Task**: Enforce MFA (TOTP) for 'Admin' and 'Inspector' roles.
 
-5. **Data Residency & Localization (GCC/Middle East)** (Priority: Critical)
-   - **Standard**: Saudi NCA ECC / UAE NESA.
-   - **Task**: Architect Supabase deployment for "Region Pinning" (e.g., AWS Bahrain/UAE) or On-Premise capability.
-
-6. **SM Series Cryptography (MLPS 2.0 / China Mode)** (Priority: High)
+5. **SM Series Cryptography (MLPS 2.0 / China Mode)** (Priority: High)
    - **Task**: Alternative crypto stack using SM4-CBC and SM2 for sovereign algorithm compliance.
 
 ---
 
 ## Phase 5: Future Standards & Technical Debt
 *Strategic improvements with high complexity or long-term implementation horizons.*
+
+6. **Data Residency & Localization (GCC/Middle East)** (Priority: Critical)
+   - **Standard**: Saudi NCA ECC / UAE NESA.
+   - **Task**: Architect Supabase deployment for "Region Pinning" (e.g., AWS Bahrain/UAE) or On-Premise capability.
 
 7. **FIPS 140-2 Cryptography Review (SC-13)** (Priority: High)
    - **Task**: Plan migration from CryptoJS to Web Crypto API (browser-native, FIPS-compliant on host OS).
