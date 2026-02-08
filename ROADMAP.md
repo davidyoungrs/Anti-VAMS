@@ -28,18 +28,14 @@ This document outlines the development path for the GVR-VAMS. Completed items ha
    - **Standard**: ISO 27002 9.4.3 & 24.1.
    - **Task**: Enforce MFA (TOTP) for 'Admin' and 'Inspector' roles.
 
-5. [x] **Software Supply Chain Security (SCA)** (Status: **Complete**)
-   - **Standard**: ISO 27032 / SBOM requirements.
-   - **Task**: Integrated automated dependency auditing (`npm audit`) and Software Bill of Materials generation (`bom.json`).
-
-6. **Media Sanitization & Destruction (MP-6)** (Priority: Medium)
+5. **Media Sanitization & Destruction (MP-6)** (Priority: Medium)
    - **Task**: Implement "Crypto-shredding" for hard deletes to ensure data is unrecoverable.
 
-7. **Data Residency & Localization (GCC/Middle East)** (Priority: Critical)
+6. **Data Residency & Localization (GCC/Middle East)** (Priority: Critical)
    - **Standard**: Saudi NCA ECC / UAE NESA.
    - **Task**: Architect Supabase deployment for "Region Pinning" (e.g., AWS Bahrain/UAE) or On-Premise capability.
 
-8. **SM Series Cryptography (MLPS 2.0 / China Mode)** (Priority: High)
+7. **SM Series Cryptography (MLPS 2.0 / China Mode)** (Priority: High)
    - **Task**: Alternative crypto stack using SM4-CBC and SM2 for sovereign algorithm compliance.
 
 ---
@@ -47,7 +43,7 @@ This document outlines the development path for the GVR-VAMS. Completed items ha
 ## Phase 4: Future Standards & Technical Debt
 *Strategic improvements with high complexity or long-term implementation horizons.*
 
-9. **FIPS 140-2 Cryptography Review (SC-13)** (Priority: High)
+8. **FIPS 140-2 Cryptography Review (SC-13)** (Priority: High)
    - **Task**: Plan migration from CryptoJS to Web Crypto API (browser-native, FIPS-compliant on host OS).
    - **Note**: High difficulty due to Async migration and re-encryption of legacy data.
 

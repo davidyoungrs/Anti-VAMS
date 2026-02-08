@@ -44,7 +44,12 @@ The GVS-VAMS (Valve Asset Management System) is engineered with a **Defense-in-D
 **Justification:** Reduces the risk of session hijacking on walk-away devices.
 *   **10-Minute Timeout:** Automatically signs out idle users and clears sensitive data from browser memory.
 
+## 9. Software Supply Chain Security (ISO 27032)
+**Justification:** Protects against malicious code injections and ensures architectural transparency.
+*   **Automated Auditing (SCA):** Real-time vulnerability scanning via `npm audit` integrated into the development lifecycle.
+*   **SBOM Generation:** Automatically generates a machine-readable Software Bill of Materials (`bom.json`) in CycloneDX format for full dependency tracing.
+
 ---
 
 ## Conclusion
-GVS-VAMS moves beyond basic password protection. By layering **Database RLS**, **AES-256 Encryption**, **Automated Scanning (RA-5)**, and **Monitoring Notifications (AC-8)**, it provides a hardened environment for critical infrastructure asset management.
+GVS-VAMS moves beyond basic password protection. By layering **Database RLS**, **AES-256 Encryption**, **Automated Scanning (RA-5)**, and **Supply Chain Assurance**, it provides a hardened environment for critical infrastructure asset management.
