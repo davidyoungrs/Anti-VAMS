@@ -768,6 +768,24 @@ export const storageService = {
                     }));
 
                     record.files = processedFiles.filter(f => f !== null);
+
+                    // Added: Check if we actually upgraded any files from Base64 to Cloud URLs
+                    const hasNewCloudUrls = record.files.some(f =>
+                        typeof f === 'object' && f.url && !f.url.startsWith('data:') &&
+                        localRecords[i].files.some(lf => lf.url?.startsWith('data:'))
+                    );
+
+                    if (hasNewCloudUrls) {
+                        console.log(`[SyncDebug] Upgraded files for ${record.serialNumber} from Base64 to Cloud URLs.`);
+                        // We need to update the local record so it doesn't try to re-upload next time
+                        const updatedLocalRecord = {
+                            ...localRecords[i],
+                            files: record.files,
+                            updatedAt: new Date().toISOString() // Ensure it's marked as updated
+                        };
+                        const encrypted = securityService.encrypt(updatedLocalRecord);
+                        await dbService.put({ id: record.id, encryptedData: encrypted });
+                    }
                 } catch (e) {
                     console.error('Error handling files in sync:', e);
                 }
@@ -825,7 +843,7 @@ export const storageService = {
             });
         }
 
-        console.log('[SyncDebug] Emergency Mode: Attempting to sync ' + recordsToUpsert.length + ' records (TEXT ONLY)');
+        console.log(`[SyncDebug] Syncing ${recordsToUpsert.length} records to cloud...`);
 
         // 3. Batch Upsert to Supabase
         if (recordsToUpsert.length > 0) {
