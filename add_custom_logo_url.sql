@@ -32,3 +32,29 @@ BEGIN
 
 END;
 $$;
+
+-- 3. Update get_active_user_role to ensure it bypasses RLS for the new field
+CREATE OR REPLACE FUNCTION public.get_active_user_role()
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  result jsonb;
+BEGIN
+  SELECT jsonb_build_object(
+    'role', p.role,
+    'allowed_customers', p.allowed_customers,
+    'custom_logo_url', p.custom_logo_url
+  ) INTO result
+  FROM public.profiles p
+  WHERE p.id = auth.uid();
+
+  RETURN result;
+END;
+$$;
+
+-- 4. Permissions (Redundant but safe)
+GRANT EXECUTE ON FUNCTION public.get_active_user_role() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.update_user_profile(uuid, text, text, text) TO authenticated;

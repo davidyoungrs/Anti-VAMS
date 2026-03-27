@@ -43,6 +43,11 @@ export const AdminPanel = ({ onNavigate }) => {
 
     const loadData = async () => {
         setLoading(true);
+        const timeoutId = setTimeout(() => {
+            setLoading(false);
+            console.warn("[AdminPanel] LoadData safety timeout reached.");
+        }, 8000); // 8 second safety limit for large datasets
+
         try {
             if (activeTab === 'trash') {
                 // For trash, we need to find local records marked as deleted
@@ -59,8 +64,6 @@ export const AdminPanel = ({ onNavigate }) => {
                     console.error("RPC Fetch Users Error:", error);
                     throw error;
                 }
-                setUsers(data || []);
-
                 setUsers(data || []);
             } else if (activeTab === 'security') {
                 // Initialize settings service if needed
@@ -88,6 +91,7 @@ export const AdminPanel = ({ onNavigate }) => {
         } catch (e) {
             console.error("Error loading admin data", e);
         } finally {
+            clearTimeout(timeoutId);
             setLoading(false);
         }
     };
