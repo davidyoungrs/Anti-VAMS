@@ -10,6 +10,7 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [role, setRole] = useState(null); // 'admin' | 'inspector' | 'client'
     const [allowedCustomers, setAllowedCustomers] = useState('');
+    const [logoUrl, setLogoUrl] = useState(null);
     const [loading, setLoading] = useState(true);
 
     const fetchRole = React.useCallback(async (userId, retries = 2) => {
@@ -40,7 +41,7 @@ export const AuthProvider = ({ children }) => {
             if (!profileData) {
                 const { data, error: dbError } = await supabase
                     .from('profiles')
-                    .select('role, allowed_customers')
+                    .select('role, allowed_customers, custom_logo_url')
                     .eq('id', userId)
                     .single();
 
@@ -60,9 +61,11 @@ export const AuthProvider = ({ children }) => {
             // 4. Set state
             const finalRole = profileData?.role || 'client';
             const customers = profileData?.allowed_customers || '';
-            console.log(`[AuthDebug] Final Role: ${finalRole}, Allowed Customers: "${customers}"`);
+            const customLogo = profileData?.custom_logo_url || null;
+            console.log(`[AuthDebug] Final Role: ${finalRole}, Allowed Customers: "${customers}", Logo: ${customLogo}`);
             setRole(finalRole);
             setAllowedCustomers(customers);
+            setLogoUrl(customLogo);
             setLoading(false);
 
         } catch (e) {
@@ -138,6 +141,7 @@ export const AuthProvider = ({ children }) => {
                 setUser(null);
                 setRole(null);
                 setAllowedCustomers('');
+                setLogoUrl(null);
                 setLoading(false);
             }
         });
@@ -190,6 +194,7 @@ export const AuthProvider = ({ children }) => {
         user,
         role,
         allowedCustomers,
+        logoUrl,
         signIn,
         signOut,
         signUp,

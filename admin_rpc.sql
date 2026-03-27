@@ -28,7 +28,8 @@ $$;
 CREATE OR REPLACE FUNCTION public.update_user_profile(
     target_user_id uuid,
     new_role text DEFAULT NULL,
-    new_allowed_customers text DEFAULT NULL
+    new_allowed_customers text DEFAULT NULL,
+    new_custom_logo_url text DEFAULT NULL
 )
 RETURNS void
 LANGUAGE plpgsql
@@ -49,7 +50,8 @@ BEGIN
   UPDATE public.profiles
   SET 
     role = COALESCE(new_role, role),
-    allowed_customers = COALESCE(new_allowed_customers, allowed_customers)
+    allowed_customers = COALESCE(new_allowed_customers, allowed_customers),
+    custom_logo_url = COALESCE(new_custom_logo_url, custom_logo_url)
   WHERE id = target_user_id;
 
 END;
@@ -57,4 +59,4 @@ $$;
 
 -- Permissions
 GRANT EXECUTE ON FUNCTION public.get_all_profiles() TO authenticated;
-GRANT EXECUTE ON FUNCTION public.update_user_profile(uuid, text, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.update_user_profile(uuid, text, text, text) TO authenticated;

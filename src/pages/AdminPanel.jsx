@@ -178,10 +178,6 @@ export const AdminPanel = ({ onNavigate }) => {
     };
 
     const handleAllowedCustomersUpdate = async (userId, newAllowed) => {
-        // Debounce or just save on blur/enter? Ideally save on blur.
-        // For simplicity in this admin panel, let's use prompt or just distinct save? 
-        // Or inline input with onBlur.
-
         try {
             const { error } = await supabase.rpc('update_user_profile', {
                 target_user_id: userId,
@@ -189,11 +185,23 @@ export const AdminPanel = ({ onNavigate }) => {
             });
 
             if (error) throw error;
-            // No alert needed for smooth editing, or maybe a toast?
-            // Let's reload to be safe or just update state locally
             setUsers(users.map(u => u.id === userId ? { ...u, allowed_customers: newAllowed } : u));
         } catch (e) {
             alert('Failed to update allowed customers: ' + e.message);
+        }
+    };
+
+    const handleCustomLogoUpdate = async (userId, newLogoUrl) => {
+        try {
+            const { error } = await supabase.rpc('update_user_profile', {
+                target_user_id: userId,
+                new_custom_logo_url: newLogoUrl
+            });
+
+            if (error) throw error;
+            setUsers(users.map(u => u.id === userId ? { ...u, custom_logo_url: newLogoUrl } : u));
+        } catch (e) {
+            alert('Failed to update custom logo: ' + e.message);
         }
     };
 
@@ -585,6 +593,7 @@ export const AdminPanel = ({ onNavigate }) => {
                                             <th style={{ padding: '1rem' }}>Email</th>
                                             <th style={{ padding: '1rem' }}>Current Role</th>
                                             <th style={{ padding: '1rem' }}>Allowed Customers <br /><span style={{ fontSize: '0.7rem', fontWeight: 'normal' }}>(CSV or 'all')</span></th>
+                                            <th style={{ padding: '1rem' }}>Custom Logo URL</th>
                                             <th style={{ padding: '1rem' }}>Actions</th>
                                         </tr>
                                     </thead>
@@ -613,6 +622,22 @@ export const AdminPanel = ({ onNavigate }) => {
                                                         defaultValue={user.allowed_customers || ''}
                                                         placeholder={user.role === 'client' ? "e.g. Shell, BP" : "Full Access"}
                                                         onBlur={(e) => handleAllowedCustomersUpdate(user.id, e.target.value)}
+                                                        style={{
+                                                            width: '100%',
+                                                            padding: '0.5rem',
+                                                            borderRadius: '4px',
+                                                            border: '1px solid var(--border-color)',
+                                                            background: 'var(--bg-input)',
+                                                            color: 'var(--text-primary)'
+                                                        }}
+                                                    />
+                                                </td>
+                                                <td style={{ padding: '1rem' }}>
+                                                    <input
+                                                        type="text"
+                                                        defaultValue={user.custom_logo_url || ''}
+                                                        placeholder="https://..."
+                                                        onBlur={(e) => handleCustomLogoUpdate(user.id, e.target.value)}
                                                         style={{
                                                             width: '100%',
                                                             padding: '0.5rem',
