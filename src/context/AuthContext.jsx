@@ -15,14 +15,13 @@ export const AuthProvider = ({ children }) => {
 
     const fetchRole = React.useCallback(async (userId, retries = 2) => {
         const startTime = Date.now();
-        console.log(`[AuthDebug] 🛰️ Starting fetchRole for: ${userId}`);
+        console.log(`[AuthDebug] 🛰️ Starting fetchRole for: ${userId} (Attempt: ${3 - retries})`);
 
         try {
             // 1. Check for specific user overrides
             if (userId === '2e85d5fd-ebfc-4c88-9577-085c2d77c21a') {
                 console.log('[AuthDebug] 🚨 OVERRIDE TRIGGERED');
                 setRole('admin');
-                setLoading(false);
                 return;
             }
 
@@ -49,12 +48,14 @@ export const AuthProvider = ({ children }) => {
                     profileData = data;
                 } else if (dbError.code === 'PGRST116' && retries > 0) {
                     // Auto-recovery for missing profiles
+                    console.warn('[AuthDebug] Profile missing, creating default...');
                     await supabase.from('profiles').insert([{ id: userId, role: 'client' }]);
-                    setTimeout(() => fetchRole(userId, retries - 1), 500);
-                    return;
+                    await new Promise(res => setTimeout(res, 500));
+                    return await fetchRole(userId, retries - 1);
                 } else if (retries > 0) {
-                    setTimeout(() => fetchRole(userId, retries - 1), 1000);
-                    return;
+                    console.warn(`[AuthDebug] Fetch failed, retrying... (${retries} left)`);
+                    await new Promise(res => setTimeout(res, 1000));
+                    return await fetchRole(userId, retries - 1);
                 }
             }
 
@@ -62,33 +63,41 @@ export const AuthProvider = ({ children }) => {
             const finalRole = profileData?.role || 'client';
             const customers = profileData?.allowed_customers || '';
             const customLogo = profileData?.custom_logo_url || null;
-            console.log(`[AuthDebug] Final Role: ${finalRole}, Allowed Customers: "${customers}", Logo: ${customLogo}`);
+            console.log(`[AuthDebug] Final Role: ${finalRole}, Logo: ${customLogo}`);
             setRole(finalRole);
             setAllowedCustomers(customers);
             setLogoUrl(customLogo);
         } catch (e) {
-            if (e.name === 'AbortError') {
-                console.error('[AuthDebug] 🚨 CRITICAL: Role fetch ABORTED (Possible SQL Recursion loop).');
-            } else {
-                console.error('[AuthDebug] Exception fetching role:', e);
-            }
+            console.error('[AuthDebug] Exception fetching role:', e);
             setRole('client');
         } finally {
             setLoading(false);
-            console.log(`[AuthDebug] ✅ fetchRole complete in ${Date.now() - startTime}ms`);
+            console.log(`[AuthDebug] ✅ fetchRole attempt complete in ${Date.now() - startTime}ms`);
         }
     }, []);
 
     const userRef = React.useRef(null);
 
+    // Reactive Safety Timeout: Monitors the loading state.
+    // Restarts every time loading becomes true.
     useEffect(() => {
+        if (!loading) return;
+
+        console.log('[AuthDebug] ⏱️ Global Safety Timeout started (6s)');
         const timeoutId = setTimeout(() => {
             if (loading) {
-                console.warn('[AuthDebug] ⏱️ Safety timeout reached. Forcing loading false.');
+                console.warn('[AuthDebug] 🚨 ⏱️ 6s limit reached! Forcing session initialization to complete.');
                 setLoading(false);
             }
-        }, 5000); // Increased to 5s for better resilience
+        }, 6000);
 
+        return () => {
+            console.log('[AuthDebug] ⏱️ Global Safety Timeout cleared');
+            clearTimeout(timeoutId);
+        };
+    }, [loading]);
+
+    useEffect(() => {
         if (!supabase) {
             setLoading(false);
             return;
@@ -96,7 +105,6 @@ export const AuthProvider = ({ children }) => {
 
         const getSession = async () => {
             try {
-                // Check if we already have a user/role from a previous sync in the same session
                 const { data: { session } } = await supabase.auth.getSession();
                 if (session?.user) {
                     console.log(`[AuthDebug] 🔄 Initial Session Found: ${session.user.id}`);
@@ -107,8 +115,8 @@ export const AuthProvider = ({ children }) => {
             } catch (err) {
                 console.error("Session check failed", err);
             } finally {
+                // Ensure loading is unset even if fetchRole blocks
                 setLoading(false);
-                clearTimeout(timeoutId);
             }
         };
 
@@ -122,14 +130,12 @@ export const AuthProvider = ({ children }) => {
 
                 if (_event === 'SIGNED_IN' || isNewUser) {
                     console.log(`[AuthDebug] 🛡️ Identity Change/Login: ${session.user.id}`);
-                    // Only show full loading if we don't have a user yet or it's a fresh sign-in
                     if (isNewUser) setLoading(true);
 
                     userRef.current = session.user;
                     setUser(session.user);
                     await fetchRole(session.user.id);
                 } else {
-                    // Just update session data silently (e.g. TOKEN_REFRESHED)
                     userRef.current = session.user;
                     setUser(session.user);
                 }
@@ -146,7 +152,6 @@ export const AuthProvider = ({ children }) => {
 
         return () => {
             subscription.unsubscribe();
-            clearTimeout(timeoutId);
         };
     }, [fetchRole]);
 
@@ -199,6 +204,16 @@ export const AuthProvider = ({ children }) => {
         loading
     };
 
+    const [showSkip, setShowSkip] = useState(false);
+    useEffect(() => {
+        if (loading) {
+            const t = setTimeout(() => setShowSkip(true), 3500);
+            return () => clearTimeout(t);
+        } else {
+            setShowSkip(false);
+        }
+    }, [loading]);
+
     return (
         <AuthContext.Provider value={value}>
             {loading ? (
@@ -212,6 +227,22 @@ export const AuthProvider = ({ children }) => {
                     }}></div>
                     <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
                     <div style={{ fontSize: '1.1rem', fontWeight: '500', opacity: 0.8 }}>Initializing Secure Session...</div>
+                    
+                    {showSkip && (
+                        <button 
+                            onClick={() => setLoading(false)}
+                            style={{
+                                marginTop: '1rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', 
+                                color: 'var(--accent)', padding: '0.5rem 1rem', borderRadius: 'var(--radius-sm)',
+                                cursor: 'pointer', fontSize: '0.8rem', opacity: 0.8,
+                                transition: 'all 0.2s ease'
+                            }}
+                            onMouseOver={(e) => e.target.style.background = 'rgba(255,255,255,0.1)'}
+                            onMouseOut={(e) => e.target.style.background = 'rgba(255,255,255,0.05)'}
+                        >
+                            Skip Initialization (Enter Dashboard)
+                        </button>
+                    )}
                 </div>
             ) : children}
         </AuthContext.Provider>
