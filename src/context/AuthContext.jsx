@@ -66,8 +66,6 @@ export const AuthProvider = ({ children }) => {
             setRole(finalRole);
             setAllowedCustomers(customers);
             setLogoUrl(customLogo);
-            setLoading(false);
-
         } catch (e) {
             if (e.name === 'AbortError') {
                 console.error('[AuthDebug] 🚨 CRITICAL: Role fetch ABORTED (Possible SQL Recursion loop).');
@@ -75,8 +73,8 @@ export const AuthProvider = ({ children }) => {
                 console.error('[AuthDebug] Exception fetching role:', e);
             }
             setRole('client');
-            setLoading(false);
         } finally {
+            setLoading(false);
             console.log(`[AuthDebug] ✅ fetchRole complete in ${Date.now() - startTime}ms`);
         }
     }, []);
@@ -89,7 +87,7 @@ export const AuthProvider = ({ children }) => {
                 console.warn('[AuthDebug] ⏱️ Safety timeout reached. Forcing loading false.');
                 setLoading(false);
             }
-        }, 1500);
+        }, 5000); // Increased to 5s for better resilience
 
         if (!supabase) {
             setLoading(false);
