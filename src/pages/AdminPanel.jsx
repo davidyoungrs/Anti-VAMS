@@ -174,8 +174,8 @@ export const AdminPanel = ({ onNavigate }) => {
             });
 
             if (error) throw error;
+            setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
             alert('User role updated successfully!');
-            loadData();
         } catch (e) {
             alert('Failed to update role: ' + e.message);
         }
@@ -189,7 +189,8 @@ export const AdminPanel = ({ onNavigate }) => {
             });
 
             if (error) throw error;
-            setUsers(users.map(u => u.id === userId ? { ...u, allowed_customers: newAllowed } : u));
+            setUsers(prev => prev.map(u => u.id === userId ? { ...u, allowed_customers: newAllowed } : u));
+            console.log("Allowed customers updated for", userId);
         } catch (e) {
             alert('Failed to update allowed customers: ' + e.message);
         }
@@ -203,7 +204,8 @@ export const AdminPanel = ({ onNavigate }) => {
             });
 
             if (error) throw error;
-            setUsers(users.map(u => u.id === userId ? { ...u, custom_logo_url: newLogoUrl } : u));
+            setUsers(prev => prev.map(u => u.id === userId ? { ...u, custom_logo_url: newLogoUrl } : u));
+            alert('Custom logo URL saved successfully!');
         } catch (e) {
             alert('Failed to update custom logo: ' + e.message);
         }
@@ -590,8 +592,8 @@ export const AdminPanel = ({ onNavigate }) => {
                             <h3 style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem', marginBottom: '1rem' }}>
                                 Manage Users & Roles
                             </h3>
-                            <div style={{ overflowX: 'auto' }}>
-                                <table style={{ width: '100%', borderCollapse: 'collapse', color: 'var(--text-primary)' }}>
+                            <div className="table-container">
+                                <table style={{ width: '100%', borderCollapse: 'collapse', color: 'var(--text-primary)', minWidth: '800px' }}>
                                     <thead>
                                         <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border-color)' }}>
                                             <th style={{ padding: '1rem' }}>Email</th>

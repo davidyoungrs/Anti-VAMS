@@ -12,20 +12,25 @@ export const AuthProvider = ({ children }) => {
     const [allowedCustomers, setAllowedCustomers] = useState('');
     const [logoUrl, setLogoUrl] = useState(null);
     const [loading, setLoading] = useState(true);
+    const fetchingRef = React.useRef(null);
 
     const fetchRole = React.useCallback(async (userId, retries = 2) => {
+        if (fetchingRef.current === userId) {
+            console.log(`[AuthDebug] ⏹️ fetchRole already in progress for ${userId}`);
+            return;
+        }
+
         const startTime = Date.now();
+        fetchingRef.current = userId;
         console.log(`[AuthDebug] 🛰️ Starting fetchRole for: ${userId} (Attempt: ${3 - retries})`);
 
         try {
-            // 1. Check for specific user overrides
             if (userId === '2e85d5fd-ebfc-4c88-9577-085c2d77c21a') {
                 console.log('[AuthDebug] 🚨 OVERRIDE TRIGGERED');
                 setRole('admin');
                 return;
             }
 
-            // 2. Try RPC first
             let profileData = null;
             try {
                 const { data: rpcData, error: rpcError } = await supabase.rpc('get_active_user_role');
@@ -36,7 +41,6 @@ export const AuthProvider = ({ children }) => {
                 console.warn('[AuthDebug] RPC Exception:', rpcEx);
             }
 
-            // 3. Fallback to DB Select
             if (!profileData) {
                 const { data, error: dbError } = await supabase
                     .from('profiles')
@@ -47,19 +51,19 @@ export const AuthProvider = ({ children }) => {
                 if (!dbError) {
                     profileData = data;
                 } else if (dbError.code === 'PGRST116' && retries > 0) {
-                    // Auto-recovery for missing profiles
                     console.warn('[AuthDebug] Profile missing, creating default...');
                     await supabase.from('profiles').insert([{ id: userId, role: 'client' }]);
                     await new Promise(res => setTimeout(res, 500));
+                    fetchingRef.current = null;
                     return await fetchRole(userId, retries - 1);
                 } else if (retries > 0) {
                     console.warn(`[AuthDebug] Fetch failed, retrying... (${retries} left)`);
                     await new Promise(res => setTimeout(res, 1000));
+                    fetchingRef.current = null;
                     return await fetchRole(userId, retries - 1);
                 }
             }
 
-            // 4. Set state
             const finalRole = profileData?.role || 'client';
             const customers = profileData?.allowed_customers || '';
             const customLogo = profileData?.custom_logo_url || null;
@@ -71,6 +75,7 @@ export const AuthProvider = ({ children }) => {
             console.error('[AuthDebug] Exception fetching role:', e);
             setRole('client');
         } finally {
+            fetchingRef.current = null;
             setLoading(false);
             console.log(`[AuthDebug] ✅ fetchRole attempt complete in ${Date.now() - startTime}ms`);
         }
@@ -111,11 +116,11 @@ export const AuthProvider = ({ children }) => {
                     userRef.current = session.user;
                     setUser(session.user);
                     await fetchRole(session.user.id);
+                } else {
+                    setLoading(false);
                 }
             } catch (err) {
                 console.error("Session check failed", err);
-            } finally {
-                // Ensure loading is unset even if fetchRole blocks
                 setLoading(false);
             }
         };
