@@ -39,7 +39,17 @@ export const Layout = ({ children, activeView, onNavigate, userRole }) => {
         overflow: 'hidden' // Ensure sidebar doesn't scroll, only nav does
       }}>
         <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
-          <img src={logoUrl || "/logo.png"} alt="Logo" style={{ height: '48px', width: 'auto', borderRadius: '4px' }} />
+          <img 
+            src={logoUrl || "/logo.png"} 
+            alt="Logo" 
+            style={{ 
+              height: '48px', 
+              maxWidth: '120px', 
+              width: 'auto', 
+              objectFit: 'contain',
+              borderRadius: '4px' 
+            }} 
+          />
           <h1 style={{
             margin: 0,
             fontSize: '1.2rem',
