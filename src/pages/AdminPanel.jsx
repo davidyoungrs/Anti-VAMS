@@ -197,16 +197,23 @@ export const AdminPanel = ({ onNavigate }) => {
     };
 
     const handleCustomLogoUpdate = async (userId, newLogoUrl) => {
+        console.log(`[AdminDebug] 🛰️ Updating logo for ${userId} -> "${newLogoUrl}"`);
         try {
-            const { error } = await supabase.rpc('update_user_profile', {
+            const { data, error } = await supabase.rpc('update_user_profile', {
                 target_user_id: userId,
                 new_custom_logo_url: newLogoUrl
             });
 
-            if (error) throw error;
+            if (error) {
+                console.error("[AdminDebug] RPC Update Error:", error);
+                throw error;
+            }
+            
+            console.log("[AdminDebug] ✅ RPC update successful");
             setUsers(prev => prev.map(u => u.id === userId ? { ...u, custom_logo_url: newLogoUrl } : u));
             alert('Custom logo URL saved successfully!');
         } catch (e) {
+            console.error('[AdminDebug] Exception during update:', e);
             alert('Failed to update custom logo: ' + e.message);
         }
     };

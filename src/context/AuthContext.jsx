@@ -8,98 +8,91 @@ export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
-    const [role, setRole] = useState(null); // 'admin' | 'inspector' | 'client'
+    const [role, setRole] = useState(null);
     const [allowedCustomers, setAllowedCustomers] = useState('');
     const [logoUrl, setLogoUrl] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [showSkip, setShowSkip] = useState(false);
+
+    const userRef = React.useRef(null);
     const fetchingRef = React.useRef(null);
 
     const fetchRole = React.useCallback(async (userId, retries = 2) => {
-        if (fetchingRef.current === userId) {
-            console.log(`[AuthDebug] ⏹️ fetchRole already in progress for ${userId}`);
+        if (!userId) {
+            setLoading(false);
             return;
         }
-
-        const startTime = Date.now();
+        
+        if (fetchingRef.current === userId) {
+            console.log(`[AuthDebug] ⏹️ fetchRole already in progress for ${userId}, waiting...`);
+            return;
+        }
+        
         fetchingRef.current = userId;
+        const startTime = Date.now();
         console.log(`[AuthDebug] 🛰️ Starting fetchRole for: ${userId} (Attempt: ${3 - retries})`);
 
         try {
-            if (userId === '2e85d5fd-ebfc-4c88-9577-085c2d77c21a') {
-                console.log('[AuthDebug] 🚨 OVERRIDE TRIGGERED');
-                setRole('admin');
-                return;
+            const { data, error: dbError } = await supabase
+                .from('profiles')
+                .select('role, allowed_customers, custom_logo_url')
+                .eq('id', userId)
+                .single();
+
+            if (dbError && dbError.code === 'PGRST116' && retries > 0) {
+                console.warn('[AuthDebug] Profile missing, creating default...');
+                await supabase.from('profiles').insert([{ id: userId, role: 'client' }]);
+                await new Promise(res => setTimeout(res, 500));
+                fetchingRef.current = null;
+                return await fetchRole(userId, retries - 1);
+            } else if (dbError && retries > 0) {
+                console.warn(`[AuthDebug] Fetch failed (${dbError.message}), retrying... (${retries} left)`);
+                await new Promise(res => setTimeout(res, 1000));
+                fetchingRef.current = null;
+                return await fetchRole(userId, retries - 1);
             }
 
-            let profileData = null;
-            try {
-                const { data: rpcData, error: rpcError } = await supabase.rpc('get_active_user_role');
-                if (!rpcError && rpcData) {
-                    profileData = rpcData;
-                }
-            } catch (rpcEx) {
-                console.warn('[AuthDebug] RPC Exception:', rpcEx);
-            }
-
-            if (!profileData) {
-                const { data, error: dbError } = await supabase
-                    .from('profiles')
-                    .select('role, allowed_customers, custom_logo_url')
-                    .eq('id', userId)
-                    .single();
-
-                if (!dbError) {
-                    profileData = data;
-                } else if (dbError.code === 'PGRST116' && retries > 0) {
-                    console.warn('[AuthDebug] Profile missing, creating default...');
-                    await supabase.from('profiles').insert([{ id: userId, role: 'client' }]);
-                    await new Promise(res => setTimeout(res, 500));
-                    fetchingRef.current = null;
-                    return await fetchRole(userId, retries - 1);
-                } else if (retries > 0) {
-                    console.warn(`[AuthDebug] Fetch failed, retrying... (${retries} left)`);
-                    await new Promise(res => setTimeout(res, 1000));
-                    fetchingRef.current = null;
-                    return await fetchRole(userId, retries - 1);
-                }
-            }
-
-            const finalRole = profileData?.role || 'client';
-            const customers = profileData?.allowed_customers || '';
-            const customLogo = profileData?.custom_logo_url || null;
-            console.log(`[AuthDebug] Final Role: ${finalRole}, Logo: ${customLogo}`);
+            const finalRole = data?.role || 'client';
+            const customers = data?.allowed_customers || '';
+            const customLogo = data?.custom_logo_url || null;
+            
+            console.log(`[AuthDebug] Final Role: ${finalRole}, Customers: ${customers ? 'Set' : 'Empty'}`);
+            
+            // Atomic state updates
             setRole(finalRole);
             setAllowedCustomers(customers);
             setLogoUrl(customLogo);
+            
         } catch (e) {
             console.error('[AuthDebug] Exception fetching role:', e);
             setRole('client');
         } finally {
             fetchingRef.current = null;
             setLoading(false);
-            console.log(`[AuthDebug] ✅ fetchRole attempt complete in ${Date.now() - startTime}ms`);
+            console.log(`[AuthDebug] ✅ fetchRole complete in ${Date.now() - startTime}ms`);
         }
     }, []);
 
-    const userRef = React.useRef(null);
-
-    // Reactive Safety Timeout: Monitors the loading state.
-    // Restarts every time loading becomes true.
+    // Global Safety Timeout
     useEffect(() => {
         if (!loading) return;
-
-        console.log('[AuthDebug] ⏱️ Global Safety Timeout started (6s)');
         const timeoutId = setTimeout(() => {
             if (loading) {
-                console.warn('[AuthDebug] 🚨 ⏱️ 6s limit reached! Forcing session initialization to complete.');
+                console.warn('[AuthDebug] 🚨 6s limit reached! Forcing initialization to complete.');
                 setLoading(false);
             }
         }, 6000);
+        return () => clearTimeout(timeoutId);
+    }, [loading]);
 
-        return () => {
-            console.log('[AuthDebug] ⏱️ Global Safety Timeout cleared');
-            clearTimeout(timeoutId);
-        };
+    // Skip Button Logic
+    useEffect(() => {
+        if (loading) {
+            const t = setTimeout(() => setShowSkip(true), 3500);
+            return () => clearTimeout(t);
+        } else {
+            setShowSkip(false);
+        }
     }, [loading]);
 
     useEffect(() => {
@@ -108,41 +101,17 @@ export const AuthProvider = ({ children }) => {
             return;
         }
 
-        const getSession = async () => {
-            try {
-                const { data: { session } } = await supabase.auth.getSession();
-                if (session?.user) {
-                    console.log(`[AuthDebug] 🔄 Initial Session Found: ${session.user.id}`);
-                    userRef.current = session.user;
-                    setUser(session.user);
-                    await fetchRole(session.user.id);
-                } else {
-                    setLoading(false);
-                }
-            } catch (err) {
-                console.error("Session check failed", err);
-                setLoading(false);
-            }
-        };
-
-        getSession();
-
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
             console.log(`[AuthDebug] 🔄 Auth Event: ${_event}`);
 
             if (session?.user) {
                 const isNewUser = !userRef.current || userRef.current.id !== session.user.id;
+                userRef.current = session.user;
+                setUser(session.user);
 
-                if (_event === 'SIGNED_IN' || isNewUser) {
-                    console.log(`[AuthDebug] 🛡️ Identity Change/Login: ${session.user.id}`);
+                if (isNewUser || _event === 'INITIAL_SESSION' || _event === 'SIGNED_IN') {
                     if (isNewUser) setLoading(true);
-
-                    userRef.current = session.user;
-                    setUser(session.user);
                     await fetchRole(session.user.id);
-                } else {
-                    userRef.current = session.user;
-                    setUser(session.user);
                 }
             } else {
                 console.log('[AuthDebug] 🚪 No Session');
@@ -155,39 +124,32 @@ export const AuthProvider = ({ children }) => {
             }
         });
 
-        return () => {
-            subscription.unsubscribe();
-        };
+        return () => subscription.unsubscribe();
     }, [fetchRole]);
+
+    const signOut = React.useCallback(async () => {
+        setLoading(true);
+        try {
+            await supabase.auth.signOut();
+            setUser(null);
+            setRole(null);
+            setAllowedCustomers('');
+            setLogoUrl(null);
+            Object.keys(localStorage).forEach(key => {
+                if (key.startsWith('sb-')) localStorage.removeItem(key);
+            });
+            window.location.href = '/login';
+        } catch (e) {
+            console.error('SignOut Error:', e);
+            window.location.href = '/login';
+        } finally {
+            setLoading(false);
+        }
+    }, []);
 
     const signIn = async (email, password) => {
         if (!supabase) return { error: { message: "Supabase not configured" } };
         return supabase.auth.signInWithPassword({ email, password });
-    };
-
-    const signOut = async () => {
-        console.log('[Auth] Signing out...');
-        try {
-            // 1. Clear Context State
-            setUser(null);
-            setRole(null);
-
-            // 2. Clear Local Storage (Robust)
-            // Remove any keys starting with 'sb-' to handle potential key mismatches
-            Object.keys(localStorage).forEach(key => {
-                if (key.startsWith('sb-')) {
-                    localStorage.removeItem(key);
-                }
-            });
-
-            // 3. Supabase SignOut (Best Effort)
-            if (supabase) await supabase.auth.signOut();
-        } catch (e) {
-            console.error('SignOut Exception:', e);
-        } finally {
-            // 4. Force Redirect to Login (avoids infinite reload loops)
-            window.location.href = '/login';
-        }
     };
 
     const signUp = async (email, password) => {
@@ -195,32 +157,21 @@ export const AuthProvider = ({ children }) => {
         return supabase.auth.signUp({ email, password });
     };
 
-    // Session Management: Auto-logout after 10 minutes (600,000 ms) of inactivity
     useInactivityTimer(600000, signOut, !!user);
 
-    const value = {
+    const contextValue = React.useMemo(() => ({
         user,
         role,
         allowedCustomers,
         logoUrl,
+        loading,
         signIn,
         signOut,
-        signUp,
-        loading
-    };
-
-    const [showSkip, setShowSkip] = useState(false);
-    useEffect(() => {
-        if (loading) {
-            const t = setTimeout(() => setShowSkip(true), 3500);
-            return () => clearTimeout(t);
-        } else {
-            setShowSkip(false);
-        }
-    }, [loading]);
+        signUp
+    }), [user, role, allowedCustomers, logoUrl, loading, signOut]);
 
     return (
-        <AuthContext.Provider value={value}>
+        <AuthContext.Provider value={contextValue}>
             {loading ? (
                 <div style={{
                     height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
