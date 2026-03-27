@@ -9,26 +9,34 @@
 -- Helper: Check if current user is an admin/inspector/super_user
 CREATE OR REPLACE FUNCTION public.is_staff(user_id UUID)
 RETURNS BOOLEAN
-LANGUAGE sql
+LANGUAGE plpgsql
 SECURITY DEFINER -- Bypasses RLS
 SET search_path = public
 AS $$
-  SELECT EXISTS (
+BEGIN
+  RETURN EXISTS (
     SELECT 1 FROM public.profiles
     WHERE id = user_id
     AND role IN ('admin', 'inspector', 'super_user')
   );
+END;
 $$;
 
 -- Helper: Get allowed_customers for a user safely
 CREATE OR REPLACE FUNCTION public.get_user_allowed_customers(user_id UUID)
 RETURNS TEXT
-LANGUAGE sql
+LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT allowed_customers FROM public.profiles
+DECLARE
+  customers TEXT;
+BEGIN
+  SELECT allowed_customers INTO customers 
+  FROM public.profiles
   WHERE id = user_id;
+  RETURN customers;
+END;
 $$;
 
 
